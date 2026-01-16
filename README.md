@@ -36,7 +36,7 @@ The plugin will apply styling to block quotes containing github alert syntax. Th
 
 A command to quickly create an alert is provided via an icon on the editing toolbar, keyboard shortcut (`Ctrl + Shift + A` by default), and an entry in the Edit menu. This will automatically insert `> [!NOTE] ` at the cursor position.
 
-> [!CAUTION] Rich Text Editor
+> [!CAUTION]
 > Note that the Rich Text Editor is **not** supported. Alerts will (sort of) render in the Rich Text Editor, but editing the note in the Rich Text Editor will remove any github alert syntax.
 
 ## Markdown Viewer

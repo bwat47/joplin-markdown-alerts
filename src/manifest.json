@@ -9,8 +9,8 @@
     "author": "bwat47",
     "homepage_url": "https://github.com/bwat47/joplin-markdown-alerts",
     "repository_url": "https://github.com/bwat47/joplin-markdown-alerts",
-    "keywords": ["Alerts", "Github", "Callouts"],
-    "categories": ["Appearance", "Editor", "Viewer"],
+    "keywords": ["alerts", "github", "callouts"],
+    "categories": ["appearance", "editor", "viewer"],
     "screenshots": [],
     "icons": {},
     "promo_tile": {}

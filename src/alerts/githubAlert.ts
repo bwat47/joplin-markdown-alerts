@@ -10,8 +10,10 @@ export type GitHubAlertType = (typeof GITHUB_ALERT_TYPES)[number];
  * - `> [!warning] Optional title`
  * - `   >    [!Tip]`
  */
+const ALERT_TYPE_PATTERN = new RegExp(`^\\s*>\\s*\\[!(${GITHUB_ALERT_TYPES.join('|')})\\](?:[ \\t]+(.*))?$`, 'i');
+
 export function parseGitHubAlertTitleLine(lineText: string): { type: GitHubAlertType; title?: string } | null {
-    const match = /^\s*>\s*\[!(note|tip|important|warning|caution)\](?:[ \t]+(.*))?\s*$/i.exec(lineText);
+    const match = ALERT_TYPE_PATTERN.exec(lineText);
 
     if (!match) return null;
 
@@ -19,8 +21,4 @@ export function parseGitHubAlertTitleLine(lineText: string): { type: GitHubAlert
     const title = match[2]?.trim();
 
     return title ? { type, title } : { type };
-}
-
-export function isBlockQuoteLine(lineText: string): boolean {
-    return /^\s*>/.test(lineText);
 }

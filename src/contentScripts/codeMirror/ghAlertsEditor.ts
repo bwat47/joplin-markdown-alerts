@@ -74,18 +74,10 @@ function computeDecorations(view: EditorView): DecorationSet {
     }
 
     const doc = view.state.doc;
-
-    let minFrom = view.viewport.from;
-    let maxTo = view.viewport.to;
-    for (const { from, to } of view.visibleRanges) {
-        if (from < minFrom) minFrom = from;
-        if (to > maxTo) maxTo = to;
-    }
-
     const ranges: Range<Decoration>[] = [];
     const seenBlockquotes = new Set<string>();
 
-    const tree = ensureSyntaxTree(view.state, maxTo, SYNTAX_TREE_TIMEOUT);
+    const tree = ensureSyntaxTree(view.state, view.viewport.to, SYNTAX_TREE_TIMEOUT);
     if (!tree) return Decoration.set([], true);
 
     const decorateBlockquote = (blockquoteFrom: number, blockquoteTo: number) => {

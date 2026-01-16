@@ -20,6 +20,7 @@
         "publish"
     ],
     "devDependencies": {
+        "@codemirror/view": "^6.39.7",
         "@eslint/eslintrc": "^3.3.3",
         "@eslint/js": "^9.39.1",
         "@types/jest": "^30.0.0",

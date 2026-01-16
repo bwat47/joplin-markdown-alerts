@@ -1,4 +1,4 @@
-# joplin-markdown-alerts (internal)
+# Architecture overview (internal)
 
 ## Goal
 
@@ -15,7 +15,7 @@ GitHub alert syntax:
 
 ### Shared Module
 
-- `src/alerts/alertColors.ts` - Single source of truth for light/dark theme colors used by both viewer and editor
+- `src/alerts/alertColors.ts` - Light/dark theme colors used by both viewer and editor
 - `src/alerts/alertParsing.ts` - Shared parsing logic (`parseGitHubAlertTitleLine`) and alert type constants
 
 ### Viewer (Markdown Renderer)

@@ -42,6 +42,7 @@ function computeDecorations(view: EditorView): DecorationSet {
     const doc = view.state.doc;
     const ranges: Range<Decoration>[] = [];
     const seenBlockquotes = new Set<string>();
+    const cursorLineNo = doc.lineAt(view.state.selection.main.head).number;
 
     const tree = ensureSyntaxTree(view.state, view.viewport.to, SYNTAX_TREE_TIMEOUT);
     if (!tree) return Decoration.set([], true);
@@ -54,6 +55,15 @@ function computeDecorations(view: EditorView): DecorationSet {
         const titleLine = doc.line(startLineNo);
         const title = parseGitHubAlertTitleLine(titleLine.text);
         if (!title) return;
+
+        if ('title' in title && cursorLineNo !== startLineNo) {
+            ranges.push(
+                Decoration.replace({}).range(
+                    titleLine.from + title.markerHideRange.from,
+                    titleLine.from + title.markerHideRange.to
+                )
+            );
+        }
 
         for (let n = startLineNo; n <= endLineNo; n++) {
             const currentLine = doc.line(n);
@@ -89,7 +99,7 @@ const alertsPlugin = ViewPlugin.fromClass(
         }
 
         update(update: ViewUpdate) {
-            if (update.docChanged || update.viewportChanged) {
+            if (update.docChanged || update.viewportChanged || update.selectionSet) {
                 this.decorations = computeDecorations(update.view);
             }
         }

@@ -3,7 +3,8 @@ import type { CodeMirrorControl } from 'api/types';
 import type { EditorState, Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 
-import { parseGitHubAlertTitleLine } from '../../alerts/githubAlert';
+import { ALERT_COLORS } from '../../alerts/alertColors';
+import { GITHUB_ALERT_TYPES, type GitHubAlertType, parseGitHubAlertTitleLine } from '../../alerts/githubAlert';
 
 declare const require: (moduleName: string) => unknown;
 
@@ -38,6 +39,7 @@ function loadEnsureSyntaxTree(): EnsureSyntaxTree | null {
 
 const ensureSyntaxTree = loadEnsureSyntaxTree();
 
+/** Base structural styles (no colors) */
 const alertsBaseTheme = EditorView.baseTheme({
     '.cm-line.cm-gh-alert': {
         borderLeft: '4px solid var(--cm-gh-alert-color)',
@@ -48,28 +50,23 @@ const alertsBaseTheme = EditorView.baseTheme({
     '.cm-line.cm-gh-alert-title': {
         fontWeight: '600',
     },
-
-    '.cm-line.cm-gh-alert.cm-gh-alert-note': {
-        '--cm-gh-alert-color': '#0969da',
-        '--cm-gh-alert-bg': 'rgba(9, 105, 218, 0.08)',
-    },
-    '.cm-line.cm-gh-alert.cm-gh-alert-tip': {
-        '--cm-gh-alert-color': '#1a7f37',
-        '--cm-gh-alert-bg': 'rgba(26, 127, 55, 0.08)',
-    },
-    '.cm-line.cm-gh-alert.cm-gh-alert-important': {
-        '--cm-gh-alert-color': '#8250df',
-        '--cm-gh-alert-bg': 'rgba(130, 80, 223, 0.08)',
-    },
-    '.cm-line.cm-gh-alert.cm-gh-alert-warning': {
-        '--cm-gh-alert-color': '#9a6700',
-        '--cm-gh-alert-bg': 'rgba(154, 103, 0, 0.10)',
-    },
-    '.cm-line.cm-gh-alert.cm-gh-alert-caution': {
-        '--cm-gh-alert-color': '#d1242f',
-        '--cm-gh-alert-bg': 'rgba(209, 36, 47, 0.08)',
-    },
 });
+
+/** Generate color theme rules for a given theme mode */
+function buildColorTheme(isDark: boolean) {
+    const colors = isDark ? ALERT_COLORS.dark : ALERT_COLORS.light;
+    const rules: Record<string, Record<string, string>> = {};
+
+    for (const type of GITHUB_ALERT_TYPES) {
+        const { color, bg } = colors[type as GitHubAlertType];
+        rules[`&.cm-gh-alert-${type}`] = {
+            '--cm-gh-alert-color': color,
+            '--cm-gh-alert-bg': bg,
+        };
+    }
+
+    return EditorView.theme({ '.cm-line.cm-gh-alert': rules });
+}
 
 function computeDecorations(view: EditorView): DecorationSet {
     if (!ensureSyntaxTree) {
@@ -152,7 +149,12 @@ export default function () {
             const editorControl = codeMirrorOrEditorControl as Partial<CodeMirrorControl>;
             if (typeof editorControl.addExtension !== 'function') return;
 
-            editorControl.addExtension([alertsBaseTheme, alertsPlugin]);
+            // Detect dark theme from the editor state
+            const editor = editorControl.editor;
+            const isDarkTheme = editor?.state?.facet(EditorView.darkTheme) ?? false;
+            const colorTheme = buildColorTheme(isDarkTheme);
+
+            editorControl.addExtension([alertsBaseTheme, colorTheme, alertsPlugin]);
         },
     };
 }

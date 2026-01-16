@@ -5,7 +5,7 @@
  * `setDebug` method to enable verbose output.
  */
 
-const PREFIX = '[joplin-callouts]';
+const PREFIX = '[markdown-alerts]';
 
 let debugEnabled = false;
 

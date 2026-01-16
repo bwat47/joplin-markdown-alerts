@@ -1,6 +1,6 @@
 ## Project Documentation
 
-joplin-callouts.md
+joplin-markdown-alerts.md
 
 - Internal documentation about project architecture, intended for LLMs to reference for context
 - Keep up to date with architecture changes when applicable

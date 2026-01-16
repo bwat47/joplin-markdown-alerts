@@ -9,19 +9,6 @@ import { GITHUB_ALERT_TYPES, type GitHubAlertType, parseGitHubAlertTitleLine } f
 
 const SYNTAX_TREE_TIMEOUT = 100;
 
-/**
- * Matches a GitHub alert title line that includes a custom title, and captures the
- * exact marker range to potentially hide.
- *
- * Examples:
- * - `> [!NOTE] My title`
- * - `   >    [!warning] Optional title`
- */
-const ALERT_TITLE_WITH_CUSTOM_TITLE_PATTERN = new RegExp(
-    `^(\\s*>\\s*)\\[!(${GITHUB_ALERT_TYPES.join('|')})\\]([ \\t]+)(\\S.*)$`,
-    'i'
-);
-
 /** Base structural styles (no colors) */
 const alertsBaseTheme = EditorView.baseTheme({
     '.cm-line.cm-gh-alert': {
@@ -51,19 +38,6 @@ function buildColorTheme(isDark: boolean) {
     return EditorView.theme({ '.cm-line.cm-gh-alert': rules });
 }
 
-function computeAlertMarkerHideRange(lineText: string): { from: number; to: number } | null {
-    const match = ALERT_TITLE_WITH_CUSTOM_TITLE_PATTERN.exec(lineText);
-    if (!match) return null;
-
-    const prefixLength = match[1].length;
-    const typeText = match[2];
-    const whitespaceAfterMarker = match[3];
-
-    const markerLength = `[!${typeText}]`.length + whitespaceAfterMarker.length;
-
-    return { from: prefixLength, to: prefixLength + markerLength };
-}
-
 function computeDecorations(view: EditorView): DecorationSet {
     const doc = view.state.doc;
     const ranges: Range<Decoration>[] = [];
@@ -82,13 +56,13 @@ function computeDecorations(view: EditorView): DecorationSet {
         const title = parseGitHubAlertTitleLine(titleLine.text);
         if (!title) return;
 
-        if (title.title && cursorLineNo !== startLineNo) {
-            const markerRange = computeAlertMarkerHideRange(titleLine.text);
-            if (markerRange) {
-                ranges.push(
-                    Decoration.replace({}).range(titleLine.from + markerRange.from, titleLine.from + markerRange.to)
-                );
-            }
+        if ('title' in title && cursorLineNo !== startLineNo) {
+            ranges.push(
+                Decoration.replace({}).range(
+                    titleLine.from + title.markerHideRange.from,
+                    titleLine.from + title.markerHideRange.to
+                )
+            );
         }
 
         for (let n = startLineNo; n <= endLineNo; n++) {

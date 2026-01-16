@@ -1,43 +1,13 @@
 import type { CodeMirrorControl } from 'api/types';
 
-import type { EditorState, Range } from '@codemirror/state';
+import { ensureSyntaxTree } from '@codemirror/language';
+import type { Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 
 import { ALERT_COLORS } from '../../alerts/alertColors';
 import { GITHUB_ALERT_TYPES, type GitHubAlertType, parseGitHubAlertTitleLine } from '../../alerts/githubAlert';
 
-declare const require: (moduleName: string) => unknown;
-
-type SyntaxNodeRef = { name: string; from: number; to: number };
-
-type SyntaxTree = {
-    iterate: (spec: { from: number; to: number; enter: (node: SyntaxNodeRef) => void }) => void;
-};
-
-type EnsureSyntaxTree = (state: EditorState, upto: number, timeout: number) => SyntaxTree | null;
-
 const SYNTAX_TREE_TIMEOUT = 100;
-
-function isNonNullObject(value: unknown): value is Record<string, unknown> {
-    return (typeof value === 'object' || typeof value === 'function') && value !== null;
-}
-
-function getEnsureSyntaxTree(moduleValue: unknown): EnsureSyntaxTree | null {
-    if (!isNonNullObject(moduleValue)) return null;
-    const candidate = moduleValue['ensureSyntaxTree'];
-    if (typeof candidate !== 'function') return null;
-    return candidate as unknown as EnsureSyntaxTree;
-}
-
-function loadEnsureSyntaxTree(): EnsureSyntaxTree | null {
-    try {
-        return getEnsureSyntaxTree(require('@codemirror/language'));
-    } catch {
-        return null;
-    }
-}
-
-const ensureSyntaxTree = loadEnsureSyntaxTree();
 
 /** Base structural styles (no colors) */
 const alertsBaseTheme = EditorView.baseTheme({
@@ -69,10 +39,6 @@ function buildColorTheme(isDark: boolean) {
 }
 
 function computeDecorations(view: EditorView): DecorationSet {
-    if (!ensureSyntaxTree) {
-        return Decoration.set([], true);
-    }
-
     const doc = view.state.doc;
     const ranges: Range<Decoration>[] = [];
     const seenBlockquotes = new Set<string>();

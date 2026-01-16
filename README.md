@@ -2,6 +2,9 @@
 
 A simple Joplin plugin that adds support for Github alert syntax in the Markdown Editor and Markdown viewer.
 
+> [!CAUTION]
+> Note that the Rich Text Editor is **not** supported. Alerts will (sort of) render in the Rich Text Editor, but editing the note in the Rich Text Editor will remove any github alert syntax.
+
 ## Alert syntax
 
 **Alerts**, also sometimes known as **callouts** or **admonitions**, are a Markdown extension based on the blockquote syntax that you can use to emphasize critical information: https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts
@@ -30,14 +33,11 @@ To add an alert, use a special blockquote line specifying the alert type, follow
 
 ## Markdown Editor
 
+A command to quickly create an alert is provided via an icon on the editing toolbar, keyboard shortcut (`Ctrl + Shift + A` by default), and an entry in the Edit menu. This will automatically insert `> [!NOTE] ` at the cursor position.
+
 The plugin will apply styling to block quotes containing github alert syntax. They will be similar to standard Joplin block quote styling, but with coloring based on the alert type. If you specify a title after the alert syntax in the first line of the block quote, only the title will be displayed when your cursor isn't on that line:
 
 <img width="2154" height="1482" alt="screenshot1" src="https://github.com/user-attachments/assets/f117331b-bec2-4d4a-923d-060079d3ca65" />
-
-A command to quickly create an alert is provided via an icon on the editing toolbar, keyboard shortcut (`Ctrl + Shift + A` by default), and an entry in the Edit menu. This will automatically insert `> [!NOTE] ` at the cursor position.
-
-> [!CAUTION]
-> Note that the Rich Text Editor is **not** supported. Alerts will (sort of) render in the Rich Text Editor, but editing the note in the Rich Text Editor will remove any github alert syntax.
 
 ## Markdown Viewer
 

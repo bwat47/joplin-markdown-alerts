@@ -34,7 +34,7 @@ Files:
 
 - Implemented as a Joplin `CodeMirrorPlugin` content script.
 - Uses CodeMirror 6 line decorations (not block widgets) so the markdown source remains visible and editable.
-- Detects alert blocks by finding blockquote regions whose first line matches `> [!TYPE]` with GitHub default types only.
+- Detects alert blocks by using the CM6 syntax tree (`ensureSyntaxTree`) to find real Markdown blockquotes, then checking the first line for `> [!TYPE]` with GitHub default types only.
 - Applies line classes per alert type with `Decoration.line(...)` and styling via `EditorView.baseTheme`.
 - Uses standard CodeMirror 6 imports (`@codemirror/view`, `@codemirror/state`) and installs the extension via `editorControl.addExtension(...)`.
 - If the content script is invoked in a non-CM6 editor context (no `addExtension`), it no-ops.

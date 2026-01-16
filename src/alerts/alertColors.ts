@@ -1,4 +1,4 @@
-import type { GitHubAlertType } from './githubAlert';
+import type { GitHubAlertType } from './alertParsing';
 
 type AlertColorSet = {
     [K in GitHubAlertType]: { color: string; bg: string };

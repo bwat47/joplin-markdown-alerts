@@ -5,7 +5,7 @@ import type { Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 
 import { ALERT_COLORS } from '../../alerts/alertColors';
-import { GITHUB_ALERT_TYPES, type GitHubAlertType, parseGitHubAlertTitleLine } from '../../alerts/githubAlert';
+import { GITHUB_ALERT_TYPES, type GitHubAlertType, parseGitHubAlertTitleLine } from '../../alerts/alertParsing';
 
 const SYNTAX_TREE_TIMEOUT = 100;
 

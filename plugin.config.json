@@ -1,6 +1,6 @@
 {
 	"extraScripts": [
-		"contentScripts/markdownIt/ghAlerts.ts",
-		"contentScripts/codeMirror/ghAlertsEditor.ts"
+		"contentScripts/markdownIt/markdownItPlugin.ts",
+		"contentScripts/codeMirror/alertDecorations.ts"
 	]
 }

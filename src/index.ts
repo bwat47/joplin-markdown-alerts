@@ -10,13 +10,13 @@ joplin.plugins.register({
         await joplin.contentScripts.register(
             ContentScriptType.MarkdownItPlugin,
             'markdownAlerts.markdownIt',
-            './contentScripts/markdownIt/ghAlerts.js'
+            './contentScripts/markdownIt/markdownItPlugin.js'
         );
 
         await joplin.contentScripts.register(
             ContentScriptType.CodeMirrorPlugin,
             'markdownAlerts.codeMirror',
-            './contentScripts/codeMirror/ghAlertsEditor.js'
+            './contentScripts/codeMirror/alertDecorations.js'
         );
     },
 });

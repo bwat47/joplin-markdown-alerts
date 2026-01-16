@@ -16,7 +16,7 @@ GitHub alert syntax:
 ### Shared Module
 
 - `src/alerts/alertColors.ts` - Single source of truth for light/dark theme colors used by both viewer and editor
-- `src/alerts/githubAlert.ts` - Shared parsing logic (`parseGitHubAlertTitleLine`) and alert type constants
+- `src/alerts/alertParsing.ts` - Shared parsing logic (`parseGitHubAlertTitleLine`) and alert type constants
 
 ### Viewer (Markdown Renderer)
 
@@ -26,9 +26,9 @@ GitHub alert syntax:
 
 **Files:**
 
-- `src/contentScripts/markdownIt/ghAlerts.ts` - Plugin integration
-- `src/contentScripts/markdownIt/ghAlerts.css` - Alert styles with transparent backgrounds
-- `src/contentScripts/markdownIt/ghAlerts-theme-*.css` - Theme-specific color variables
+- `src/contentScripts/markdownIt/markdownItPlugin.ts` - Plugin integration
+- `src/contentScripts/markdownIt/alerts.css` - Alert styles with transparent backgrounds
+- `src/contentScripts/markdownIt/alerts-theme-*.css` - Theme-specific color variables
 
 ### Editor (CodeMirror 6)
 
@@ -39,7 +39,7 @@ GitHub alert syntax:
 
 **Files:**
 
-- `src/contentScripts/codeMirror/ghAlertsEditor.ts` - CM6 extension with theme detection
+- `src/contentScripts/codeMirror/alertDecorations.ts` - CM6 extension with theme detection
 
 ## Design Principles
 

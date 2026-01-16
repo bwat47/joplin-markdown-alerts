@@ -29,9 +29,9 @@ export default function () {
                 appearance = '';
             }
 
-            const themeAsset = appearance === 'dark' ? 'ghAlerts-theme-dark.css' : 'ghAlerts-theme-light.css';
+            const themeAsset = appearance === 'dark' ? 'alerts-theme-dark.css' : 'alerts-theme-light.css';
 
-            return [{ name: 'ghAlerts.css' }, { name: themeAsset }];
+            return [{ name: 'alerts.css' }, { name: themeAsset }];
         },
     };
 }

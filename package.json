@@ -26,6 +26,7 @@
         "@types/node": "^24.10.1",
         "@typescript-eslint/eslint-plugin": "^8.48.1",
         "@typescript-eslint/parser": "^8.48.1",
+        "@types/markdown-it": "^14.1.2",
         "baseline-browser-mapping": "^2.9.14",
         "chalk": "^4.1.0",
         "copy-webpack-plugin": "^13.0.1",
@@ -43,5 +44,9 @@
         "typescript": "^5.9.3",
         "webpack": "^5.103.0",
         "webpack-cli": "^6.0.1"
+    },
+    "dependencies": {
+        "markdown-it": "^14.1.0",
+        "markdown-it-github-alerts": "^0.3.2"
     }
 }

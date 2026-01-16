@@ -9,7 +9,7 @@ const alertsBaseTheme = EditorView.baseTheme({
     '.cm-line.cm-gh-alert': {
         borderLeft: '4px solid var(--cm-gh-alert-color)',
         paddingLeft: '8px',
-        marginLeft: '2px',
+        marginLeft: '0',
         backgroundColor: 'var(--cm-gh-alert-bg)',
     },
     '.cm-line.cm-gh-alert-title': {
@@ -114,7 +114,7 @@ const alertsPlugin = ViewPlugin.fromClass(
     },
     {
         decorations: (value) => value.decorations,
-    },
+    }
 );
 
 export default function () {

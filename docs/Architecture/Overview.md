@@ -43,6 +43,6 @@ GitHub alert syntax:
 
 ## Design Principles
 
-- Editor uses styling only (no text hiding or replacement)
+- Editor uses styling/text hiding only (no block widgets)
 - Single detection path via `parseGitHubAlertTitleLine` with regex derived from `GITHUB_ALERT_TYPES`
 - Consistent styling between editor and viewer (4px border, transparent backgrounds, matching colors)

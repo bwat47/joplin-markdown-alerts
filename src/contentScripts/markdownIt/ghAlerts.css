@@ -2,7 +2,7 @@
     padding: 0.5rem 1rem;
     margin-bottom: 16px;
     color: inherit;
-    border-left: 0.25em solid #888;
+    border-left: 4px solid #888;
 }
 
 .markdown-alert > :first-child {
@@ -15,7 +15,7 @@
 
 .markdown-alert .markdown-alert-title {
     display: flex;
-    font-weight: 500;
+    font-weight: 600;
     align-items: center;
     line-height: 1;
 }
@@ -30,6 +30,7 @@
 
 .markdown-alert.markdown-alert-note {
     border-left-color: var(--color-note);
+    background-color: var(--color-note-bg);
 }
 
 .markdown-alert.markdown-alert-note .markdown-alert-title {
@@ -38,6 +39,7 @@
 
 .markdown-alert.markdown-alert-important {
     border-left-color: var(--color-important);
+    background-color: var(--color-important-bg);
 }
 
 .markdown-alert.markdown-alert-important .markdown-alert-title {
@@ -46,6 +48,7 @@
 
 .markdown-alert.markdown-alert-warning {
     border-left-color: var(--color-warning);
+    background-color: var(--color-warning-bg);
 }
 
 .markdown-alert.markdown-alert-warning .markdown-alert-title {
@@ -54,6 +57,7 @@
 
 .markdown-alert.markdown-alert-tip {
     border-left-color: var(--color-tip);
+    background-color: var(--color-tip-bg);
 }
 
 .markdown-alert.markdown-alert-tip .markdown-alert-title {
@@ -62,8 +66,10 @@
 
 .markdown-alert.markdown-alert-caution {
     border-left-color: var(--color-caution);
+    background-color: var(--color-caution-bg);
 }
 
 .markdown-alert.markdown-alert-caution .markdown-alert-title {
     color: var(--color-caution);
 }
+

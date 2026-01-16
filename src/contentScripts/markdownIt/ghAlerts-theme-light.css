@@ -1,8 +1,12 @@
 :root {
     --color-note: #0969da;
+    --color-note-bg: rgba(9, 105, 218, 0.08);
     --color-tip: #1a7f37;
+    --color-tip-bg: rgba(26, 127, 55, 0.08);
     --color-warning: #9a6700;
+    --color-warning-bg: rgba(154, 103, 0, 0.10);
     --color-caution: #d1242f;
+    --color-caution-bg: rgba(209, 36, 47, 0.08);
     --color-important: #8250df;
+    --color-important-bg: rgba(130, 80, 223, 0.08);
 }
-

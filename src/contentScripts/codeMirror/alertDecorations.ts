@@ -27,7 +27,6 @@ const alertsBaseTheme = EditorView.baseTheme({
         alignItems: 'center',
         marginRight: '0.5rem',
         verticalAlign: 'middle',
-        fill: 'currentColor',
     },
     '.cm-gh-alert-icon svg': {
         fill: 'currentColor',

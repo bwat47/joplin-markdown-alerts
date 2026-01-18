@@ -4,6 +4,7 @@ import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate
 import type { SyntaxNode } from '@lezer/common';
 
 import { ALERT_COLORS } from '../../alerts/alertColors';
+import { ALERT_ICONS } from '../../alerts/alertIcons';
 import { GITHUB_ALERT_TYPES, type GitHubAlertType, parseGitHubAlertTitleLine } from '../../alerts/alertParsing';
 
 const SYNTAX_TREE_TIMEOUT = 100;
@@ -20,6 +21,17 @@ const alertsBaseTheme = EditorView.baseTheme({
     '.cm-line.cm-gh-alert-title': {
         fontWeight: '600',
         color: 'var(--cm-gh-alert-color)',
+    },
+    '.cm-gh-alert-icon': {
+        display: 'inline-flex',
+        alignItems: 'center',
+        marginRight: '0.5rem',
+        verticalAlign: 'middle',
+        fill: 'currentColor',
+    },
+    '.cm-gh-alert-title-widget': {
+        display: 'inline-flex',
+        alignItems: 'center',
     },
 });
 
@@ -64,17 +76,18 @@ function computeDecorations(view: EditorView): DecorationSet {
 
         if (!isLineSelected) {
             if ('title' in title) {
+                // Custom title: replace marker + whitespace with icon + custom title widget
                 ranges.push(
-                    Decoration.replace({}).range(
-                        titleLine.from + title.markerHideRange.from,
-                        titleLine.from + title.markerHideRange.to
-                    )
+                    Decoration.replace({
+                        widget: new AlertTitleWidget(title.type, title.title),
+                    }).range(titleLine.from + title.markerHideRange.from, titleLine.to)
                 );
             } else {
+                // Default title: replace marker with icon + capitalized type name
                 const typeText = title.type.charAt(0).toUpperCase() + title.type.slice(1);
                 ranges.push(
                     Decoration.replace({
-                        widget: new AlertTitleWidget(typeText),
+                        widget: new AlertTitleWidget(title.type, typeText),
                     }).range(titleLine.from + title.markerRange.from, titleLine.from + title.markerRange.to)
                 );
             }
@@ -125,18 +138,28 @@ const alertsPlugin = ViewPlugin.fromClass(
 );
 
 class AlertTitleWidget extends WidgetType {
-    constructor(private readonly text: string) {
+    constructor(
+        private readonly type: GitHubAlertType,
+        private readonly text: string
+    ) {
         super();
     }
 
     eq(other: AlertTitleWidget) {
-        return other.text === this.text;
+        return other.type === this.type && other.text === this.text;
     }
 
     toDOM() {
         const span = document.createElement('span');
-        span.textContent = this.text;
+        span.className = 'cm-gh-alert-title-widget';
+        span.innerHTML = `<span class="cm-gh-alert-icon">${ALERT_ICONS[this.type]}</span>${this.escapeHtml(this.text)}`;
         return span;
+    }
+
+    private escapeHtml(text: string): string {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     ignoreEvent() {

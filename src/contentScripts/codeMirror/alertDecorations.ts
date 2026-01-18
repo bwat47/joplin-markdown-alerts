@@ -43,8 +43,10 @@ function computeDecorations(view: EditorView): DecorationSet {
     const doc = view.state.doc;
     const ranges: Range<Decoration>[] = [];
     const seenBlockquotes = new Set<string>();
-    const tree = ensureSyntaxTree(view.state, view.viewport.to, SYNTAX_TREE_TIMEOUT);
-    if (!tree) return Decoration.set([], true);
+    let tree = ensureSyntaxTree(view.state, view.viewport.to, SYNTAX_TREE_TIMEOUT);
+    if (!tree) {
+        tree = syntaxTree(view.state);
+    }
 
     const decorateBlockquote = (blockquoteFrom: number, blockquoteTo: number) => {
         const endPos = Math.max(blockquoteFrom, blockquoteTo - 1);

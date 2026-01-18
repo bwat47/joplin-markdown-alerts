@@ -46,8 +46,7 @@ GitHub alert syntax:
 ### Commands
 
 - `markdownAlerts.insertNoteAlert`: Global command (accessible via menu/shortcut)
-    - Tries to execute `markdownAlerts.insertAlertOrToggle` via CM6 editor control
-    - Fallback: Inserts `> [!NOTE] ` text directly if CM6 command fails
+    - Executes `markdownAlerts.insertAlertOrToggle` via CM6 editor control to insert new alert, or toggle alert types on existing alerts (or convert block quote to alert).
 
 ## Design Principles
 

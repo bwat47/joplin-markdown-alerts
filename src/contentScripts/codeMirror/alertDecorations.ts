@@ -179,14 +179,12 @@ export default function () {
                 const tree = syntaxTree(state);
                 let node: SyntaxNode | null = tree.resolveInner(cursorPos, -1);
 
-                let nearestBlockquoteFrom: number | null = null;
                 let outermostBlockquoteFrom: number | null = null;
 
                 // Walk up ancestor nodes, preferring to toggle a blockquote whose first line
                 // actually matches the GitHub alert marker syntax.
                 while (node) {
                     if (node.name.toLowerCase() === 'blockquote') {
-                        if (nearestBlockquoteFrom === null) nearestBlockquoteFrom = node.from;
                         outermostBlockquoteFrom = node.from;
 
                         const blockquoteStartLine = state.doc.lineAt(node.from);

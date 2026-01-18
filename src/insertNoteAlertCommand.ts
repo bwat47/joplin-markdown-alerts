@@ -1,5 +1,5 @@
 import joplin from 'api';
-import { MenuItemLocation, ToolbarButtonLocation } from 'api/types';
+import { MenuItemLocation, ToastType, ToolbarButtonLocation } from 'api/types';
 
 export const INSERT_NOTE_ALERT_COMMAND_NAME = 'markdownAlerts.insertNoteAlert';
 export const INSERT_NOTE_ALERT_TEXT = '> [!NOTE] ';
@@ -14,12 +14,24 @@ export async function registerInsertNoteAlertCommand(): Promise<void> {
         label: 'Insert Markdown Alert',
         iconName: 'fas fa-exclamation-circle',
         execute: async () => {
+            const isMarkdown = !!(await joplin.settings.globalValue('editor.codeView'));
+            if (!isMarkdown) {
+                await joplin.views.dialogs.showToast({
+                    message: 'Markdown Alerts: This command only works in the Markdown editor',
+                    type: ToastType.Info,
+                });
+                return;
+            }
+
             try {
                 await joplin.commands.execute('editor.execCommand', {
                     name: 'markdownAlerts.insertAlertOrToggle',
                 });
             } catch {
-                await joplin.commands.execute('insertText', INSERT_NOTE_ALERT_TEXT);
+                await joplin.views.dialogs.showToast({
+                    message: 'Markdown Alerts: Failed to run editor command.',
+                    type: ToastType.Error,
+                });
             }
         },
     });

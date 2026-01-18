@@ -78,11 +78,11 @@ function computeDecorations(view: EditorView): DecorationSet {
 
         if (!isLineSelected) {
             if ('title' in title) {
-                // Custom title: replace marker + whitespace with icon + custom title widget
+                // Custom title: replace marker + title with icon + custom title widget
                 ranges.push(
                     Decoration.replace({
                         widget: new AlertTitleWidget(title.type, title.title),
-                    }).range(titleLine.from + title.markerHideRange.from, titleLine.to)
+                    }).range(titleLine.from + title.markerRange.from, titleLine.to)
                 );
             } else {
                 // Default title: replace marker with icon + capitalized type name

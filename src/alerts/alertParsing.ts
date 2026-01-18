@@ -21,12 +21,6 @@ export type ParsedGitHubAlertTitleLine =
            * to the alert marker `[!TYPE]`.
            */
           markerRange: TextRange;
-          /**
-           * Character range (0-based, within the original line text) that corresponds
-           * to the alert marker plus the whitespace that follows it, suitable for
-           * hiding when a custom title is present.
-           */
-          markerHideRange: TextRange;
       };
 
 /**
@@ -40,7 +34,7 @@ export type ParsedGitHubAlertTitleLine =
 const ALERT_TITLE_LINE_PATTERN = new RegExp(
     // Match one-or-more blockquote markers (`>`), allowing optional whitespace after each.
     // This supports nested blockquotes like `>> [!NOTE]` and `> > [!NOTE]`.
-    `^(\\s*(?:>\\s*)+)\\[!(${GITHUB_ALERT_TYPES.join('|')})\\](?:([ \\t]+)(.*))?$`,
+    `^(\\s*(?:>\\s*)+)\\[!(${GITHUB_ALERT_TYPES.join('|')})\\](?:[ \\t]+(.*))?$`,
     'i'
 );
 
@@ -53,8 +47,7 @@ export function parseGitHubAlertTitleLine(lineText: string): ParsedGitHubAlertTi
     const typeText = match[2];
     const type = typeText.toLowerCase() as GitHubAlertType;
 
-    const whitespaceAfterMarker = match[3] ?? '';
-    const title = match[4]?.trim();
+    const title = match[3]?.trim();
 
     const markerLength = `[!${typeText}]`.length;
     const markerRange: TextRange = {
@@ -64,10 +57,5 @@ export function parseGitHubAlertTitleLine(lineText: string): ParsedGitHubAlertTi
 
     if (!title) return { type, markerRange };
 
-    const markerHideRange: TextRange = {
-        from: markerRange.from,
-        to: markerRange.to + whitespaceAfterMarker.length,
-    };
-
-    return { type, title, markerRange, markerHideRange };
+    return { type, title, markerRange };
 }

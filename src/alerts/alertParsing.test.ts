@@ -36,7 +36,7 @@ describe('parseGitHubAlertTitleLine', () => {
 
         expect(parsed.type).toBe('warning');
         expect(parsed.title).toBe('Optional title');
-        expect(line.slice(parsed.markerHideRange.from, parsed.markerHideRange.to)).toBe('[!warning] ');
+        expect(line.slice(parsed.markerRange.from, parsed.markerRange.to)).toBe('[!warning]');
     });
 
     test('parses title line with custom title (case-insensitive type)', () => {
@@ -50,7 +50,7 @@ describe('parseGitHubAlertTitleLine', () => {
 
         expect(parsed.type).toBe('warning');
         expect(parsed.title).toBe('Optional title');
-        expect(line.slice(parsed.markerHideRange.from, parsed.markerHideRange.to)).toBe('[!warning] ');
+        expect(line.slice(parsed.markerRange.from, parsed.markerRange.to)).toBe('[!warning]');
     });
 
     test('preserves marker length using original type casing', () => {
@@ -61,10 +61,10 @@ describe('parseGitHubAlertTitleLine', () => {
 
         expect(parsed.type).toBe('tip');
         expect(parsed.title).toBe('My title');
-        expect(line.slice(parsed.markerHideRange.from, parsed.markerHideRange.to)).toBe('[!Tip] ');
+        expect(line.slice(parsed.markerRange.from, parsed.markerRange.to)).toBe('[!Tip]');
     });
 
-    test('markerHideRange includes whitespace after marker', () => {
+    test('trims the title and computes markerRange with extra whitespace', () => {
         const line = '   >    [!NOTE]   Title';
         const parsed = parseGitHubAlertTitleLine(line);
 
@@ -72,6 +72,6 @@ describe('parseGitHubAlertTitleLine', () => {
 
         expect(parsed.type).toBe('note');
         expect(parsed.title).toBe('Title');
-        expect(line.slice(parsed.markerHideRange.from, parsed.markerHideRange.to)).toBe('[!NOTE]   ');
+        expect(line.slice(parsed.markerRange.from, parsed.markerRange.to)).toBe('[!NOTE]');
     });
 });

@@ -21,19 +21,6 @@ Architecture overview: docs/Architecture/Overview.md
 - Never force push to main
 - Never approve or merge (human decision)
 
-## Key Entry Points
-
-Start here when exploring the codebase:
-
-| File                                                | Purpose                                                                      |
-| --------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `src/alerts/alertColors.ts`                         | Alert colors for light and dark themes, used by the codemirror decorations   |
-| `src/alerts/alertParsing.ts`                        | Logic for parsing alert title lines (`[!TYPE] Title`) in the markdown editor |
-| `src/contentScripts/codeMirror/alertDecorations.ts` | Alert styling via codemirror line decorations for the markdown editor        |
-| `src/contentScripts/markdownIt/markdownItPlugin.ts` | markdownIt renderer plugin for joplin markdown viewer                        |
-| `src/contentScripts/markdownIt/alerts.css`          | Alert styles with transparent backgrounds used by the markdownIt plugin      |
-| `src/contentScripts/markdownIt/alerts-theme-*.css`  | Theme-specific color variables for the markdownIt plugin                     |
-
 ## Common Pitfalls
 
 - **Build command**: Use `npm run dist`, not `npm run build` or `npx tsc`.

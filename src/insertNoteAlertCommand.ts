@@ -14,7 +14,9 @@ export async function registerInsertNoteAlertCommand(): Promise<void> {
         label: 'Insert Markdown Alert',
         iconName: 'fas fa-exclamation-circle',
         execute: async () => {
-            await joplin.commands.execute('insertText', INSERT_NOTE_ALERT_TEXT);
+            await joplin.commands.execute('editor.execCommand', {
+                name: 'markdownAlerts.insertAlertOrToggle',
+            });
         },
     });
 

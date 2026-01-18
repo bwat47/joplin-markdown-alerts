@@ -1,6 +1,6 @@
 import type { CodeMirrorControl } from 'api/types';
 
-import { ensureSyntaxTree } from '@codemirror/language';
+import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view';
 
@@ -157,6 +157,63 @@ export default function () {
             const colorTheme = buildColorTheme(isDarkTheme);
 
             editorControl.addExtension([alertsBaseTheme, colorTheme, alertsPlugin]);
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (editorControl as any).registerCommand('markdownAlerts.insertAlertOrToggle', () => {
+                const view = editorControl.cm6;
+                const state = view.state;
+                const cursorPos = state.selection.main.head;
+
+                const tree = syntaxTree(state);
+                let node = tree.resolveInner(cursorPos, -1);
+
+                // Find parent blockquote if any
+                while (node && node.name.toLowerCase() !== 'blockquote' && node.parent) {
+                    node = node.parent;
+                }
+
+                if (node && node.name.toLowerCase() === 'blockquote') {
+                    const blockquoteStartLine = state.doc.lineAt(node.from);
+                    const lineText = blockquoteStartLine.text;
+                    const alertInfo = parseGitHubAlertTitleLine(lineText);
+
+                    if (alertInfo) {
+                        // Toggle existing alert
+                        const currentType = alertInfo.type;
+                        const currentIndex = GITHUB_ALERT_TYPES.indexOf(currentType);
+                        const nextIndex = (currentIndex + 1) % GITHUB_ALERT_TYPES.length;
+                        const nextType = GITHUB_ALERT_TYPES[nextIndex];
+                        const nextTypeUpper = nextType.toUpperCase();
+
+                        // Replace the marker [!TYPE] with [!NEXT_TYPE]
+                        const from = blockquoteStartLine.from + alertInfo.markerRange.from;
+                        const to = blockquoteStartLine.from + alertInfo.markerRange.to;
+
+                        view.dispatch({
+                            changes: { from, to, insert: `[!${nextTypeUpper}]` },
+                        });
+                        return true;
+                    } else {
+                        // Convert standard blockquote to alert
+                        // Find the end of the blockquote prefix (e.g. "> " or ">> ")
+                        const match = /^(\s*(?:>\s*)+)/.exec(lineText);
+                        if (match) {
+                            const prefixLength = match[1].length;
+                            const insertionPoint = blockquoteStartLine.from + prefixLength;
+
+                            view.dispatch({
+                                changes: { from: insertionPoint, insert: '[!NOTE] ' },
+                            });
+                            return true;
+                        }
+                    }
+                }
+
+                // Default: Insert new alert at cursor
+                const text = '> [!NOTE] ';
+                view.dispatch(view.state.replaceSelection(text));
+                return true;
+            });
         },
     };
 }

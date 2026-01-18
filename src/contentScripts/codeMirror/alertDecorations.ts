@@ -2,7 +2,7 @@ import type { CodeMirrorControl } from 'api/types';
 
 import { ensureSyntaxTree } from '@codemirror/language';
 import type { Range } from '@codemirror/state';
-import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
+import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view';
 
 import { ALERT_COLORS } from '../../alerts/alertColors';
 import { GITHUB_ALERT_TYPES, type GitHubAlertType, parseGitHubAlertTitleLine } from '../../alerts/alertParsing';
@@ -16,9 +16,11 @@ const alertsBaseTheme = EditorView.baseTheme({
         paddingLeft: '8px',
         marginLeft: '0',
         backgroundColor: 'var(--cm-gh-alert-bg)',
+        opacity: 1,
     },
     '.cm-line.cm-gh-alert-title': {
         fontWeight: '600',
+        color: 'var(--cm-gh-alert-color)',
     },
 });
 
@@ -42,8 +44,6 @@ function computeDecorations(view: EditorView): DecorationSet {
     const doc = view.state.doc;
     const ranges: Range<Decoration>[] = [];
     const seenBlockquotes = new Set<string>();
-    const cursorLineNo = doc.lineAt(view.state.selection.main.head).number;
-
     const tree = ensureSyntaxTree(view.state, view.viewport.to, SYNTAX_TREE_TIMEOUT);
     if (!tree) return Decoration.set([], true);
 
@@ -56,13 +56,27 @@ function computeDecorations(view: EditorView): DecorationSet {
         const title = parseGitHubAlertTitleLine(titleLine.text);
         if (!title) return;
 
-        if ('title' in title && cursorLineNo !== startLineNo) {
-            ranges.push(
-                Decoration.replace({}).range(
-                    titleLine.from + title.markerHideRange.from,
-                    titleLine.from + title.markerHideRange.to
-                )
-            );
+        // Check if any selection range overlaps with the title line
+        const isLineSelected = view.state.selection.ranges.some(
+            (range) => range.from <= titleLine.to && range.to >= titleLine.from
+        );
+
+        if (!isLineSelected) {
+            if ('title' in title) {
+                ranges.push(
+                    Decoration.replace({}).range(
+                        titleLine.from + title.markerHideRange.from,
+                        titleLine.from + title.markerHideRange.to
+                    )
+                );
+            } else {
+                const typeText = title.type.charAt(0).toUpperCase() + title.type.slice(1);
+                ranges.push(
+                    Decoration.replace({
+                        widget: new AlertTitleWidget(typeText),
+                    }).range(titleLine.from + title.markerRange.from, titleLine.from + title.markerRange.to)
+                );
+            }
         }
 
         for (let n = startLineNo; n <= endLineNo; n++) {
@@ -108,6 +122,26 @@ const alertsPlugin = ViewPlugin.fromClass(
         decorations: (value) => value.decorations,
     }
 );
+
+class AlertTitleWidget extends WidgetType {
+    constructor(private readonly text: string) {
+        super();
+    }
+
+    eq(other: AlertTitleWidget) {
+        return other.text === this.text;
+    }
+
+    toDOM() {
+        const span = document.createElement('span');
+        span.textContent = this.text;
+        return span;
+    }
+
+    ignoreEvent() {
+        return false;
+    }
+}
 
 export default function () {
     return {

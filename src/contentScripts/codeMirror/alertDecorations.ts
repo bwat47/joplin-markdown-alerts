@@ -1,5 +1,3 @@
-import type { CodeMirrorControl } from 'api/types';
-
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view';
@@ -143,12 +141,19 @@ class AlertTitleWidget extends WidgetType {
     }
 }
 
+interface EditorControl {
+    editor: EditorView;
+    cm6: EditorView;
+    addExtension: (extension: unknown) => void;
+    registerCommand: (name: string, callback: (...args: unknown[]) => unknown) => void;
+}
+
 export default function () {
     return {
         plugin: function (codeMirrorOrEditorControl: unknown) {
             if (!codeMirrorOrEditorControl || typeof codeMirrorOrEditorControl !== 'object') return;
 
-            const editorControl = codeMirrorOrEditorControl as Partial<CodeMirrorControl>;
+            const editorControl = codeMirrorOrEditorControl as EditorControl;
             if (typeof editorControl.addExtension !== 'function') return;
 
             // Detect dark theme from the editor state
@@ -158,8 +163,7 @@ export default function () {
 
             editorControl.addExtension([alertsBaseTheme, colorTheme, alertsPlugin]);
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (editorControl as any).registerCommand('markdownAlerts.insertAlertOrToggle', () => {
+            editorControl.registerCommand('markdownAlerts.insertAlertOrToggle', () => {
                 const view = editorControl.cm6;
                 const state = view.state;
                 const cursorPos = state.selection.main.head;

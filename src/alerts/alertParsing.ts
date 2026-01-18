@@ -38,7 +38,9 @@ export type ParsedGitHubAlertTitleLine =
  * - `   >    [!Tip]`
  */
 const ALERT_TITLE_LINE_PATTERN = new RegExp(
-    `^(\\s*>\\s*)\\[!(${GITHUB_ALERT_TYPES.join('|')})\\](?:([ \\t]+)(.*))?$`,
+    // Match one-or-more blockquote markers (`>`), allowing optional whitespace after each.
+    // This supports nested blockquotes like `>> [!NOTE]` and `> > [!NOTE]`.
+    `^(\\s*(?:>\\s*)+)\\[!(${GITHUB_ALERT_TYPES.join('|')})\\](?:([ \\t]+)(.*))?$`,
     'i'
 );
 

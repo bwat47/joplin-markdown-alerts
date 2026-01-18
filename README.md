@@ -40,10 +40,11 @@ A command to quickly create an alert (or toggle alert types) is provided via an 
 
 The plugin will apply styling to block quotes containing github alert syntax. They will be similar to standard Joplin block quote styling, but with coloring based on the alert type, and the line with the alert syntax will be rendered as a title.
 
-<img width="2154" height="1482" alt="screenshot1" src="https://github.com/user-attachments/assets/f117331b-bec2-4d4a-923d-060079d3ca65" />
+<img width="2240" height="1714" alt="screenshot1" src="https://github.com/user-attachments/assets/ac318b01-d708-4a90-ab7a-cc88d8b9ad22" />
 
 ## Markdown Viewer
 
 Block quotes containing github alert syntax will be rendered as github style alerts in the markdown viewer using markdown-it-github-alerts:
 
-<img width="2146" height="1704" alt="screenshot2" src="https://github.com/user-attachments/assets/96f84282-4caa-42d2-99ce-552176071360" />
+<img width="2242" height="1726" alt="screenshot2" src="https://github.com/user-attachments/assets/7544cf05-b5c4-4d4c-856b-9ce06203526e" />
+

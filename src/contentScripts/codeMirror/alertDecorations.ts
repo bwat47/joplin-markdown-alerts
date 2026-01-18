@@ -44,8 +44,6 @@ function computeDecorations(view: EditorView): DecorationSet {
     const doc = view.state.doc;
     const ranges: Range<Decoration>[] = [];
     const seenBlockquotes = new Set<string>();
-    const cursorLineNo = doc.lineAt(view.state.selection.main.head).number;
-
     const tree = ensureSyntaxTree(view.state, view.viewport.to, SYNTAX_TREE_TIMEOUT);
     if (!tree) return Decoration.set([], true);
 
@@ -58,7 +56,12 @@ function computeDecorations(view: EditorView): DecorationSet {
         const title = parseGitHubAlertTitleLine(titleLine.text);
         if (!title) return;
 
-        if (cursorLineNo !== startLineNo) {
+        // Check if any selection range overlaps with the title line
+        const isLineSelected = view.state.selection.ranges.some(
+            (range) => range.from <= titleLine.to && range.to >= titleLine.from
+        );
+
+        if (!isLineSelected) {
             if ('title' in title) {
                 ranges.push(
                     Decoration.replace({}).range(

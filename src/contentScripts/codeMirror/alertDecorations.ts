@@ -125,10 +125,18 @@ class AlertTitleWidget extends WidgetType {
         super();
     }
 
+    eq(other: AlertTitleWidget) {
+        return other.text === this.text;
+    }
+
     toDOM() {
         const span = document.createElement('span');
         span.textContent = this.text;
         return span;
+    }
+
+    ignoreEvent() {
+        return false;
     }
 }
 

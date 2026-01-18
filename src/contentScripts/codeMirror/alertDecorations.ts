@@ -1,6 +1,7 @@
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view';
+import type { SyntaxNode } from '@lezer/common';
 
 import { ALERT_COLORS } from '../../alerts/alertColors';
 import { GITHUB_ALERT_TYPES, type GitHubAlertType, parseGitHubAlertTitleLine } from '../../alerts/alertParsing';
@@ -153,8 +154,10 @@ export default function () {
         plugin: function (codeMirrorOrEditorControl: unknown) {
             if (!codeMirrorOrEditorControl || typeof codeMirrorOrEditorControl !== 'object') return;
 
-            const editorControl = codeMirrorOrEditorControl as EditorControl;
+            const editorControl = codeMirrorOrEditorControl as Partial<EditorControl>;
             if (typeof editorControl.addExtension !== 'function') return;
+            if (typeof editorControl.registerCommand !== 'function') return;
+            if (!editorControl.cm6) return;
 
             // Detect dark theme from the editor state
             const editor = editorControl.editor;
@@ -165,51 +168,58 @@ export default function () {
 
             editorControl.registerCommand('markdownAlerts.insertAlertOrToggle', () => {
                 const view = editorControl.cm6;
+                if (!view) return false;
                 const state = view.state;
                 const cursorPos = state.selection.main.head;
 
+                // Ensure the syntax tree is available before resolving nodes.
+                // If this times out, fall back to whatever tree is currently available.
+                ensureSyntaxTree(state, cursorPos, SYNTAX_TREE_TIMEOUT);
+
                 const tree = syntaxTree(state);
-                let node = tree.resolveInner(cursorPos, -1);
+                let node: SyntaxNode | null = tree.resolveInner(cursorPos, -1);
 
-                // Find parent blockquote if any
-                while (node && node.name.toLowerCase() !== 'blockquote' && node.parent) {
-                    node = node.parent;
-                }
+                let nearestBlockquoteFrom: number | null = null;
+                let outermostBlockquoteFrom: number | null = null;
 
-                if (node && node.name.toLowerCase() === 'blockquote') {
-                    const blockquoteStartLine = state.doc.lineAt(node.from);
-                    const lineText = blockquoteStartLine.text;
-                    const alertInfo = parseGitHubAlertTitleLine(lineText);
+                // Walk up ancestor nodes, preferring to toggle a blockquote whose first line
+                // actually matches the GitHub alert marker syntax.
+                while (node) {
+                    if (node.name.toLowerCase() === 'blockquote') {
+                        if (nearestBlockquoteFrom === null) nearestBlockquoteFrom = node.from;
+                        outermostBlockquoteFrom = node.from;
 
-                    if (alertInfo) {
-                        // Toggle existing alert
-                        const currentType = alertInfo.type;
-                        const currentIndex = GITHUB_ALERT_TYPES.indexOf(currentType);
-                        const nextIndex = (currentIndex + 1) % GITHUB_ALERT_TYPES.length;
-                        const nextType = GITHUB_ALERT_TYPES[nextIndex];
-                        const nextTypeUpper = nextType.toUpperCase();
+                        const blockquoteStartLine = state.doc.lineAt(node.from);
+                        const alertInfo = parseGitHubAlertTitleLine(blockquoteStartLine.text);
 
-                        // Replace the marker [!TYPE] with [!NEXT_TYPE]
-                        const from = blockquoteStartLine.from + alertInfo.markerRange.from;
-                        const to = blockquoteStartLine.from + alertInfo.markerRange.to;
+                        if (alertInfo) {
+                            const currentIndex = GITHUB_ALERT_TYPES.indexOf(alertInfo.type);
+                            const nextIndex = (currentIndex + 1) % GITHUB_ALERT_TYPES.length;
+                            const nextTypeUpper = GITHUB_ALERT_TYPES[nextIndex].toUpperCase();
 
-                        view.dispatch({
-                            changes: { from, to, insert: `[!${nextTypeUpper}]` },
-                        });
-                        return true;
-                    } else {
-                        // Convert standard blockquote to alert
-                        // Find the end of the blockquote prefix (e.g. "> " or ">> ")
-                        const match = /^(\s*(?:>\s*)+)/.exec(lineText);
-                        if (match) {
-                            const prefixLength = match[1].length;
-                            const insertionPoint = blockquoteStartLine.from + prefixLength;
+                            const from = blockquoteStartLine.from + alertInfo.markerRange.from;
+                            const to = blockquoteStartLine.from + alertInfo.markerRange.to;
 
                             view.dispatch({
-                                changes: { from: insertionPoint, insert: '[!NOTE] ' },
+                                changes: { from, to, insert: `[!${nextTypeUpper}]` },
                             });
                             return true;
                         }
+                    }
+
+                    node = node.parent;
+                }
+
+                if (outermostBlockquoteFrom !== null) {
+                    // Convert standard blockquote to alert by inserting the marker after the prefix.
+                    const blockquoteStartLine = state.doc.lineAt(outermostBlockquoteFrom);
+                    const match = /^(\s*(?:>\s*)+)/.exec(blockquoteStartLine.text);
+                    if (match) {
+                        const insertionPoint = blockquoteStartLine.from + match[1].length;
+                        view.dispatch({
+                            changes: { from: insertionPoint, insert: '[!NOTE] ' },
+                        });
+                        return true;
                     }
                 }
 

@@ -13,10 +13,11 @@ GitHub alert syntax:
 
 ## Architecture
 
-### Shared Module
+### Shared Modules
 
 - `src/alerts/alertColors.ts` - Light/dark theme colors used by both viewer and editor
 - `src/alerts/alertParsing.ts` - Shared parsing logic (`parseGitHubAlertTitleLine`) and alert type constants
+- `src/alerts/alertIcons.ts` - Octicon SVG icons used in alert titles in the markdown editor
 
 ### Viewer (Markdown Renderer)
 
@@ -34,7 +35,7 @@ GitHub alert syntax:
 
 - Joplin `CodeMirrorPlugin` content script using line decorations (keeps source visible/editable)
 - Detects alert blocks via CM6 syntax tree: finds blockquotes, validates first line matches `> [!TYPE]`
-- Implements "clean titles": hides `[!TYPE]` marker and replaces it with a styled label unless the line is selected
+- Implements "clean titles": Replaces `[!TYPE]` marker with an inline widget containing the alert icon and either the alert type name (e.g., "Note", "Warning", "Danger", "Tip") or a custom title if provided.
 - Theme detection via `EditorView.darkTheme` facet at plugin initialization
 - Applies appropriate color theme based on detected theme
 
@@ -50,6 +51,6 @@ GitHub alert syntax:
 
 ## Design Principles
 
-- Editor uses styling/text hiding and inline widgets (no heavy block widgets)
+- Markdown Editor implementation uses styling (line decorations) and inline widgets (no heavy block widgets)
 - Single detection path via `parseGitHubAlertTitleLine` with regex derived from `GITHUB_ALERT_TYPES`
-- Consistent styling between editor and viewer (4px border, transparent backgrounds, matching colors)
+- Consistent styling between editor and viewer (4px border, transparent backgrounds, matching colors, octicon SVGs)

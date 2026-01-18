@@ -11,7 +11,7 @@ const INSERT_NOTE_ALERT_TOOLBAR_BUTTON_ID = 'markdownAlerts.insertNoteAlert.tool
 export async function registerInsertNoteAlertCommand(): Promise<void> {
     await joplin.commands.register({
         name: INSERT_NOTE_ALERT_COMMAND_NAME,
-        label: 'Insert Markdown Alert',
+        label: 'Insert or Toggle Markdown Alert',
         iconName: 'fas fa-exclamation-circle',
         execute: async () => {
             const isMarkdown = !!(await joplin.settings.globalValue('editor.codeView'));

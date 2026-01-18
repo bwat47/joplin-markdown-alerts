@@ -34,15 +34,23 @@ GitHub alert syntax:
 
 - Joplin `CodeMirrorPlugin` content script using line decorations (keeps source visible/editable)
 - Detects alert blocks via CM6 syntax tree: finds blockquotes, validates first line matches `> [!TYPE]`
+- Implements "clean titles": hides `[!TYPE]` marker and replaces it with a styled label unless the line is selected
 - Theme detection via `EditorView.darkTheme` facet at plugin initialization
 - Applies appropriate color theme based on detected theme
 
 **Files:**
 
 - `src/contentScripts/codeMirror/alertDecorations.ts` - CM6 extension with theme detection
+- `src/insertNoteAlertCommand.ts` - Registers global command that delegates to CM6 extension
+
+### Commands
+
+- `markdownAlerts.insertNoteAlert`: Global command (accessible via menu/shortcut)
+    - Tries to execute `markdownAlerts.insertAlertOrToggle` via CM6 editor control
+    - Fallback: Inserts `> [!NOTE] ` text directly if CM6 command fails
 
 ## Design Principles
 
-- Editor uses styling/text hiding only (no block widgets)
+- Editor uses styling/text hiding and inline widgets (no heavy block widgets)
 - Single detection path via `parseGitHubAlertTitleLine` with regex derived from `GITHUB_ALERT_TYPES`
 - Consistent styling between editor and viewer (4px border, transparent backgrounds, matching colors)

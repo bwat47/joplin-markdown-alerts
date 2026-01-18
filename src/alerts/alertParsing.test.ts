@@ -8,8 +8,14 @@ describe('parseGitHubAlertTitleLine', () => {
     });
 
     test('parses type-only title line', () => {
-        const parsed = parseGitHubAlertTitleLine('> [!NOTE]');
-        expect(parsed).toEqual({ type: 'note' });
+        const line = '> [!NOTE]';
+        const parsed = parseGitHubAlertTitleLine(line);
+        expect(parsed).toMatchObject({
+            type: 'note',
+            markerRange: { from: 2, to: 9 },
+        });
+        if (!parsed) throw new Error('Expected parsed result');
+        expect(line.slice(parsed.markerRange.from, parsed.markerRange.to)).toBe('[!NOTE]');
     });
 
     test('parses title line with custom title (case-insensitive type)', () => {

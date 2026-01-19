@@ -1,6 +1,6 @@
 # Markdown Alerts
 
-A simple Joplin plugin that adds support for Github alert syntax in the Markdown Editor and Markdown viewer.
+A simple Joplin plugin that adds support for Github alert syntax in the Markdown Editor and Markdown Viewer.
 
 ![example](https://github.com/user-attachments/assets/610816cb-f90f-42ff-8ece-bb8734c2a4a3)
 

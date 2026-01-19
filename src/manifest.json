@@ -5,11 +5,11 @@
     "version": "1.1.1",
     "platforms": ["desktop", "mobile"],
     "name": "Markdown Alerts",
-    "description": "Adds support for Github style alerts in the Markdown editor & viewer",
+    "description": "Adds support for Github style alerts (aka callouts) in the Markdown editor & viewer",
     "author": "bwat47",
     "homepage_url": "https://github.com/bwat47/joplin-markdown-alerts",
     "repository_url": "https://github.com/bwat47/joplin-markdown-alerts",
-    "keywords": ["alerts", "github", "callouts"],
+    "keywords": ["alerts", "github", "callouts", "admonitions"],
     "categories": ["appearance", "editor", "viewer"],
     "screenshots": [
         { "src": "images/screenshot1.png", "label": "markdown alerts example 1" },

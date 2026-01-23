@@ -1,3 +1,6 @@
+> [!note]
+> This plugin was created entirely with AI tools
+
 # Markdown Alerts
 
 A simple Joplin plugin that adds support for Github alert syntax in the Markdown Editor and Markdown Viewer.

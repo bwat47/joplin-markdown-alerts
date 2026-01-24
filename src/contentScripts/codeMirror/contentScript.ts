@@ -1,14 +1,9 @@
 import { EditorView } from '@codemirror/view';
+import { CodeMirrorControl } from 'api/types';
 
 import { createAlertDecorationExtensions } from './alertDecorations';
 import { createInsertAlertCommand } from './insertAlertCommand';
-
-interface EditorControl {
-    editor: EditorView;
-    cm6: EditorView;
-    addExtension: (extension: unknown) => void;
-    registerCommand: (name: string, callback: (...args: unknown[]) => unknown) => void;
-}
+import { logger } from '../../logger';
 
 /**
  * Joplin CodeMirror content script entry point.
@@ -17,16 +12,14 @@ interface EditorControl {
  */
 export default function () {
     return {
-        plugin: function (codeMirrorOrEditorControl: unknown) {
-            if (!codeMirrorOrEditorControl || typeof codeMirrorOrEditorControl !== 'object') return;
-
-            const editorControl = codeMirrorOrEditorControl as Partial<EditorControl>;
-            if (typeof editorControl.addExtension !== 'function') return;
-            if (typeof editorControl.registerCommand !== 'function') return;
-            if (!editorControl.cm6) return;
+        plugin: function (editorControl: CodeMirrorControl) {
+            if (!editorControl?.cm6) {
+                logger.warn('CodeMirror 6 not available; skipping markdown alert extensions.');
+                return;
+            }
 
             // Detect dark theme from the editor state
-            const editor = editorControl.editor;
+            const editor = editorControl.editor as EditorView;
             const isDarkTheme = editor?.state?.facet(EditorView.darkTheme) ?? false;
 
             editorControl.addExtension(createAlertDecorationExtensions(isDarkTheme));

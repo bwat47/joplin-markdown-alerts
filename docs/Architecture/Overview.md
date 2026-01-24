@@ -13,12 +13,6 @@ GitHub alert syntax:
 
 ## Architecture
 
-### Shared Modules
-
-- `src/alerts/alertColors.ts` - Light/dark theme colors used by both viewer and editor
-- `src/alerts/alertParsing.ts` - Shared parsing logic (`parseGitHubAlertTitleLine`) and alert type constants
-- `src/alerts/alertIcons.ts` - Octicon SVG icons used in alert titles in the markdown editor
-
 ### Viewer (Markdown Renderer)
 
 - Joplin `MarkdownItPlugin` content script using `markdown-it-github-alerts` library
@@ -35,14 +29,17 @@ GitHub alert syntax:
 
 - Joplin `CodeMirrorPlugin` content script using line decorations (keeps source visible/editable)
 - Detects alert blocks via CM6 syntax tree: finds blockquotes, validates first line matches `> [!TYPE]`
-- Implements "clean titles": Replaces `[!TYPE]` marker with an inline widget containing the alert icon and either the alert type name (e.g., "Note", "Warning", "Danger", "Tip") or a custom title if provided.
+- Implements "clean titles": Replaces `[!TYPE]` marker with an inline widget containing the alert icon and either the alert type name (e.g., "Note", "Tip", "Important", "Warning", "Caution") or a custom title if provided.
 - Theme detection via `EditorView.darkTheme` facet at plugin initialization
 - Applies appropriate color theme based on detected theme
 
 **Files:**
 
 - `src/contentScripts/codeMirror/alertDecorations.ts` - CM6 extension with theme detection
-- `src/insertNoteAlertCommand.ts` - Registers global command that delegates to CM6 extension
+- `src/contentScripts/codeMirror/alertParsing.ts` - Parses `> [!TYPE]` title lines and defines alert type constants
+- `src/contentScripts/codeMirror/alertIcons.ts` - Octicon SVG icons used in the inline title widget
+- `src/contentScripts/codeMirror/alertColors.ts` - Light/dark theme color tokens used by the CM6 decorations
+- `src/insertNoteAlertCommand.ts` - Registers global command that delegates to the CM6 extension
 
 ### Commands
 

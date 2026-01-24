@@ -3,9 +3,9 @@ import type { Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view';
 import type { SyntaxNode } from '@lezer/common';
 
-import { ALERT_COLORS } from '../../alerts/alertColors';
-import { ALERT_ICONS } from '../../alerts/alertIcons';
-import { GITHUB_ALERT_TYPES, type GitHubAlertType, parseGitHubAlertTitleLine } from '../../alerts/alertParsing';
+import { ALERT_COLORS } from './alertColors';
+import { ALERT_ICONS } from './alertIcons';
+import { GITHUB_ALERT_TYPES, type GitHubAlertType, parseGitHubAlertTitleLine } from './alertParsing';
 
 const SYNTAX_TREE_TIMEOUT = 100;
 

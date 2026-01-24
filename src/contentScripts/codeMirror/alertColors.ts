@@ -12,9 +12,7 @@ export type ThemeColors = {
 /**
  * GitHub-style alert colors for light and dark themes.
  *
- * These are the authoritative color values used by both the CodeMirror editor
- * and the MarkdownIt renderer. If updating colors, ensure the corresponding
- * CSS files in contentScripts/markdownIt/ are also updated.
+ * If updating colors, ensure the corresponding CSS files in contentScripts/markdownIt/ are also updated.
  */
 export const ALERT_COLORS: ThemeColors = {
     light: {

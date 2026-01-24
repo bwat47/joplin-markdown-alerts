@@ -1,5 +1,5 @@
 import { EditorView } from '@codemirror/view';
-import { CodeMirrorControl } from 'api/types';
+import type { CodeMirrorControl } from 'api/types';
 
 import { createAlertDecorationExtensions } from './alertDecorations';
 import { createInsertAlertCommand } from './insertAlertCommand';

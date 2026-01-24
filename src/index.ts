@@ -19,7 +19,7 @@ joplin.plugins.register({
         await joplin.contentScripts.register(
             ContentScriptType.CodeMirrorPlugin,
             'markdownAlerts.codeMirror',
-            './contentScripts/codeMirror/alertDecorations.js'
+            './contentScripts/codeMirror/contentScript.js'
         );
     },
 });

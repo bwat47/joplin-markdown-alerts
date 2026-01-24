@@ -13,12 +13,6 @@ GitHub alert syntax:
 
 ## Architecture
 
-### Shared Modules
-
-- `src/alerts/alertColors.ts` - Light/dark theme colors used by both viewer and editor
-- `src/alerts/alertParsing.ts` - Shared parsing logic (`parseGitHubAlertTitleLine`) and alert type constants
-- `src/alerts/alertIcons.ts` - Octicon SVG icons used in alert titles in the markdown editor
-
 ### Viewer (Markdown Renderer)
 
 - Joplin `MarkdownItPlugin` content script using `markdown-it-github-alerts` library
@@ -35,19 +29,24 @@ GitHub alert syntax:
 
 - Joplin `CodeMirrorPlugin` content script using line decorations (keeps source visible/editable)
 - Detects alert blocks via CM6 syntax tree: finds blockquotes, validates first line matches `> [!TYPE]`
-- Implements "clean titles": Replaces `[!TYPE]` marker with an inline widget containing the alert icon and either the alert type name (e.g., "Note", "Warning", "Danger", "Tip") or a custom title if provided.
-- Theme detection via `EditorView.darkTheme` facet at plugin initialization
-- Applies appropriate color theme based on detected theme
+- Implements "clean titles": Replaces `[!TYPE]` marker with an inline widget containing the alert icon and either the alert type name (e.g., "Note", "Tip", "Important", "Warning", "Caution") or a custom title if provided.
+- Theme detection via `EditorView.darkTheme` facet at content script initialization
+- Applies appropriate color theme based on detected theme (passed into the decorations extension)
 
 **Files:**
 
-- `src/contentScripts/codeMirror/alertDecorations.ts` - CM6 extension with theme detection
-- `src/insertNoteAlertCommand.ts` - Registers global command that delegates to CM6 extension
+- `src/contentScripts/codeMirror/contentScript.ts` - Content script entry point; registers extensions and editor commands
+- `src/contentScripts/codeMirror/alertDecorations.ts` - CM6 decorations extension (base styles + themed colors + view plugin)
+- `src/contentScripts/codeMirror/alertParsing.ts` - Parses `> [!TYPE]` title lines and defines alert type constants
+- `src/contentScripts/codeMirror/alertIcons.ts` - Octicon SVG icons used in the inline title widget
+- `src/contentScripts/codeMirror/alertColors.ts` - Light/dark theme color tokens used by the CM6 decorations
+- `src/contentScripts/codeMirror/insertAlertCommand.ts` - Editor command logic (insert/toggle/convert blockquote)
+- `src/insertNoteAlertCommand.ts` - Registers global Joplin command that executes the editor command
 
 ### Commands
 
 - `markdownAlerts.insertNoteAlert`: Global command (accessible via menu/shortcut)
-    - Executes `markdownAlerts.insertAlertOrToggle` via CM6 editor control to insert new alert, or toggle alert types on existing alerts (or convert block quote to alert).
+    - Executes `markdownAlerts.insertAlertOrToggle` in the editor (registered by the CM content script) to insert a new alert, toggle alert types on existing alerts, or convert a blockquote to an alert.
 
 ## Design Principles
 

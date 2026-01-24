@@ -2,7 +2,6 @@ import joplin from 'api';
 import { MenuItemLocation, ToastType, ToolbarButtonLocation } from 'api/types';
 
 export const INSERT_NOTE_ALERT_COMMAND_NAME = 'markdownAlerts.insertNoteAlert';
-export const INSERT_NOTE_ALERT_TEXT = '> [!NOTE] ';
 export const INSERT_NOTE_ALERT_ACCELERATOR = 'Ctrl+Shift+A';
 
 const INSERT_NOTE_ALERT_MENU_ITEM_ID = 'markdownAlerts.insertNoteAlert.menuItem';

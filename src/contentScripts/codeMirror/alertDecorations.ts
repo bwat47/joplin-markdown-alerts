@@ -1,11 +1,10 @@
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
-import type { Range } from '@codemirror/state';
+import type { Extension, Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view';
-import type { SyntaxNode } from '@lezer/common';
 
-import { ALERT_COLORS } from '../../alerts/alertColors';
-import { ALERT_ICONS } from '../../alerts/alertIcons';
-import { GITHUB_ALERT_TYPES, type GitHubAlertType, parseGitHubAlertTitleLine } from '../../alerts/alertParsing';
+import { ALERT_COLORS } from './alertColors';
+import { ALERT_ICONS } from './alertIcons';
+import { GITHUB_ALERT_TYPES, type GitHubAlertType, parseGitHubAlertTitleLine } from './alertParsing';
 
 const SYNTAX_TREE_TIMEOUT = 100;
 
@@ -169,90 +168,13 @@ class AlertTitleWidget extends WidgetType {
     }
 }
 
-interface EditorControl {
-    editor: EditorView;
-    cm6: EditorView;
-    addExtension: (extension: unknown) => void;
-    registerCommand: (name: string, callback: (...args: unknown[]) => unknown) => void;
-}
-
-export default function () {
-    return {
-        plugin: function (codeMirrorOrEditorControl: unknown) {
-            if (!codeMirrorOrEditorControl || typeof codeMirrorOrEditorControl !== 'object') return;
-
-            const editorControl = codeMirrorOrEditorControl as Partial<EditorControl>;
-            if (typeof editorControl.addExtension !== 'function') return;
-            if (typeof editorControl.registerCommand !== 'function') return;
-            if (!editorControl.cm6) return;
-
-            // Detect dark theme from the editor state
-            const editor = editorControl.editor;
-            const isDarkTheme = editor?.state?.facet(EditorView.darkTheme) ?? false;
-            const colorTheme = buildColorTheme(isDarkTheme);
-
-            editorControl.addExtension([alertsBaseTheme, colorTheme, alertsPlugin]);
-
-            editorControl.registerCommand('markdownAlerts.insertAlertOrToggle', () => {
-                const view = editorControl.cm6;
-                if (!view) return false;
-                const state = view.state;
-                const cursorPos = state.selection.main.head;
-
-                // Ensure the syntax tree is available before resolving nodes.
-                // If this times out, fall back to whatever tree is currently available.
-                ensureSyntaxTree(state, cursorPos, SYNTAX_TREE_TIMEOUT);
-
-                const tree = syntaxTree(state);
-                let node: SyntaxNode | null = tree.resolveInner(cursorPos, -1);
-
-                let outermostBlockquoteFrom: number | null = null;
-
-                // Walk up ancestor nodes, preferring to toggle a blockquote whose first line
-                // actually matches the GitHub alert marker syntax.
-                while (node) {
-                    if (node.name.toLowerCase() === 'blockquote') {
-                        outermostBlockquoteFrom = node.from;
-
-                        const blockquoteStartLine = state.doc.lineAt(node.from);
-                        const alertInfo = parseGitHubAlertTitleLine(blockquoteStartLine.text);
-
-                        if (alertInfo) {
-                            const currentIndex = GITHUB_ALERT_TYPES.indexOf(alertInfo.type);
-                            const nextIndex = (currentIndex + 1) % GITHUB_ALERT_TYPES.length;
-                            const nextTypeUpper = GITHUB_ALERT_TYPES[nextIndex].toUpperCase();
-
-                            const from = blockquoteStartLine.from + alertInfo.markerRange.from;
-                            const to = blockquoteStartLine.from + alertInfo.markerRange.to;
-
-                            view.dispatch({
-                                changes: { from, to, insert: `[!${nextTypeUpper}]` },
-                            });
-                            return true;
-                        }
-                    }
-
-                    node = node.parent;
-                }
-
-                if (outermostBlockquoteFrom !== null) {
-                    // Convert standard blockquote to alert by inserting the marker after the prefix.
-                    const blockquoteStartLine = state.doc.lineAt(outermostBlockquoteFrom);
-                    const match = /^(\s*(?:>\s*)+)/.exec(blockquoteStartLine.text);
-                    if (match) {
-                        const insertionPoint = blockquoteStartLine.from + match[1].length;
-                        view.dispatch({
-                            changes: { from: insertionPoint, insert: '[!NOTE] ' },
-                        });
-                        return true;
-                    }
-                }
-
-                // Default: Insert new alert at cursor
-                const text = '> [!NOTE] ';
-                view.dispatch(view.state.replaceSelection(text));
-                return true;
-            });
-        },
-    };
+/**
+ * Creates the CodeMirror extensions for rendering GitHub-style alert decorations.
+ *
+ * @param isDarkTheme - Whether to use dark theme colors
+ * @returns Array of CodeMirror extensions
+ */
+export function createAlertDecorationExtensions(isDarkTheme: boolean): Extension[] {
+    const colorTheme = buildColorTheme(isDarkTheme);
+    return [alertsBaseTheme, colorTheme, alertsPlugin];
 }

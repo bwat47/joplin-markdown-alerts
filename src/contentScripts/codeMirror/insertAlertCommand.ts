@@ -21,9 +21,10 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
 
         // Ensure the syntax tree is available before resolving nodes.
         // If this times out, fall back to whatever tree is currently available.
-        ensureSyntaxTree(state, cursorPos, SYNTAX_TREE_TIMEOUT);
-
-        const tree = syntaxTree(state);
+        let tree = ensureSyntaxTree(state, cursorPos, SYNTAX_TREE_TIMEOUT);
+        if (!tree) {
+            tree = syntaxTree(state);
+        }
         let node: SyntaxNode | null = tree.resolveInner(cursorPos, -1);
 
         let outermostBlockquoteFrom: number | null = null;

@@ -20,6 +20,8 @@ const alertsBaseTheme = EditorView.baseTheme({
     '.cm-line.cm-gh-alert-title': {
         fontWeight: '600',
         color: 'var(--cm-gh-alert-color)',
+        textIndent: '0 !important',
+        paddingLeft: '1px !important',
     },
     '.cm-gh-alert-icon': {
         display: 'inline-flex',

@@ -202,16 +202,12 @@ export function createInsertQuoteCommand(view: EditorView): () => boolean {
         const paragraphRanges = Array.from(paragraphRangeMap.values()).sort((a, b) => a.from - b.from);
         const nonParagraphLineRanges = Array.from(nonParagraphLineRangeMap.values()).sort((a, b) => a.from - b.from);
 
-        const rangeTexts = [
-            ...paragraphRanges.map((range) => ({
+        const rangeTexts = [...paragraphRanges, ...nonParagraphLineRanges]
+            .sort((a, b) => a.from - b.from)
+            .map((range) => ({
                 range,
                 text: state.doc.sliceString(range.from, range.to),
-            })),
-            ...nonParagraphLineRanges.map((range) => ({
-                range,
-                text: state.doc.sliceString(range.from, range.to),
-            })),
-        ];
+            }));
 
         if (rangeTexts.length === 0) {
             return false;

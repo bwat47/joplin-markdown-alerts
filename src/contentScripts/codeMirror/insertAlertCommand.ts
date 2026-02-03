@@ -14,6 +14,8 @@ type ParagraphRange = {
     to: number;
 };
 
+type NodeRange = { from: number; to: number };
+
 function createAlertLine(prefix: string): string {
     return `${prefix}[!${DEFAULT_ALERT_TYPE}]`;
 }
@@ -25,6 +27,14 @@ function isBlockquoteLine(line: string): boolean {
 function getBlockquotePrefix(line: string): string | null {
     const match = BLOCKQUOTE_PREFIX_PATTERN.exec(line);
     return match ? match[1] : null;
+}
+
+function getSyntaxTree(state: EditorState, position: number) {
+    let tree = ensureSyntaxTree(state, position, SYNTAX_TREE_TIMEOUT);
+    if (!tree) {
+        tree = syntaxTree(state);
+    }
+    return tree;
 }
 
 function findParagraphNodeAt(state: EditorState, tree: ReturnType<typeof syntaxTree>, position: number): SyntaxNode | null {
@@ -54,11 +64,40 @@ function findParagraphNodeAt(state: EditorState, tree: ReturnType<typeof syntaxT
     return null;
 }
 
-function getParagraphLineRange(state: EditorState, node: SyntaxNode): ParagraphRange {
+function getParagraphLineRange(state: EditorState, node: NodeRange): ParagraphRange {
     const startLine = state.doc.lineAt(node.from);
     const endPos = Math.max(node.from, node.to - 1);
     const endLine = state.doc.lineAt(endPos);
     return { from: startLine.from, to: endLine.to };
+}
+
+function collectParagraphRanges(
+    state: EditorState,
+    tree: ReturnType<typeof syntaxTree>,
+    from: number,
+    to: number
+): ParagraphRange[] {
+    const ranges: ParagraphRange[] = [];
+    const seen = new Set<string>();
+
+    tree.iterate({
+        from,
+        to,
+        enter: (node) => {
+            if (node.name.toLowerCase() !== 'paragraph') {
+                return;
+            }
+            const paragraphRange = getParagraphLineRange(state, node);
+            const key = `${paragraphRange.from}:${paragraphRange.to}`;
+            if (seen.has(key)) {
+                return;
+            }
+            seen.add(key);
+            ranges.push(paragraphRange);
+        },
+    });
+
+    return ranges.sort((a, b) => a.from - b.from);
 }
 
 export function toggleAlertSelectionText(text: string): string {
@@ -104,7 +143,29 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
         const nonEmptyRanges = ranges.filter((range) => !range.empty);
 
         if (nonEmptyRanges.length > 0) {
-            const changes = nonEmptyRanges.map((range) => {
+            const expandedRangeMap = new Map<string, ParagraphRange>();
+            for (const range of nonEmptyRanges) {
+                const tree = getSyntaxTree(state, range.to);
+                const paragraphRanges = collectParagraphRanges(state, tree, range.from, range.to);
+                if (paragraphRanges.length === 0) {
+                    const key = `${range.from}:${range.to}`;
+                    if (!expandedRangeMap.has(key)) {
+                        expandedRangeMap.set(key, { from: range.from, to: range.to });
+                    }
+                    continue;
+                }
+
+                const expandedRange = {
+                    from: paragraphRanges[0].from,
+                    to: paragraphRanges[paragraphRanges.length - 1].to,
+                };
+                const key = `${expandedRange.from}:${expandedRange.to}`;
+                if (!expandedRangeMap.has(key)) {
+                    expandedRangeMap.set(key, expandedRange);
+                }
+            }
+
+            const changes = Array.from(expandedRangeMap.values()).map((range) => {
                 const text = state.doc.sliceString(range.from, range.to);
                 const updated = toggleAlertSelectionText(text);
 
@@ -120,13 +181,7 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
         }
 
         const cursorPos = state.selection.main.head;
-
-        // Ensure the syntax tree is available before resolving nodes.
-        // If this times out, fall back to whatever tree is currently available.
-        let tree = ensureSyntaxTree(state, cursorPos, SYNTAX_TREE_TIMEOUT);
-        if (!tree) {
-            tree = syntaxTree(state);
-        }
+        const tree = getSyntaxTree(state, cursorPos);
         let node: SyntaxNode | null = tree.resolveInner(cursorPos, -1);
 
         let outermostBlockquoteFrom: number | null = null;

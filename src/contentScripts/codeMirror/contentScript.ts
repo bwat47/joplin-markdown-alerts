@@ -3,7 +3,11 @@ import type { CodeMirrorControl } from 'api/types';
 
 import { createAlertDecorationExtensions } from './alertDecorations';
 import { createInsertAlertCommand } from './insertAlertCommand';
+import { createQuoteSelectionCommand } from './quoteCommand';
 import { logger } from '../../logger';
+
+const INSERT_ALERT_COMMAND = 'markdownAlerts.insertAlertOrToggle';
+const QUOTE_SELECTION_COMMAND = 'markdownAlerts.quoteSelection';
 
 /**
  * Joplin CodeMirror content script entry point.
@@ -24,10 +28,9 @@ export default function () {
 
             editorControl.addExtension(createAlertDecorationExtensions(isDarkTheme));
 
-            editorControl.registerCommand(
-                'markdownAlerts.insertAlertOrToggle',
-                createInsertAlertCommand(editorControl.cm6)
-            );
+            editorControl.registerCommand(INSERT_ALERT_COMMAND, createInsertAlertCommand(editorControl.cm6));
+
+            editorControl.registerCommand(QUOTE_SELECTION_COMMAND, createQuoteSelectionCommand(editorControl.cm6));
         },
     };
 }

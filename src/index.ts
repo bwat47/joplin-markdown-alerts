@@ -3,12 +3,14 @@ import { ContentScriptType } from 'api/types';
 
 import { logger } from './logger';
 import { registerInsertNoteAlertCommand } from './insertNoteAlertCommand';
+import { registerQuoteSelectionCommand } from './quoteSelectionCommand';
 
 joplin.plugins.register({
     onStart: async function () {
         logger.info('Markdown Alerts plugin started');
 
         await registerInsertNoteAlertCommand();
+        await registerQuoteSelectionCommand();
 
         await joplin.contentScripts.register(
             ContentScriptType.MarkdownItPlugin,

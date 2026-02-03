@@ -1,6 +1,6 @@
 /** @jest-environment jsdom */
 import { EditorSelection } from '@codemirror/state';
-import { createQuoteSelectionCommand, toggleBlockquoteText } from './quoteCommand';
+import { createInsertQuoteCommand, toggleBlockquoteText } from './insertQuoteCommand';
 import { createEditorHarness } from './testUtils';
 
 describe('toggleBlockquoteText', () => {
@@ -26,11 +26,11 @@ describe('toggleBlockquoteText', () => {
     });
 });
 
-describe('createQuoteSelectionCommand', () => {
+describe('createInsertQuoteCommand', () => {
     function runCommand(input: string): string {
         const harness = createEditorHarness(input);
         try {
-            const command = createQuoteSelectionCommand(harness.view);
+            const command = createInsertQuoteCommand(harness.view);
             command();
             return harness.getText();
         } finally {
@@ -41,7 +41,7 @@ describe('createQuoteSelectionCommand', () => {
     function runCommandWithCursor(input: string): { text: string; cursor: number } {
         const harness = createEditorHarness(input);
         try {
-            const command = createQuoteSelectionCommand(harness.view);
+            const command = createInsertQuoteCommand(harness.view);
             command();
             return { text: harness.getText(), cursor: harness.getCursor() };
         } finally {
@@ -125,7 +125,7 @@ describe('createQuoteSelectionCommand', () => {
 
             expect(harness.view.state.selection.ranges).toHaveLength(2);
 
-            const command = createQuoteSelectionCommand(harness.view);
+            const command = createInsertQuoteCommand(harness.view);
             command();
 
             expect(harness.getText()).toBe(['> First line', '', 'Middle line', '', '> Last line'].join('\n'));
@@ -148,7 +148,7 @@ describe('createQuoteSelectionCommand', () => {
                 ]),
             });
 
-            const command = createQuoteSelectionCommand(harness.view);
+            const command = createInsertQuoteCommand(harness.view);
             command();
 
             expect(harness.getText()).toBe(['First line', '', '> Middle line', '', 'Last line'].join('\n'));

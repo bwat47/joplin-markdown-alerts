@@ -1,4 +1,5 @@
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
+import type { EditorState } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { SyntaxNode } from '@lezer/common';
 
@@ -7,6 +8,11 @@ import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine } from './alertParsing';
 const SYNTAX_TREE_TIMEOUT = 100;
 const BLOCKQUOTE_PREFIX_PATTERN = /^(\s*(?:>\s*)+)/;
 const DEFAULT_ALERT_TYPE = 'NOTE';
+
+type ParagraphRange = {
+    from: number;
+    to: number;
+};
 
 function createAlertLine(prefix: string): string {
     return `${prefix}[!${DEFAULT_ALERT_TYPE}]`;
@@ -19,6 +25,40 @@ function isBlockquoteLine(line: string): boolean {
 function getBlockquotePrefix(line: string): string | null {
     const match = BLOCKQUOTE_PREFIX_PATTERN.exec(line);
     return match ? match[1] : null;
+}
+
+function findParagraphNodeAt(state: EditorState, tree: ReturnType<typeof syntaxTree>, position: number): SyntaxNode | null {
+    const docLength = state.doc.length;
+    const positions = [position, position - 1, position + 1]
+        .map((pos) => Math.min(Math.max(pos, 0), docLength))
+        .filter((pos, index, list) => list.indexOf(pos) === index);
+
+    for (const probePosition of positions) {
+        let node: SyntaxNode | null = tree.resolveInner(probePosition, -1);
+        while (node) {
+            if (node.name.toLowerCase() === 'paragraph') {
+                return node;
+            }
+            node = node.parent;
+        }
+
+        node = tree.resolveInner(probePosition, 1);
+        while (node) {
+            if (node.name.toLowerCase() === 'paragraph') {
+                return node;
+            }
+            node = node.parent;
+        }
+    }
+
+    return null;
+}
+
+function getParagraphLineRange(state: EditorState, node: SyntaxNode): ParagraphRange {
+    const startLine = state.doc.lineAt(node.from);
+    const endPos = Math.max(node.from, node.to - 1);
+    const endLine = state.doc.lineAt(endPos);
+    return { from: startLine.from, to: endLine.to };
 }
 
 export function toggleAlertSelectionText(text: string): string {
@@ -130,6 +170,22 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
                 });
                 return true;
             }
+        }
+
+        const paragraphNode = findParagraphNodeAt(state, tree, cursorPos);
+        if (paragraphNode) {
+            const paragraphRange = getParagraphLineRange(state, paragraphNode);
+            const text = state.doc.sliceString(paragraphRange.from, paragraphRange.to);
+            const updated = toggleAlertSelectionText(text);
+
+            view.dispatch({
+                changes: {
+                    from: paragraphRange.from,
+                    to: paragraphRange.to,
+                    insert: updated,
+                },
+            });
+            return true;
         }
 
         // Default: Insert new alert at cursor

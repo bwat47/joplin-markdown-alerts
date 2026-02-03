@@ -40,13 +40,18 @@ GitHub alert syntax:
 - `src/contentScripts/codeMirror/alertParsing.ts` - Parses `> [!TYPE]` title lines and defines alert type constants
 - `src/contentScripts/codeMirror/alertIcons.ts` - Octicon SVG icons used in the inline title widget
 - `src/contentScripts/codeMirror/alertColors.ts` - Light/dark theme color tokens used by the CM6 decorations
-- `src/contentScripts/codeMirror/insertAlertCommand.ts` - Editor command logic (insert/toggle/convert blockquote)
+- `src/contentScripts/codeMirror/insertAlertCommand.ts` - Editor command logic (insert/toggle/convert blockquote, selection-aware)
+- `src/contentScripts/codeMirror/quoteCommand.ts` - Editor command logic for quoting/toggling selected text
 - `src/insertNoteAlertCommand.ts` - Registers global Joplin command that executes the editor command
+- `src/quoteSelectionCommand.ts` - Registers global Joplin quote command (toolbar + shortcut)
 
 ### Commands
 
 - `markdownAlerts.insertNoteAlert`: Global command (accessible via menu/shortcut)
-    - Executes `markdownAlerts.insertAlertOrToggle` in the editor (registered by the CM content script) to insert a new alert, toggle alert types on existing alerts, or convert a blockquote to an alert.
+-    - Executes `markdownAlerts.insertAlertOrToggle` in the editor (registered by the CM content script) to insert a new alert, toggle alert types on existing alerts, or convert a blockquote to an alert.
+-    - When text is selected, it operates on the selection: non-quotes become an alert; quoted selections toggle alert type or get a new marker line.
+- `markdownAlerts.quoteSelection`: Global command (toolbar + shortcut)
+-    - Executes `markdownAlerts.quoteSelection` in the editor to quote selected text or remove quote markers when all selected lines are quoted.
 
 ## Design Principles
 

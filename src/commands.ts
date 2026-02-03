@@ -61,7 +61,7 @@ export async function registerInsertNoteAlertCommand(): Promise<void> {
 export async function registerQuoteSelectionCommand(): Promise<void> {
     await joplin.commands.register({
         name: QUOTE_SELECTION_COMMAND_NAME,
-        label: 'Quote Selected Text',
+        label: 'Insert or Toggle Blockquote',
         iconName: QUOTE_SELECTION_ICON_NAME,
         execute: async () => {
             const isMarkdown = !!(await joplin.settings.globalValue('editor.codeView'));

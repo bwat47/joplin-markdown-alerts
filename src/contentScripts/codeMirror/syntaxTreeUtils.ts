@@ -28,7 +28,10 @@ export function getProbePositions(
     linePrefixPattern?: RegExp
 ): number[] {
     const line = state.doc.lineAt(position);
-    const positions = [position, position - 1, position + 1];
+    const positions = [position, position + 1];
+    if (position > line.from) {
+        positions.push(position - 1);
+    }
 
     if (linePrefixPattern) {
         const match = linePrefixPattern.exec(line.text);

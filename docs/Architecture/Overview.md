@@ -42,8 +42,7 @@ GitHub alert syntax:
 - `src/contentScripts/codeMirror/alertColors.ts` - Light/dark theme color tokens used by the CM6 decorations
 - `src/contentScripts/codeMirror/insertAlertCommand.ts` - Editor command logic (insert/toggle/convert blockquote, selection-aware)
 - `src/contentScripts/codeMirror/quoteCommand.ts` - Editor command logic for quoting/toggling selected text
-- `src/insertNoteAlertCommand.ts` - Registers global Joplin command that executes the editor command
-- `src/quoteSelectionCommand.ts` - Registers global Joplin quote command (toolbar + shortcut)
+- `src/commands.ts` - Registers global Joplin commands (alerts + quote, toolbar + shortcuts)
 
 ### Commands
 

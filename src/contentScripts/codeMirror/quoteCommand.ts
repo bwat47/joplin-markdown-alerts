@@ -165,25 +165,37 @@ export function createQuoteSelectionCommand(view: EditorView): () => boolean {
         }
 
         const paragraphRangeMap = new Map<string, ParagraphRange>();
+        const nonParagraphLineRangeMap = new Map<string, LineRange>();
+
         for (const range of nonEmptyRanges) {
             const tree = getSyntaxTree(state, range.to);
-            for (const paragraphRange of collectParagraphRanges(state, tree, range.from, range.to)) {
+            let paragraphRanges = collectParagraphRanges(state, tree, range.from, range.to);
+
+            if (paragraphRanges.length === 0) {
+                const paragraphNode = findParagraphNodeAt(state, tree, range.from, BLOCKQUOTE_PREFIX_REGEX);
+                if (paragraphNode) {
+                    paragraphRanges = [getParagraphLineRange(state, paragraphNode)];
+                }
+            }
+
+            for (const paragraphRange of paragraphRanges) {
                 const key = `${paragraphRange.from}:${paragraphRange.to}`;
                 if (!paragraphRangeMap.has(key)) {
                     paragraphRangeMap.set(key, paragraphRange);
                 }
             }
-        }
-        const paragraphRanges = Array.from(paragraphRangeMap.values()).sort((a, b) => a.from - b.from);
 
-        const selectionFrom = Math.min(...nonEmptyRanges.map((range) => range.from));
-        const selectionTo = Math.max(...nonEmptyRanges.map((range) => range.to));
-        const nonParagraphLineRanges = collectNonParagraphLineRanges(
-            state,
-            paragraphRanges,
-            selectionFrom,
-            selectionTo
-        );
+            const nonParagraphLineRanges = collectNonParagraphLineRanges(state, paragraphRanges, range.from, range.to);
+            for (const nonParagraphRange of nonParagraphLineRanges) {
+                const key = `${nonParagraphRange.from}:${nonParagraphRange.to}`;
+                if (!nonParagraphLineRangeMap.has(key)) {
+                    nonParagraphLineRangeMap.set(key, nonParagraphRange);
+                }
+            }
+        }
+
+        const paragraphRanges = Array.from(paragraphRangeMap.values()).sort((a, b) => a.from - b.from);
+        const nonParagraphLineRanges = Array.from(nonParagraphLineRangeMap.values()).sort((a, b) => a.from - b.from);
 
         const rangeTexts = [
             ...paragraphRanges.map((range) => ({

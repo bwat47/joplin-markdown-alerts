@@ -53,7 +53,7 @@ export function createEditorHarness(input: string): EditorHarness {
     const state = EditorState.create({
         doc,
         selection,
-        extensions: [markdown()],
+        extensions: [markdown(), EditorState.allowMultipleSelections.of(true)],
     });
     const parent = document.createElement('div');
     const view = new EditorView({ state, parent });

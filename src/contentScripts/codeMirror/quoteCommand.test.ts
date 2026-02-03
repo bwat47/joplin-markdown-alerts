@@ -1,4 +1,5 @@
 /** @jest-environment jsdom */
+import { EditorSelection } from '@codemirror/state';
 import { createQuoteSelectionCommand, toggleBlockquoteText } from './quoteCommand';
 import { createEditorHarness } from './testUtils';
 
@@ -106,5 +107,53 @@ describe('createQuoteSelectionCommand', () => {
         const expected = ['> Quoted line', '> ', '> Plain line'].join('\n');
 
         expect(runCommand(input)).toBe(expected);
+    });
+
+    test('quotes only selected ranges when multiple selections are present', () => {
+        const harness = createEditorHarness(['First line', '', 'Middle line', '', 'Last line'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line5 = harness.view.state.doc.line(5);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.range(line1.from, line1.to),
+                    EditorSelection.range(line5.from, line5.to),
+                ]),
+            });
+
+            expect(harness.view.state.selection.ranges).toHaveLength(2);
+
+            const command = createQuoteSelectionCommand(harness.view);
+            command();
+
+            expect(harness.getText()).toBe(['> First line', '', 'Middle line', '', '> Last line'].join('\n'));
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('unquotes only selected ranges when multiple selections are present', () => {
+        const harness = createEditorHarness(['> First line', '', '> Middle line', '', '> Last line'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line5 = harness.view.state.doc.line(5);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.range(line1.from, line1.to),
+                    EditorSelection.range(line5.from, line5.to),
+                ]),
+            });
+
+            const command = createQuoteSelectionCommand(harness.view);
+            command();
+
+            expect(harness.getText()).toBe(['First line', '', '> Middle line', '', 'Last line'].join('\n'));
+        } finally {
+            harness.destroy();
+        }
     });
 });

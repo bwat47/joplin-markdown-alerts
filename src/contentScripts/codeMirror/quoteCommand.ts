@@ -1,16 +1,18 @@
-import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import type { SyntaxNode, SyntaxNodeRef } from '@lezer/common';
+import type { SyntaxNode } from '@lezer/common';
+
+import {
+    collectParagraphRanges,
+    findParagraphNodeAt,
+    getParagraphLineRange,
+    getProbePositions,
+    getSyntaxTree,
+    type ParagraphRange,
+} from './syntaxTreeUtils';
 
 const BLOCKQUOTE_PREFIX = '> ';
 const BLOCKQUOTE_PREFIX_REGEX = /^>\s?/;
-const SYNTAX_TREE_TIMEOUT = 100;
-
-type ParagraphRange = {
-    from: number;
-    to: number;
-};
 
 type LineRange = {
     from: number;
@@ -46,18 +48,10 @@ function isBlockquoteText(text: string): boolean {
     return text.split('\n').every((line) => BLOCKQUOTE_PREFIX_REGEX.test(line));
 }
 
-function getSyntaxTree(state: EditorState, position: number) {
-    let tree = ensureSyntaxTree(state, position, SYNTAX_TREE_TIMEOUT);
-    if (!tree) {
-        tree = syntaxTree(state);
-    }
-    return tree;
-}
-
 type NodeMatchPredicate = (node: SyntaxNode) => boolean;
 
 function findNodeAtPositions(
-    tree: ReturnType<typeof syntaxTree>,
+    tree: ReturnType<typeof getSyntaxTree>,
     positions: number[],
     predicate: NodeMatchPredicate
 ): SyntaxNode | null {
@@ -80,69 +74,9 @@ function findNodeAtPositions(
     return null;
 }
 
-const BLOCKQUOTE_LINE_PREFIX = /^>\s?/;
-
-function clampPositions(state: EditorState, positions: number[]): number[] {
-    const max = Math.max(0, state.doc.length);
-    return positions
-        .map((pos) => Math.min(Math.max(pos, 0), max))
-        .filter((pos, index, list) => list.indexOf(pos) === index);
-}
-
-function getProbePositions(state: EditorState, position: number): number[] {
-    const line = state.doc.lineAt(position);
-    const positions = [position, position - 1, position + 1];
-    const match = BLOCKQUOTE_LINE_PREFIX.exec(line.text);
-    if (match) {
-        const afterPrefix = line.from + match[0].length;
-        positions.push(afterPrefix);
-        positions.push(afterPrefix + 1);
-    }
-    return clampPositions(state, positions);
-}
-
-function findParagraphNodeAt(state: EditorState, tree: ReturnType<typeof syntaxTree>, position: number): SyntaxNode | null {
-    const positions = getProbePositions(state, position);
-    return findNodeAtPositions(tree, positions, (node) => node.name.toLowerCase() === 'paragraph');
-}
-
-function isPositionInBlockquote(state: EditorState, tree: ReturnType<typeof syntaxTree>, position: number): boolean {
-    const positions = getProbePositions(state, position);
+function isPositionInBlockquote(state: EditorState, tree: ReturnType<typeof getSyntaxTree>, position: number): boolean {
+    const positions = getProbePositions(state, position, BLOCKQUOTE_PREFIX_REGEX);
     return Boolean(findNodeAtPositions(tree, positions, (node) => node.name.toLowerCase() === 'blockquote'));
-}
-
-type NodeRange = { from: number; to: number };
-
-function getParagraphLineRange(state: EditorState, node: NodeRange): ParagraphRange {
-    const startLine = state.doc.lineAt(node.from);
-    const endPos = Math.max(node.from, node.to - 1);
-    const endLine = state.doc.lineAt(endPos);
-    return { from: startLine.from, to: endLine.to };
-}
-
-function collectParagraphRanges(state: EditorState, from: number, to: number): ParagraphRange[] {
-    const tree = getSyntaxTree(state, to);
-    const ranges: ParagraphRange[] = [];
-    const seen = new Set<string>();
-
-    tree.iterate({
-        from,
-        to,
-        enter: (node: SyntaxNodeRef) => {
-            if (node.name.toLowerCase() !== 'paragraph') {
-                return;
-            }
-            const paragraphRange = getParagraphLineRange(state, node);
-            const key = `${paragraphRange.from}:${paragraphRange.to}`;
-            if (seen.has(key)) {
-                return;
-            }
-            seen.add(key);
-            ranges.push(paragraphRange);
-        },
-    });
-
-    return ranges.sort((a, b) => a.from - b.from);
 }
 
 function collectNonParagraphLineRanges(
@@ -184,7 +118,7 @@ export function createQuoteSelectionCommand(view: EditorView): () => boolean {
         if (nonEmptyRanges.length === 0) {
             const cursorPos = state.selection.main.head;
             const tree = getSyntaxTree(state, cursorPos);
-            const paragraphNode = findParagraphNodeAt(state, tree, cursorPos);
+            const paragraphNode = findParagraphNodeAt(state, tree, cursorPos, BLOCKQUOTE_PREFIX_REGEX);
             if (!paragraphNode) {
                 const cursorLine = state.doc.lineAt(cursorPos);
                 const updated = isBlockquoteText(cursorLine.text)
@@ -219,7 +153,8 @@ export function createQuoteSelectionCommand(view: EditorView): () => boolean {
 
         const paragraphRangeMap = new Map<string, ParagraphRange>();
         for (const range of nonEmptyRanges) {
-            for (const paragraphRange of collectParagraphRanges(state, range.from, range.to)) {
+            const tree = getSyntaxTree(state, range.to);
+            for (const paragraphRange of collectParagraphRanges(state, tree, range.from, range.to)) {
                 const key = `${paragraphRange.from}:${paragraphRange.to}`;
                 if (!paragraphRangeMap.has(key)) {
                     paragraphRangeMap.set(key, paragraphRange);

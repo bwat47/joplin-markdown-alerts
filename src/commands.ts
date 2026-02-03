@@ -76,16 +76,9 @@ export async function registerInsertNoteQuoteCommand(): Promise<void> {
             }
 
             try {
-                const result = await joplin.commands.execute('editor.execCommand', {
+                await joplin.commands.execute('editor.execCommand', {
                     name: INSERT_QUOTE_OR_TOGGLE_COMMAND,
                 });
-
-                if (result === false) {
-                    await joplin.views.dialogs.showToast({
-                        message: 'Markdown Alerts: Select text to quote.',
-                        type: ToastType.Info,
-                    });
-                }
             } catch {
                 await joplin.views.dialogs.showToast({
                     message: 'Markdown Alerts: Failed to run editor command.',

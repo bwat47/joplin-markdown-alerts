@@ -83,12 +83,12 @@ export function toggleAlertSelectionText(text: string): string {
 }
 
 /**
- * Creates a command that inserts a new alert or toggles the type of an existing one.
- *
- * Behavior:
- * - If cursor is inside an existing alert blockquote, cycles to the next alert type
- * - If cursor is inside a regular blockquote, converts it to an alert
- * - Otherwise, inserts a new `> [!NOTE] ` at the cursor
+ * Creates a command that inserts or cycles a GitHub alert.
+ * - Selections: expand each selection to paragraph boundaries, dedupe ranges, and apply `toggleAlertSelectionText` to each.
+ * - Cursor on empty line: insert `> [!NOTE] ` and place the cursor after the marker.
+ * - Cursor on an alert title line: cycle the alert marker on that line.
+ * - Cursor inside a regular blockquote: insert an alert title line above the blockquote, respecting its nesting prefix.
+ * - Otherwise: toggle alert formatting for the surrounding paragraph or current line via `toggleAlertSelectionText`.
  */
 export function createInsertAlertCommand(view: EditorView): () => boolean {
     return () => {

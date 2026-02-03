@@ -88,24 +88,15 @@ describe('createQuoteSelectionCommand', () => {
     });
 
     test('quotes code block lines inside selection', () => {
-        const input = [
-            '[[Paragraph',
-            '',
-            '```',
-            'code block',
-            '```',
-            '',
-            'Paragraph]]',
-        ].join('\n');
-        const expected = [
-            '> Paragraph',
-            '> ',
-            '> ```',
-            '> code block',
-            '> ```',
-            '> ',
-            '> Paragraph',
-        ].join('\n');
+        const input = ['[[Paragraph', '', '```', 'code block', '```', '', 'Paragraph]]'].join('\n');
+        const expected = ['> Paragraph', '> ', '> ```', '> code block', '> ```', '> ', '> Paragraph'].join('\n');
+
+        expect(runCommand(input)).toBe(expected);
+    });
+
+    test('quotes non-paragraph selection such as a code block', () => {
+        const input = ['[[```', 'code block', '```]]'].join('\n');
+        const expected = ['> ```', '> code block', '> ```'].join('\n');
 
         expect(runCommand(input)).toBe(expected);
     });

@@ -176,10 +176,6 @@ export function createQuoteSelectionCommand(view: EditorView): () => boolean {
         }
         const paragraphRanges = Array.from(paragraphRangeMap.values()).sort((a, b) => a.from - b.from);
 
-        if (paragraphRanges.length === 0) {
-            return false;
-        }
-
         const selectionFrom = Math.min(...nonEmptyRanges.map((range) => range.from));
         const selectionTo = Math.max(...nonEmptyRanges.map((range) => range.to));
         const nonParagraphLineRanges = collectNonParagraphLineRanges(

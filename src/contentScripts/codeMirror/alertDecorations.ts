@@ -1,12 +1,10 @@
-import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { Extension, Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view';
 
 import { ALERT_COLORS } from './alertColors';
 import { ALERT_ICONS } from './alertIcons';
 import { GITHUB_ALERT_TYPES, type GitHubAlertType, parseGitHubAlertTitleLine } from './alertParsing';
-
-const SYNTAX_TREE_TIMEOUT = 100;
+import { getSyntaxTree } from './syntaxTreeUtils';
 
 /** Base structural styles (no colors) */
 const alertsBaseTheme = EditorView.baseTheme({
@@ -58,10 +56,7 @@ function computeDecorations(view: EditorView): DecorationSet {
     const doc = view.state.doc;
     const ranges: Range<Decoration>[] = [];
     const seenBlockquotes = new Set<string>();
-    let tree = ensureSyntaxTree(view.state, view.viewport.to, SYNTAX_TREE_TIMEOUT);
-    if (!tree) {
-        tree = syntaxTree(view.state);
-    }
+    const tree = getSyntaxTree(view.state, view.viewport.to);
 
     const decorateBlockquote = (blockquoteFrom: number, blockquoteTo: number) => {
         const endPos = Math.max(blockquoteFrom, blockquoteTo - 1);

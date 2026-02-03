@@ -1,4 +1,6 @@
-import { toggleAlertSelectionText } from './insertAlertCommand';
+/** @jest-environment jsdom */
+import { createInsertAlertCommand, toggleAlertSelectionText } from './insertAlertCommand';
+import { createEditorHarness } from './testUtils';
 
 describe('toggleAlertSelectionText', () => {
     test('adds an alert line and quotes when selection is not a blockquote', () => {
@@ -34,5 +36,39 @@ describe('toggleAlertSelectionText', () => {
         const expected = ['> [!CAUTION] Custom title', '> Line one'].join('\n');
 
         expect(toggleAlertSelectionText(input)).toBe(expected);
+    });
+});
+
+describe('createInsertAlertCommand', () => {
+    function runCommand(input: string): string {
+        const harness = createEditorHarness(input);
+        try {
+            const command = createInsertAlertCommand(harness.view);
+            command();
+            return harness.getText();
+        } finally {
+            harness.destroy();
+        }
+    }
+
+    test('toggles alert marker when cursor is before the blockquote marker', () => {
+        const input = ['|> [!NOTE]', '> Line one'].join('\n');
+        const expected = ['> [!TIP]', '> Line one'].join('\n');
+
+        expect(runCommand(input)).toBe(expected);
+    });
+
+    test('converts a partially selected paragraph into an alert block', () => {
+        const input = ['Intro line', '', 'Se[[cond paragraph]]'].join('\n');
+        const expected = ['Intro line', '', '> [!NOTE]', '> Second paragraph'].join('\n');
+
+        expect(runCommand(input)).toBe(expected);
+    });
+
+    test('includes headings when converting selection to an alert', () => {
+        const input = ['[[## Heading', '', 'Paragraph]]'].join('\n');
+        const expected = ['> [!NOTE]', '> ## Heading', '> ', '> Paragraph'].join('\n');
+
+        expect(runCommand(input)).toBe(expected);
     });
 });

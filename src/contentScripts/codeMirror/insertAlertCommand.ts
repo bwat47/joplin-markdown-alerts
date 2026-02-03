@@ -48,6 +48,12 @@ function toggleAlertMarkerOnLine(view: EditorView, line: { from: number; text: s
     return true;
 }
 
+/**
+ * Inserts or cycles a GitHub alert block.
+ * - If text is not fully quoted, inserts an alert title line and quotes all lines.
+ * - If already an alert, cycles the marker on the first line while preserving the title and nesting prefix.
+ * - If quoted but not an alert, injects an alert marker respecting existing blockquote depth.
+ */
 export function toggleAlertSelectionText(text: string): string {
     const lines = text.split('\n');
     const allQuoted = lines.every((line) => isBlockquoteLine(line));

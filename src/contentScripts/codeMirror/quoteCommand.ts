@@ -109,6 +109,11 @@ function collectNonParagraphLineRanges(
     return ranges;
 }
 
+/**
+ * Toggles blockquote formatting for the cursor or the selected ranges.
+ * - Cursor only: toggles the current paragraph (or line if no paragraph) and inserts `> ` on an empty line.
+ * - Selections: processes each selection independently, quoting paragraphs and any non-paragraph lines inside the selection; dedupes overlapping ranges.
+ */
 export function createQuoteSelectionCommand(view: EditorView): () => boolean {
     return () => {
         const state = view.state;

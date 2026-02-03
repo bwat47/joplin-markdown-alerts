@@ -22,6 +22,9 @@ export function getSyntaxTree(state: EditorState, position: number, timeoutMs = 
     return tree;
 }
 
+/**
+ * Returns nearby offsets to probe syntax nodes, including just after a detected line prefix (e.g. "> ") so lookups work when the cursor is on a marker boundary.
+ */
 export function getProbePositions(state: EditorState, position: number, linePrefixPattern?: RegExp): number[] {
     const line = state.doc.lineAt(position);
     const positions = [position, position + 1];
@@ -44,6 +47,9 @@ export function getProbePositions(state: EditorState, position: number, linePref
         .filter((pos, index, list) => list.indexOf(pos) === index);
 }
 
+/**
+ * Finds the nearest paragraph around a position, probing offsets before/after prefixes to handle cursors placed on blockquote markers.
+ */
 export function findParagraphNodeAt(
     state: EditorState,
     tree: ReturnType<typeof syntaxTree>,

@@ -183,15 +183,21 @@ export function createQuoteSelectionCommand(view: EditorView): () => boolean {
 
         if (nonEmptyRanges.length === 0) {
             const cursorPos = state.selection.main.head;
-            const cursorLine = state.doc.lineAt(cursorPos);
-            if (cursorLine.text.trim() === '') {
-                view.dispatch(view.state.replaceSelection('> '));
-                return true;
-            }
             const tree = getSyntaxTree(state, cursorPos);
             const paragraphNode = findParagraphNodeAt(state, tree, cursorPos);
             if (!paragraphNode) {
-                view.dispatch(view.state.replaceSelection('> '));
+                const cursorLine = state.doc.lineAt(cursorPos);
+                const updated = isBlockquoteText(cursorLine.text)
+                    ? removeBlockquotePrefix(cursorLine.text)
+                    : addBlockquotePrefix(cursorLine.text);
+
+                view.dispatch({
+                    changes: {
+                        from: cursorLine.from,
+                        to: cursorLine.to,
+                        insert: updated,
+                    },
+                });
                 return true;
             }
 

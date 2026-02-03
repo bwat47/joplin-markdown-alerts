@@ -58,6 +58,13 @@ describe('createInsertAlertCommand', () => {
         expect(runCommand(input)).toBe(expected);
     });
 
+    test('converts the entire paragraph when cursor is inside it', () => {
+        const input = 'Parag|raph';
+        const expected = ['> [!NOTE]', '> Paragraph'].join('\n');
+
+        expect(runCommand(input)).toBe(expected);
+    });
+
     test('converts a partially selected paragraph into an alert block', () => {
         const input = ['Intro line', '', 'Se[[cond paragraph]]'].join('\n');
         const expected = ['Intro line', '', '> [!NOTE]', '> Second paragraph'].join('\n');

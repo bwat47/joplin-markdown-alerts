@@ -44,6 +44,13 @@ describe('createQuoteSelectionCommand', () => {
         expect(runCommand(input)).toBe(expected);
     });
 
+    test('quotes entire paragraph when cursor is inside it', () => {
+        const input = ['First line', 'Sec|ond line'].join('\n');
+        const expected = ['> First line', '> Second line'].join('\n');
+
+        expect(runCommand(input)).toBe(expected);
+    });
+
     test('unquotes when cursor is before the blockquote marker', () => {
         const input = '|> Quoted line';
         const expected = 'Quoted line';

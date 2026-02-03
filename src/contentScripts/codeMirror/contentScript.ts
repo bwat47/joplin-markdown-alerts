@@ -7,7 +7,7 @@ import { createQuoteSelectionCommand } from './quoteCommand';
 import { logger } from '../../logger';
 
 const INSERT_ALERT_COMMAND = 'markdownAlerts.insertAlertOrToggle';
-const QUOTE_SELECTION_COMMAND = 'markdownAlerts.quoteSelection';
+const INSERT_QUOTE_COMMAND = 'markdownAlerts.insertQuoteOrToggle';
 
 /**
  * Joplin CodeMirror content script entry point.
@@ -30,7 +30,7 @@ export default function () {
 
             editorControl.registerCommand(INSERT_ALERT_COMMAND, createInsertAlertCommand(editorControl.cm6));
 
-            editorControl.registerCommand(QUOTE_SELECTION_COMMAND, createQuoteSelectionCommand(editorControl.cm6));
+            editorControl.registerCommand(INSERT_QUOTE_COMMAND, createQuoteSelectionCommand(editorControl.cm6));
         },
     };
 }

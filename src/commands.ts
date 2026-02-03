@@ -3,15 +3,17 @@ import { MenuItemLocation, ToastType, ToolbarButtonLocation } from 'api/types';
 
 export const INSERT_NOTE_ALERT_COMMAND_NAME = 'markdownAlerts.insertNoteAlert';
 export const INSERT_NOTE_ALERT_ACCELERATOR = 'Ctrl+Shift+A';
+const INSERT_ALERT_OR_TOGGLE_COMMAND = 'markdownAlerts.insertAlertOrToggle';
 
-export const QUOTE_SELECTION_COMMAND_NAME = 'markdownAlerts.quoteSelection';
-export const QUOTE_SELECTION_ACCELERATOR = 'Ctrl+Shift+.';
+export const INSERT_NOTE_QUOTE_COMMAND_NAME = 'markdownAlerts.insertNoteQuote';
+export const INSERT_NOTE_QUOTE_ACCELERATOR = 'Ctrl+Shift+.';
+const INSERT_QUOTE_OR_TOGGLE_COMMAND = 'markdownAlerts.insertQuoteOrToggle';
 
 const INSERT_NOTE_ALERT_MENU_ITEM_ID = 'markdownAlerts.insertNoteAlert.menuItem';
 const INSERT_NOTE_ALERT_TOOLBAR_BUTTON_ID = 'markdownAlerts.insertNoteAlert.toolbarButton';
 
-const QUOTE_SELECTION_MENU_ITEM_ID = 'markdownAlerts.quoteSelection.menuItem';
-const QUOTE_SELECTION_TOOLBAR_BUTTON_ID = 'markdownAlerts.quoteSelection.toolbarButton';
+const INSERT_NOTE_QUOTE_MENU_ITEM_ID = 'markdownAlerts.insertNoteQuote.menuItem';
+const INSERT_NOTE_QUOTE_TOOLBAR_BUTTON_ID = 'markdownAlerts.insertNoteQuote.toolbarButton';
 const QUOTE_SELECTION_ICON_NAME = 'fas fa-quote-right';
 
 export async function registerInsertNoteAlertCommand(): Promise<void> {
@@ -31,7 +33,7 @@ export async function registerInsertNoteAlertCommand(): Promise<void> {
 
             try {
                 await joplin.commands.execute('editor.execCommand', {
-                    name: 'markdownAlerts.insertAlertOrToggle',
+                    name: INSERT_ALERT_OR_TOGGLE_COMMAND,
                 });
             } catch {
                 await joplin.views.dialogs.showToast({
@@ -58,9 +60,9 @@ export async function registerInsertNoteAlertCommand(): Promise<void> {
     );
 }
 
-export async function registerQuoteSelectionCommand(): Promise<void> {
+export async function registerInsertNoteQuoteCommand(): Promise<void> {
     await joplin.commands.register({
-        name: QUOTE_SELECTION_COMMAND_NAME,
+        name: INSERT_NOTE_QUOTE_COMMAND_NAME,
         label: 'Insert or Toggle Blockquote',
         iconName: QUOTE_SELECTION_ICON_NAME,
         execute: async () => {
@@ -75,7 +77,7 @@ export async function registerQuoteSelectionCommand(): Promise<void> {
 
             try {
                 const result = await joplin.commands.execute('editor.execCommand', {
-                    name: QUOTE_SELECTION_COMMAND_NAME,
+                    name: INSERT_QUOTE_OR_TOGGLE_COMMAND,
                 });
 
                 if (result === false) {
@@ -94,17 +96,17 @@ export async function registerQuoteSelectionCommand(): Promise<void> {
     });
 
     await joplin.views.menuItems.create(
-        QUOTE_SELECTION_MENU_ITEM_ID,
-        QUOTE_SELECTION_COMMAND_NAME,
+        INSERT_NOTE_QUOTE_MENU_ITEM_ID,
+        INSERT_NOTE_QUOTE_COMMAND_NAME,
         MenuItemLocation.Edit,
         {
-            accelerator: QUOTE_SELECTION_ACCELERATOR,
+            accelerator: INSERT_NOTE_QUOTE_ACCELERATOR,
         }
     );
 
     await joplin.views.toolbarButtons.create(
-        QUOTE_SELECTION_TOOLBAR_BUTTON_ID,
-        QUOTE_SELECTION_COMMAND_NAME,
+        INSERT_NOTE_QUOTE_TOOLBAR_BUTTON_ID,
+        INSERT_NOTE_QUOTE_COMMAND_NAME,
         ToolbarButtonLocation.EditorToolbar
     );
 }

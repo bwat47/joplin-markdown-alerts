@@ -186,6 +186,11 @@ export function createQuoteSelectionCommand(view: EditorView): () => boolean {
 
         if (nonEmptyRanges.length === 0) {
             const cursorPos = state.selection.main.head;
+            const cursorLine = state.doc.lineAt(cursorPos);
+            if (cursorLine.text.trim() === '') {
+                view.dispatch(view.state.replaceSelection('> '));
+                return true;
+            }
             const tree = getSyntaxTree(state, cursorPos);
             const paragraphNode = findParagraphNodeAt(state, tree, cursorPos);
             if (!paragraphNode) {

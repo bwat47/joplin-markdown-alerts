@@ -22,11 +22,7 @@ export function getSyntaxTree(state: EditorState, position: number, timeoutMs = 
     return tree;
 }
 
-export function getProbePositions(
-    state: EditorState,
-    position: number,
-    linePrefixPattern?: RegExp
-): number[] {
+export function getProbePositions(state: EditorState, position: number, linePrefixPattern?: RegExp): number[] {
     const line = state.doc.lineAt(position);
     const positions = [position, position + 1];
     if (position > line.from) {

@@ -38,10 +38,17 @@ To add an alert, use a special blockquote line specifying the alert type, follow
 
 ## Markdown Editor
 
+### Insert or Toggle alert
+
 A command to quickly create an alert (or toggle alert types) is provided via an icon on the editing toolbar, keyboard shortcut (`Ctrl + Shift + A` by default), and an entry in the Edit menu. This command will either:
 
 - Insert a new alert (`> [!NOTE]`) at the cursor positon (if not inside a block quote)
 - Or, if inside a block quote will toggle through the different alert types (Note > Tip > Important > Warning > Caution).
+- Or, if you have a text selection it will convert the text to a `[!note]` alert (or toggle through alert types if selected text is already a quote or an alert).
+
+### Quote/Unquote selected text
+
+A command to quickly Quote or Unquote selected text is provided via an icon on the editing toolbar, keyboard shortcut (`Ctrl + Shift + .` by default), and an entry in the Edit Menu.
 
 The plugin will apply styling to block quotes containing github alert syntax. They will be similar to standard Joplin block quote styling, but with coloring based on the alert type, and the line with the alert syntax will be rendered as a title.
 

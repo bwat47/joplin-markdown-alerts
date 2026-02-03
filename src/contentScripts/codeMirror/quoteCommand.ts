@@ -3,13 +3,6 @@ import type { EditorView } from '@codemirror/view';
 const BLOCKQUOTE_PREFIX = '> ';
 const BLOCKQUOTE_PREFIX_REGEX = /^>\s?/;
 
-export function convertToBlockquoteText(text: string): string {
-    return text
-        .split('\n')
-        .map((line) => `${BLOCKQUOTE_PREFIX}${line}`)
-        .join('\n');
-}
-
 export function toggleBlockquoteText(text: string): string {
     const lines = text.split('\n');
     const allQuoted = lines.every((line) => BLOCKQUOTE_PREFIX_REGEX.test(line));

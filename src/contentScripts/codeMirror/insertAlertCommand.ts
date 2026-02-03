@@ -182,17 +182,14 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
             for (const range of nonEmptyRanges) {
                 const tree = getSyntaxTree(state, range.to);
                 const paragraphRanges = collectParagraphRanges(state, tree, range.from, range.to);
-                if (paragraphRanges.length === 0) {
-                    const key = `${range.from}:${range.to}`;
-                    if (!expandedRangeMap.has(key)) {
-                        expandedRangeMap.set(key, { from: range.from, to: range.to });
-                    }
-                    continue;
-                }
-
+                const baseFrom = state.doc.lineAt(range.from).from;
+                const baseTo = state.doc.lineAt(range.to).to;
+                const paragraphFrom = paragraphRanges.length > 0 ? paragraphRanges[0].from : baseFrom;
+                const paragraphTo =
+                    paragraphRanges.length > 0 ? paragraphRanges[paragraphRanges.length - 1].to : baseTo;
                 const expandedRange = {
-                    from: paragraphRanges[0].from,
-                    to: paragraphRanges[paragraphRanges.length - 1].to,
+                    from: Math.min(baseFrom, paragraphFrom),
+                    to: Math.max(baseTo, paragraphTo),
                 };
                 const key = `${expandedRange.from}:${expandedRange.to}`;
                 if (!expandedRangeMap.has(key)) {

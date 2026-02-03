@@ -12,7 +12,7 @@ const INSERT_QUOTE_COMMAND = 'markdownAlerts.insertQuoteOrToggle';
 /**
  * Joplin CodeMirror content script entry point.
  *
- * Registers the alert decorations extension and the insertAlertOrToggle command.
+ * Registers the alert decorations extension and the editor commands for alerts and blockquotes.
  */
 export default function () {
     return {

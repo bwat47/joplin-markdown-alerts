@@ -49,8 +49,8 @@ GitHub alert syntax:
 - `markdownAlerts.insertNoteAlert`: Global command (accessible via menu/shortcut)
 -    - Executes `markdownAlerts.insertAlertOrToggle` in the editor (registered by the CM content script) to insert a new alert, toggle alert types on existing alerts, or convert a blockquote to an alert.
 -    - When text is selected, it operates on the selection: non-quotes become an alert; quoted selections toggle alert type or get a new marker line.
-- `markdownAlerts.quoteSelection`: Global command (toolbar + shortcut)
--    - Executes `markdownAlerts.quoteSelection` in the editor to quote selected text or remove quote markers when all selected lines are quoted.
+- `markdownAlerts.insertNoteQuote`: Global command (toolbar + shortcut)
+-    - Executes `markdownAlerts.insertQuoteOrToggle` in the editor to quote selected text or remove quote markers when all selected lines are quoted.
 
 ## Design Principles
 

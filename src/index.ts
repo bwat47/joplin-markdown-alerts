@@ -2,8 +2,7 @@ import joplin from 'api';
 import { ContentScriptType } from 'api/types';
 
 import { logger } from './logger';
-import { registerInsertNoteAlertCommand } from './insertNoteAlertCommand';
-import { registerQuoteSelectionCommand } from './quoteSelectionCommand';
+import { registerInsertNoteAlertCommand, registerQuoteSelectionCommand } from './commands';
 
 joplin.plugins.register({
     onStart: async function () {

@@ -51,6 +51,17 @@ describe('createInsertAlertCommand', () => {
         }
     }
 
+    function runCommandWithCursor(input: string): { text: string; cursor: number } {
+        const harness = createEditorHarness(input);
+        try {
+            const command = createInsertAlertCommand(harness.view);
+            command();
+            return { text: harness.getText(), cursor: harness.getCursor() };
+        } finally {
+            harness.destroy();
+        }
+    }
+
     test('toggles alert marker when cursor is before the blockquote marker', () => {
         const input = ['|> [!NOTE]', '> Line one'].join('\n');
         const expected = ['> [!TIP]', '> Line one'].join('\n');
@@ -63,6 +74,17 @@ describe('createInsertAlertCommand', () => {
         const expected = ['> [!NOTE]', '> Paragraph'].join('\n');
 
         expect(runCommand(input)).toBe(expected);
+    });
+
+    test('places cursor after alert marker on blank line', () => {
+        const input = '|\n';
+        const expectedText = `> [!NOTE] \n`;
+        const expectedCursor = expectedText.indexOf('\n');
+
+        const result = runCommandWithCursor(input);
+
+        expect(result.text).toBe(expectedText);
+        expect(result.cursor).toBe(expectedCursor);
     });
 
     test('converts a partially selected paragraph into an alert block', () => {

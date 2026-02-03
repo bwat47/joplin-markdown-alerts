@@ -11,6 +11,7 @@ type EditorHarness = {
     view: EditorView;
     destroy: () => void;
     getText: () => string;
+    getCursor: () => number;
 };
 
 const SELECTION_START = '[[';
@@ -61,5 +62,6 @@ export function createEditorHarness(input: string): EditorHarness {
         view,
         destroy: () => view.destroy(),
         getText: () => view.state.doc.toString(),
+        getCursor: () => view.state.selection.main.head,
     };
 }

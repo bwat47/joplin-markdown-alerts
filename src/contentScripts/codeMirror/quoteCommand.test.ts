@@ -37,6 +37,17 @@ describe('createQuoteSelectionCommand', () => {
         }
     }
 
+    function runCommandWithCursor(input: string): { text: string; cursor: number } {
+        const harness = createEditorHarness(input);
+        try {
+            const command = createQuoteSelectionCommand(harness.view);
+            command();
+            return { text: harness.getText(), cursor: harness.getCursor() };
+        } finally {
+            harness.destroy();
+        }
+    }
+
     test('quotes paragraph when cursor is at the start', () => {
         const input = '|Paragraph';
         const expected = '> Paragraph';
@@ -63,6 +74,17 @@ describe('createQuoteSelectionCommand', () => {
         const expected = '> \n';
 
         expect(runCommand(input)).toBe(expected);
+    });
+
+    test('places cursor after quote marker on blank line', () => {
+        const input = '|\n';
+        const expectedText = '> \n';
+        const expectedCursor = 2;
+
+        const result = runCommandWithCursor(input);
+
+        expect(result.text).toBe(expectedText);
+        expect(result.cursor).toBe(expectedCursor);
     });
 
     test('quotes code block lines inside selection', () => {

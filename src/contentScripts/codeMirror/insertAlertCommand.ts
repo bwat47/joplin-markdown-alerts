@@ -5,6 +5,49 @@ import type { SyntaxNode } from '@lezer/common';
 import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine } from './alertParsing';
 
 const SYNTAX_TREE_TIMEOUT = 100;
+const BLOCKQUOTE_PREFIX_PATTERN = /^(\s*(?:>\s*)+)/;
+const DEFAULT_ALERT_TYPE = 'NOTE';
+
+function createAlertLine(prefix: string): string {
+    return `${prefix}[!${DEFAULT_ALERT_TYPE}]`;
+}
+
+function isBlockquoteLine(line: string): boolean {
+    return BLOCKQUOTE_PREFIX_PATTERN.test(line);
+}
+
+function getBlockquotePrefix(line: string): string | null {
+    const match = BLOCKQUOTE_PREFIX_PATTERN.exec(line);
+    return match ? match[1] : null;
+}
+
+export function toggleAlertSelectionText(text: string): string {
+    const lines = text.split('\n');
+    const allQuoted = lines.every((line) => isBlockquoteLine(line));
+
+    if (!allQuoted) {
+        const quotedLines = lines.map((line) => `> ${line}`);
+        return [createAlertLine('> '), ...quotedLines].join('\n');
+    }
+
+    const firstLine = lines[0];
+    const alertInfo = parseGitHubAlertTitleLine(firstLine);
+    if (alertInfo) {
+        const currentIndex = GITHUB_ALERT_TYPES.indexOf(alertInfo.type);
+        const nextIndex = (currentIndex + 1) % GITHUB_ALERT_TYPES.length;
+        const nextTypeUpper = GITHUB_ALERT_TYPES[nextIndex].toUpperCase();
+
+        const updatedFirstLine =
+            firstLine.slice(0, alertInfo.markerRange.from) +
+            `[!${nextTypeUpper}]` +
+            firstLine.slice(alertInfo.markerRange.to);
+
+        return [updatedFirstLine, ...lines.slice(1)].join('\n');
+    }
+
+    const prefix = getBlockquotePrefix(firstLine) ?? '> ';
+    return [createAlertLine(prefix), ...lines].join('\n');
+}
 
 /**
  * Creates a command that inserts a new alert or toggles the type of an existing one.
@@ -17,6 +60,25 @@ const SYNTAX_TREE_TIMEOUT = 100;
 export function createInsertAlertCommand(view: EditorView): () => boolean {
     return () => {
         const state = view.state;
+        const ranges = state.selection.ranges;
+        const nonEmptyRanges = ranges.filter((range) => !range.empty);
+
+        if (nonEmptyRanges.length > 0) {
+            const changes = nonEmptyRanges.map((range) => {
+                const text = state.doc.sliceString(range.from, range.to);
+                const updated = toggleAlertSelectionText(text);
+
+                return {
+                    from: range.from,
+                    to: range.to,
+                    insert: updated,
+                };
+            });
+
+            view.dispatch({ changes });
+            return true;
+        }
+
         const cursorPos = state.selection.main.head;
 
         // Ensure the syntax tree is available before resolving nodes.
@@ -57,20 +119,21 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
         }
 
         if (outermostBlockquoteFrom !== null) {
-            // Convert standard blockquote to alert by inserting the marker after the prefix.
+            // Convert standard blockquote to alert by inserting a new marker line above.
             const blockquoteStartLine = state.doc.lineAt(outermostBlockquoteFrom);
-            const match = /^(\s*(?:>\s*)+)/.exec(blockquoteStartLine.text);
+            const match = BLOCKQUOTE_PREFIX_PATTERN.exec(blockquoteStartLine.text);
             if (match) {
-                const insertionPoint = blockquoteStartLine.from + match[1].length;
+                const insertionPoint = blockquoteStartLine.from;
+                const insertionText = `${createAlertLine(match[1])}\n`;
                 view.dispatch({
-                    changes: { from: insertionPoint, insert: '[!NOTE] ' },
+                    changes: { from: insertionPoint, insert: insertionText },
                 });
                 return true;
             }
         }
 
         // Default: Insert new alert at cursor
-        const text = '> [!NOTE] ';
+        const text = `> [!${DEFAULT_ALERT_TYPE}] `;
         view.dispatch(view.state.replaceSelection(text));
         return true;
     };

@@ -5,7 +5,7 @@
 
 A simple Joplin plugin that adds support for Github alert syntax in the Markdown Editor and Markdown Viewer.
 
-![example](https://github.com/user-attachments/assets/610816cb-f90f-42ff-8ece-bb8734c2a4a3)
+![example](https://github.com/user-attachments/assets/5cc62d52-9cd3-40f6-97bc-0bf2a51a83f7)
 
 > [!CAUTION]
 > Note that the Rich Text Editor is **not** supported. Alerts will (sort of) render in the Rich Text Editor, but editing the note in the Rich Text Editor will remove any github alert syntax.

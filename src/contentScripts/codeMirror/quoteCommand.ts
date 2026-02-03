@@ -1,4 +1,4 @@
-import type { EditorState } from '@codemirror/state';
+import { EditorSelection, type EditorState } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { SyntaxNode } from '@lezer/common';
 
@@ -117,10 +117,23 @@ export function createQuoteSelectionCommand(view: EditorView): () => boolean {
 
         if (nonEmptyRanges.length === 0) {
             const cursorPos = state.selection.main.head;
+            const cursorLine = state.doc.lineAt(cursorPos);
+            if (cursorLine.text.trim() === '') {
+                const insertionText = '> ';
+                const selectionPos = cursorLine.from + insertionText.length;
+                view.dispatch({
+                    changes: {
+                        from: cursorLine.from,
+                        to: cursorLine.to,
+                        insert: insertionText,
+                    },
+                    selection: EditorSelection.single(selectionPos),
+                });
+                return true;
+            }
             const tree = getSyntaxTree(state, cursorPos);
             const paragraphNode = findParagraphNodeAt(state, tree, cursorPos, BLOCKQUOTE_PREFIX_REGEX);
             if (!paragraphNode) {
-                const cursorLine = state.doc.lineAt(cursorPos);
                 const updated = isBlockquoteText(cursorLine.text)
                     ? removeBlockquotePrefix(cursorLine.text)
                     : addBlockquotePrefix(cursorLine.text);

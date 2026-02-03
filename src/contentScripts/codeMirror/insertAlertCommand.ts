@@ -1,4 +1,5 @@
 import type { EditorView } from '@codemirror/view';
+import { EditorSelection } from '@codemirror/state';
 import type { SyntaxNode } from '@lezer/common';
 
 import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine } from './alertParsing';
@@ -126,6 +127,19 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
 
         const cursorPos = state.selection.main.head;
         const cursorLine = state.doc.lineAt(cursorPos);
+        if (cursorLine.text.trim() === '') {
+            const insertionText = `> [!${DEFAULT_ALERT_TYPE}] `;
+            const selectionPos = cursorLine.from + insertionText.length;
+            view.dispatch({
+                changes: {
+                    from: cursorLine.from,
+                    to: cursorLine.to,
+                    insert: insertionText,
+                },
+                selection: EditorSelection.single(selectionPos),
+            });
+            return true;
+        }
         if (toggleAlertMarkerOnLine(view, cursorLine)) {
             return true;
         }
@@ -180,9 +194,15 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
             return true;
         }
 
-        // Default: Insert new alert at cursor
-        const text = `> [!${DEFAULT_ALERT_TYPE}] `;
-        view.dispatch(view.state.replaceSelection(text));
+        const fallbackLine = state.doc.lineAt(cursorPos);
+        const updated = toggleAlertSelectionText(fallbackLine.text);
+        view.dispatch({
+            changes: {
+                from: fallbackLine.from,
+                to: fallbackLine.to,
+                insert: updated,
+            },
+        });
         return true;
     };
 }

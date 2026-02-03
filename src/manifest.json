@@ -2,7 +2,7 @@
     "manifest_version": 1,
     "id": "com.bwat47.joplin-markdown-alerts",
     "app_min_version": "3.3",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "platforms": ["desktop", "mobile"],
     "name": "Markdown Alerts",
     "description": "Adds support for Github style alerts (aka callouts) in the Markdown editor & viewer",

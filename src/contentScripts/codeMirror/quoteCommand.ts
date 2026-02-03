@@ -46,14 +46,6 @@ function isBlockquoteText(text: string): boolean {
     return text.split('\n').every((line) => BLOCKQUOTE_PREFIX_REGEX.test(line));
 }
 
-function isBlankLine(text: string): boolean {
-    return text.trim().length === 0;
-}
-
-function isQuotedBlankLine(text: string): boolean {
-    return /^>\s*$/.test(text);
-}
-
 function getSyntaxTree(state: EditorState, position: number) {
     let tree = ensureSyntaxTree(state, position, SYNTAX_TREE_TIMEOUT);
     if (!tree) {
@@ -153,27 +145,32 @@ function collectParagraphRanges(state: EditorState, from: number, to: number): P
     return ranges.sort((a, b) => a.from - b.from);
 }
 
-function collectBlankLineRangesBetween(state: EditorState, paragraphRanges: ParagraphRange[]): LineRange[] {
-    if (paragraphRanges.length < 2) {
-        return [];
-    }
-
+function collectNonParagraphLineRanges(
+    state: EditorState,
+    paragraphRanges: ParagraphRange[],
+    selectionFrom: number,
+    selectionTo: number
+): LineRange[] {
     const doc = state.doc;
-    const firstRange = paragraphRanges[0];
-    const lastRange = paragraphRanges[paragraphRanges.length - 1];
+    const startLineNo = doc.lineAt(selectionFrom).number;
+    const endLineNo = doc.lineAt(selectionTo).number;
+    const paragraphLineNumbers = new Set<number>();
 
-    const startLineNo = doc.lineAt(firstRange.to).number + 1;
-    const endLineNo = doc.lineAt(lastRange.from).number - 1;
-    if (startLineNo > endLineNo) {
-        return [];
+    for (const range of paragraphRanges) {
+        const rangeStartLine = doc.lineAt(range.from).number;
+        const rangeEndLine = doc.lineAt(range.to).number;
+        for (let lineNo = rangeStartLine; lineNo <= rangeEndLine; lineNo += 1) {
+            paragraphLineNumbers.add(lineNo);
+        }
     }
 
     const ranges: LineRange[] = [];
     for (let lineNo = startLineNo; lineNo <= endLineNo; lineNo += 1) {
-        const line = doc.line(lineNo);
-        if (isBlankLine(line.text) || isQuotedBlankLine(line.text)) {
-            ranges.push({ from: line.from, to: line.to });
+        if (paragraphLineNumbers.has(lineNo)) {
+            continue;
         }
+        const line = doc.line(lineNo);
+        ranges.push({ from: line.from, to: line.to });
     }
     return ranges;
 }
@@ -194,7 +191,8 @@ export function createQuoteSelectionCommand(view: EditorView): () => boolean {
             const tree = getSyntaxTree(state, cursorPos);
             const paragraphNode = findParagraphNodeAt(state, tree, cursorPos);
             if (!paragraphNode) {
-                return false;
+                view.dispatch(view.state.replaceSelection('> '));
+                return true;
             }
 
             const paragraphRange = getParagraphLineRange(state, paragraphNode);
@@ -228,14 +226,33 @@ export function createQuoteSelectionCommand(view: EditorView): () => boolean {
             return false;
         }
 
-        const paragraphTexts = paragraphRanges.map((range) => ({
-            range,
-            text: state.doc.sliceString(range.from, range.to),
-        }));
-        const allQuoted = paragraphTexts.every((paragraph) => isBlockquoteText(paragraph.text));
-        const blankLineRanges = collectBlankLineRangesBetween(state, paragraphRanges);
+        const selectionFrom = Math.min(...nonEmptyRanges.map((range) => range.from));
+        const selectionTo = Math.max(...nonEmptyRanges.map((range) => range.to));
+        const nonParagraphLineRanges = collectNonParagraphLineRanges(
+            state,
+            paragraphRanges,
+            selectionFrom,
+            selectionTo
+        );
 
-        const changes = paragraphTexts
+        const rangeTexts = [
+            ...paragraphRanges.map((range) => ({
+                range,
+                text: state.doc.sliceString(range.from, range.to),
+            })),
+            ...nonParagraphLineRanges.map((range) => ({
+                range,
+                text: state.doc.sliceString(range.from, range.to),
+            })),
+        ];
+
+        if (rangeTexts.length === 0) {
+            return false;
+        }
+
+        const allQuoted = rangeTexts.every((entry) => isBlockquoteText(entry.text));
+
+        const changes = rangeTexts
             .map(({ range, text }) => {
                 if (allQuoted) {
                     const updated = removeBlockquotePrefix(text);
@@ -253,17 +270,6 @@ export function createQuoteSelectionCommand(view: EditorView): () => boolean {
                 return null;
             })
             .filter((change): change is { from: number; to: number; insert: string } => Boolean(change));
-
-        if (blankLineRanges.length > 0) {
-            for (const range of blankLineRanges) {
-                const text = state.doc.sliceString(range.from, range.to);
-                const updated = allQuoted ? removeBlockquotePrefix(text) : addBlockquotePrefix(text);
-                if (updated === text) {
-                    continue;
-                }
-                changes.push({ from: range.from, to: range.to, insert: updated });
-            }
-        }
 
         if (changes.length === 0) {
             return false;

@@ -3,16 +3,16 @@ import type { CodeMirrorControl } from 'api/types';
 
 import { createAlertDecorationExtensions } from './alertDecorations';
 import { createInsertAlertCommand } from './insertAlertCommand';
-import { createQuoteSelectionCommand } from './quoteCommand';
+import { createInsertQuoteCommand } from './insertQuoteCommand';
 import { logger } from '../../logger';
 
 const INSERT_ALERT_COMMAND = 'markdownAlerts.insertAlertOrToggle';
-const QUOTE_SELECTION_COMMAND = 'markdownAlerts.quoteSelection';
+const INSERT_QUOTE_COMMAND = 'markdownAlerts.insertQuoteOrToggle';
 
 /**
  * Joplin CodeMirror content script entry point.
  *
- * Registers the alert decorations extension and the insertAlertOrToggle command.
+ * Registers the alert decorations extension and the editor commands for alerts and blockquotes.
  */
 export default function () {
     return {
@@ -30,7 +30,7 @@ export default function () {
 
             editorControl.registerCommand(INSERT_ALERT_COMMAND, createInsertAlertCommand(editorControl.cm6));
 
-            editorControl.registerCommand(QUOTE_SELECTION_COMMAND, createQuoteSelectionCommand(editorControl.cm6));
+            editorControl.registerCommand(INSERT_QUOTE_COMMAND, createInsertQuoteCommand(editorControl.cm6));
         },
     };
 }

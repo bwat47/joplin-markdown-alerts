@@ -44,7 +44,8 @@ A command to quickly create an alert (or toggle alert types) is provided via an 
 
 - On an empty line, insert a new alert (`> [!NOTE]`) and place the cursor after the marker.
 - If the cursor is within an existing alert, toggle through the alert types (Note > Tip > Important > Warning > Caution).
-- If the cursor is inside a regular blockquote, insert an alert title line above it (respecting nesting).
+- If the cursor is inside a regular blockquote, convert it into an alert.
+- With no selection, (and cursor isn't inside an existing quote/alert), convert the current paragraph into an alert (or current line if no paragraph).
 - If you have a selection, convert the selected paragraphs/lines into an alert (and toggle types if already an alert).
 
 ### Insert or Toggle blockquote
@@ -52,7 +53,7 @@ A command to quickly create an alert (or toggle alert types) is provided via an 
 A command to quickly insert or toggle blockquotes is provided via an icon on the editing toolbar, keyboard shortcut (`Ctrl + Shift + .` by default), and an entry in the Edit Menu. This command will either:
 
 - On an empty line, insert `> ` and place the cursor after the marker.
-- With no selection, toggle the current paragraph (or line if no paragraph).
+- With no selection, convert the current paragraph to a blockquote (or line if no paragraph).
 - With a selection, convert all paragraphs/lines in the selection to blockquotes (paragraph-aware).
 
 The plugin will apply styling to block quotes containing github alert syntax. They will be similar to standard Joplin block quote styling, but with coloring based on the alert type, and the line with the alert syntax will be rendered as a title.

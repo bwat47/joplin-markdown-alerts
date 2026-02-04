@@ -11,16 +11,17 @@ const INSERT_QUOTE_OR_TOGGLE_COMMAND = 'markdownAlerts.insertQuoteOrToggle';
 
 const INSERT_NOTE_ALERT_MENU_ITEM_ID = 'markdownAlerts.insertNoteAlert.menuItem';
 const INSERT_NOTE_ALERT_TOOLBAR_BUTTON_ID = 'markdownAlerts.insertNoteAlert.toolbarButton';
+const INSERT_NOTE_ALERT_ICON_NAME = 'fas fa-exclamation-circle';
 
 const INSERT_NOTE_QUOTE_MENU_ITEM_ID = 'markdownAlerts.insertNoteQuote.menuItem';
 const INSERT_NOTE_QUOTE_TOOLBAR_BUTTON_ID = 'markdownAlerts.insertNoteQuote.toolbarButton';
-const QUOTE_SELECTION_ICON_NAME = 'fas fa-quote-right';
+const INSERT_NOTE_QUOTE_ICON_NAME = 'fas fa-quote-right';
 
 export async function registerInsertNoteAlertCommand(): Promise<void> {
     await joplin.commands.register({
         name: INSERT_NOTE_ALERT_COMMAND_NAME,
         label: 'Insert or Toggle Markdown Alert',
-        iconName: 'fas fa-exclamation-circle',
+        iconName: INSERT_NOTE_ALERT_ICON_NAME,
         execute: async () => {
             const isMarkdown = !!(await joplin.settings.globalValue('editor.codeView'));
             if (!isMarkdown) {
@@ -64,7 +65,7 @@ export async function registerInsertNoteQuoteCommand(): Promise<void> {
     await joplin.commands.register({
         name: INSERT_NOTE_QUOTE_COMMAND_NAME,
         label: 'Insert or Toggle Blockquote',
-        iconName: QUOTE_SELECTION_ICON_NAME,
+        iconName: INSERT_NOTE_QUOTE_ICON_NAME,
         execute: async () => {
             const isMarkdown = !!(await joplin.settings.globalValue('editor.codeView'));
             if (!isMarkdown) {

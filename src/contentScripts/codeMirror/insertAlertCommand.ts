@@ -141,6 +141,7 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
             });
 
             view.dispatch({ changes });
+            view.focus();
             return true;
         }
 
@@ -157,9 +158,11 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
                 },
                 selection: EditorSelection.single(selectionPos),
             });
+            view.focus();
             return true;
         }
         if (toggleAlertMarkerOnLine(view, cursorLine)) {
+            view.focus();
             return true;
         }
         const tree = getSyntaxTree(state, cursorPos);
@@ -175,6 +178,7 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
 
                     const blockquoteStartLine = state.doc.lineAt(node.from);
                     if (toggleAlertMarkerOnLine(view, blockquoteStartLine)) {
+                        view.focus();
                         return true;
                     }
                 }
@@ -193,6 +197,7 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
                 view.dispatch({
                     changes: { from: insertionPoint, insert: insertionText },
                 });
+                view.focus();
                 return true;
             }
         }
@@ -210,6 +215,7 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
                     insert: updated,
                 },
             });
+            view.focus();
             return true;
         }
 
@@ -222,6 +228,7 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
                 insert: updated,
             },
         });
+        view.focus();
         return true;
     };
 }

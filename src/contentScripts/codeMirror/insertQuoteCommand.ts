@@ -134,6 +134,7 @@ export function createInsertQuoteCommand(view: EditorView): () => boolean {
                     },
                     selection: EditorSelection.single(selectionPos),
                 });
+                view.focus();
                 return true;
             }
             const tree = getSyntaxTree(state, cursorPos);
@@ -150,6 +151,7 @@ export function createInsertQuoteCommand(view: EditorView): () => boolean {
                         insert: updated,
                     },
                 });
+                view.focus();
                 return true;
             }
 
@@ -166,6 +168,7 @@ export function createInsertQuoteCommand(view: EditorView): () => boolean {
                     insert: updated,
                 },
             });
+            view.focus();
             return true;
         }
 
@@ -239,6 +242,7 @@ export function createInsertQuoteCommand(view: EditorView): () => boolean {
         }
 
         view.dispatch({ changes });
+        view.focus();
         return true;
     };
 }

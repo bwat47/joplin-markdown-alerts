@@ -1,9 +1,9 @@
 > [!note]
 > This plugin was created entirely with AI tools
 
-# Markdown Alerts
+# Markdown Alerts and Quotes
 
-A simple Joplin plugin that adds support for Github alert syntax in the Markdown Editor and Markdown Viewer.
+A Joplin plugin that adds support for GitHub-style alerts (callouts) in the markdown editor/viewer, plus editor commands for alerts and blockquotes.
 
 ![example](https://github.com/user-attachments/assets/5cc62d52-9cd3-40f6-97bc-0bf2a51a83f7)
 

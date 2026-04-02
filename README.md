@@ -1,9 +1,9 @@
 > [!note]
 > This plugin was created entirely with AI tools
 
-# Markdown Alerts and Quotes
+# Markdown Alerts and Formatting Commands
 
-A Joplin plugin that adds support for GitHub-style alerts (callouts) in the markdown editor/viewer, plus editor commands for alerts and blockquotes.
+A Joplin plugin that adds support for GitHub-style alerts (callouts) in the markdown editor/viewer, plus editor commands for alerts, blockquotes, and inline formatting commands for strikethrough/underline/superscript/subscript/highlight.
 
 ![example](https://github.com/user-attachments/assets/5cc62d52-9cd3-40f6-97bc-0bf2a51a83f7)
 
@@ -56,8 +56,30 @@ A command to quickly insert or toggle blockquotes is provided via an icon on the
 - With no selection, convert the current paragraph to a blockquote (or line if no paragraph).
 - With a selection, convert all paragraphs/lines in the selection to blockquotes (paragraph-aware).
 
-The plugin will apply styling to block quotes containing github alert syntax. They will be similar to standard Joplin block quote styling, but with coloring based on the alert type, and the line with the alert syntax will be rendered as a title.
+### Inline formatting commands
 
-## Markdown Viewer
+The plugin also adds toolbar and Edit menu commands for these inline formats (which joplin supports rendering, but doesn't provide commands for in the markdown editor):
+
+- Highlight: `==text==` (`CmdOrCtrl + Shift + Y` by default)
+- Strikethrough: `~~text~~` (`CmdOrCtrl + Shift + \`` by default)
+- Underline: `++text++` (`CmdOrCtrl + Shift + U` by default)
+- Superscript: `^text^` (no default shortcut)
+- Subscript: `~text~` (no default shortcut)
+
+These commands behave as follows:
+
+- On an empty selection, insert the opening and closing delimiters and place the cursor between them.
+- If the entire selection is already wrapped in the target format, remove that outer formatting.
+- If the selection contains one or more complete spans already using the target format, remove only that target formatting and leave other markdown intact.
+- If the target format is not present in the selection, wrap the full selection.
+- For multiline full-line selections, format line by line instead of wrapping the entire block.
+- For list lines, preserve structural markers such as blockquote prefixes, bullet/ordered list markers, and task checkboxes while formatting only the list item content.
+- Blank lines are preserved when formatting multiline full-line selections.
+
+## Github Alert Styling
+
+The plugin will apply styling to block quotes containing github alert syntax in the markdown editor. They will be similar to standard Joplin block quote styling, but with coloring based on the alert type, and the line with the alert syntax will be rendered as a title.
+
+### Markdown Viewer
 
 Block quotes containing github alert syntax will be rendered as github style alerts in the markdown viewer using markdown-it-github-alerts.

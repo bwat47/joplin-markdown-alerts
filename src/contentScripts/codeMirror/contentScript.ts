@@ -3,7 +3,9 @@ import type { CodeMirrorControl } from 'api/types';
 
 import { createAlertDecorationExtensions } from './alertDecorations';
 import { createInsertAlertCommand } from './insertAlertCommand';
+import { createInsertInlineFormatCommand } from './insertInlineFormatCommand';
 import { createInsertQuoteCommand } from './insertQuoteCommand';
+import { INLINE_FORMAT_COMMANDS } from '../../inlineFormatCommands';
 import { logger } from '../../logger';
 
 const INSERT_ALERT_COMMAND = 'markdownAlerts.insertAlertOrToggle';
@@ -29,8 +31,13 @@ export default function () {
             editorControl.addExtension(createAlertDecorationExtensions(isDarkTheme));
 
             editorControl.registerCommand(INSERT_ALERT_COMMAND, createInsertAlertCommand(editorControl.cm6));
-
             editorControl.registerCommand(INSERT_QUOTE_COMMAND, createInsertQuoteCommand(editorControl.cm6));
+            for (const format of INLINE_FORMAT_COMMANDS) {
+                editorControl.registerCommand(
+                    format.editorCommandName,
+                    createInsertInlineFormatCommand(editorControl.cm6, format)
+                );
+            }
         },
     };
 }

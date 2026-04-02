@@ -2,7 +2,7 @@
 
 ## Goal
 
-Render GitHub-style Markdown alerts in both Joplin's viewer and CodeMirror 6 editor.
+Render GitHub-style Markdown alerts in both Joplin's viewer and CodeMirror 6 editor, and provide markdown editor commands for alerts, blockquotes, and inline formatting.
 
 GitHub alert syntax:
 
@@ -41,8 +41,10 @@ GitHub alert syntax:
 - `src/contentScripts/codeMirror/alertIcons.ts` - Octicon SVG icons used in the inline title widget
 - `src/contentScripts/codeMirror/alertColors.ts` - Light/dark theme color tokens used by the CM6 decorations
 - `src/contentScripts/codeMirror/insertAlertCommand.ts` - Editor command logic (insert/toggle/convert blockquote, selection-aware)
+- `src/contentScripts/codeMirror/insertInlineFormatCommand.ts` - Shared editor command logic for inline formatting (selection-aware, multiline list-aware)
 - `src/contentScripts/codeMirror/insertQuoteCommand.ts` - Editor command logic for quoting/toggling selected text
-- `src/commands.ts` - Registers global Joplin commands (alerts + quote, toolbar + shortcuts)
+- `src/inlineFormatCommands.ts` - Shared inline-format command metadata (labels, delimiters, shortcuts, toolbar ids)
+- `src/commands.ts` - Registers global Joplin commands (alerts + quote + inline formatting, toolbar + shortcuts)
 
 ### Commands
 
@@ -51,6 +53,11 @@ GitHub alert syntax:
 -   - When text is selected, it operates on the selection: non-quotes become an alert; quoted selections toggle alert type or get a new marker line.
 - `markdownAlerts.insertNoteQuote`: Global command (toolbar + shortcut)
 -   - Executes `markdownAlerts.insertQuoteOrToggle` in the editor to quote selected text or remove quote markers when all selected lines are quoted.
+- `markdownAlerts.insertHighlight` / `markdownAlerts.insertStrikethrough` / `markdownAlerts.insertUnderline` / `markdownAlerts.insertSuperscript` / `markdownAlerts.insertSubscript`
+-   - Execute matching inline-format editor commands registered by the CodeMirror content script.
+-   - Empty selection inserts paired delimiters and places the cursor between them.
+-   - Selected text toggles the target inline delimiter; multiline full-line selections are handled line by line.
+-   - List-aware multiline formatting preserves blockquote prefixes, list markers, and task checkboxes while formatting only item content.
 
 ## Design Principles
 

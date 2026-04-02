@@ -2,7 +2,7 @@ import joplin from 'api';
 import { ContentScriptType } from 'api/types';
 
 import { logger } from './logger';
-import { registerInsertNoteAlertCommand, registerInsertNoteQuoteCommand } from './commands';
+import { registerInlineFormatCommands, registerInsertNoteAlertCommand, registerInsertNoteQuoteCommand } from './commands';
 
 joplin.plugins.register({
     onStart: async function () {
@@ -10,6 +10,7 @@ joplin.plugins.register({
 
         await registerInsertNoteAlertCommand();
         await registerInsertNoteQuoteCommand();
+        await registerInlineFormatCommands();
 
         await joplin.contentScripts.register(
             ContentScriptType.MarkdownItPlugin,

@@ -17,9 +17,15 @@ type WrappedSegment = {
     to: number;
 };
 
-// Matches list content while preserving structural markers such as:
-// `- item`, `1. item`, `> - [ ] item`, `> 2) [x] item`
-const LIST_LINE_PREFIX_REGEX = /^(\s*(?:>\s*)*(?:[-+*]|\d+[.)])\s+(?:\[(?: |x|X)\]\s+)?)(.*)$/;
+type StructuralLineParts = {
+    prefix: string;
+    content: string;
+};
+
+const BLOCKQUOTE_PREFIX_REGEX = /^(\s*(?:>\s*)*)(.*)$/;
+const HEADING_PREFIX_REGEX = /^(#{1,6}\s+)(.*)$/;
+const LIST_PREFIX_REGEX = /^((?:[-+*]|\d+[.)])\s+(?:\[(?: |x|X)\]\s+)?)(.*)$/;
+const INDENTED_CONTENT_REGEX = /^(\s+)(.*)$/;
 
 function isIndexPartOfLongerDelimiter(text: string, index: number, longerDelimiters: string[] | undefined): boolean {
     if (!longerDelimiters || longerDelimiters.length === 0) {
@@ -94,6 +100,55 @@ function findWrappedSegments(text: string, format: InlineFormatDefinition): Wrap
     return segments;
 }
 
+function splitStructuralLineParts(line: string): StructuralLineParts | null {
+    const blockquoteMatch = BLOCKQUOTE_PREFIX_REGEX.exec(line);
+    if (!blockquoteMatch) {
+        return null;
+    }
+
+    const [, blockquotePrefix, rest] = blockquoteMatch;
+
+    if (blockquotePrefix && rest.length === 0) {
+        return {
+            prefix: line,
+            content: '',
+        };
+    }
+
+    const headingMatch = HEADING_PREFIX_REGEX.exec(rest);
+    if (headingMatch) {
+        return {
+            prefix: `${blockquotePrefix}${headingMatch[1]}`,
+            content: headingMatch[2],
+        };
+    }
+
+    const listMatch = LIST_PREFIX_REGEX.exec(rest);
+    if (listMatch) {
+        return {
+            prefix: `${blockquotePrefix}${listMatch[1]}`,
+            content: listMatch[2],
+        };
+    }
+
+    const indentedContentMatch = INDENTED_CONTENT_REGEX.exec(rest);
+    if (indentedContentMatch && indentedContentMatch[2].length > 0) {
+        return {
+            prefix: `${blockquotePrefix}${indentedContentMatch[1]}`,
+            content: indentedContentMatch[2],
+        };
+    }
+
+    if (blockquotePrefix) {
+        return {
+            prefix: blockquotePrefix,
+            content: rest,
+        };
+    }
+
+    return null;
+}
+
 export function applyInlineFormattingToSelectionText(text: string, format: InlineFormatDefinition): string {
     const wrappedSegments = findWrappedSegments(text, format);
     if (wrappedSegments.length === 1 && wrappedSegments[0].from === 0 && wrappedSegments[0].to === text.length) {
@@ -122,17 +177,16 @@ function formatFullLineText(line: string, format: InlineFormatDefinition): strin
         return line;
     }
 
-    const listMatch = LIST_LINE_PREFIX_REGEX.exec(line);
-    if (!listMatch) {
-        return applyInlineFormattingToSelectionText(line, format);
+    const structuralParts = splitStructuralLineParts(line);
+    if (structuralParts) {
+        if (structuralParts.content.length === 0) {
+            return line;
+        }
+
+        return `${structuralParts.prefix}${applyInlineFormattingToSelectionText(structuralParts.content, format)}`;
     }
 
-    const [, prefix, content] = listMatch;
-    if (content.length === 0) {
-        return line;
-    }
-
-    return `${prefix}${applyInlineFormattingToSelectionText(content, format)}`;
+    return applyInlineFormattingToSelectionText(line, format);
 }
 
 export function applyInlineFormattingToFullLineSelectionText(text: string, format: InlineFormatDefinition): string {
@@ -189,17 +243,12 @@ function applyInlineFormattingToFullLineSelectionRange(
         .join('\n');
 }
 
-function isMultilineFullLineSelection(view: EditorView, range: SelectionRange): boolean {
+function isFullLineSelection(view: EditorView, range: SelectionRange): boolean {
     if (range.empty) {
         return false;
     }
 
     const state = view.state;
-    const selectedText = state.doc.sliceString(range.from, range.to);
-    if (!selectedText.includes('\n')) {
-        return false;
-    }
-
     const startLine = state.doc.lineAt(range.from);
     if (range.from !== startLine.from) {
         return false;
@@ -269,7 +318,7 @@ export function createInsertInlineFormatCommand(view: EditorView, format: Inline
             }
 
             const selectedText = state.doc.sliceString(range.from, range.to);
-            const updatedText = isMultilineFullLineSelection(view, range)
+            const updatedText = isFullLineSelection(view, range)
                 ? applyInlineFormattingToFullLineSelectionRange(view, range, format)
                 : applyInlineFormattingToSelectionText(selectedText, format);
 

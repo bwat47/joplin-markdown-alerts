@@ -187,6 +187,45 @@ describe('createInsertInlineFormatCommand', () => {
         }
     });
 
+    test('preserves blockquote-prefixed list markers while formatting only item content', () => {
+        const harness = createEditorHarness(['> - one', '> - two', 'tail'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line3 = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.single(line1.from, line3.from),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('highlight'));
+            command();
+
+            expect(harness.getText()).toBe(['> - ==one==', '> - ==two==', 'tail'].join('\n'));
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('preserves blockquote-prefixed list markers for a single full-line selection', () => {
+        const harness = createEditorHarness(['> - abc test', 'tail'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+
+            harness.view.dispatch({
+                selection: EditorSelection.single(line1.from, line1.to),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('highlight'));
+            command();
+
+            expect(harness.getText()).toBe(['> - ==abc test==', 'tail'].join('\n'));
+        } finally {
+            harness.destroy();
+        }
+    });
+
     test('skips fenced code lines during multiline full-line formatting', () => {
         const harness = createEditorHarness(
             ['- one', '```ts', '- inside code', 'plain code', '```', '> - [ ] three', 'tail'].join('\n')
@@ -205,6 +244,54 @@ describe('createInsertInlineFormatCommand', () => {
 
             expect(harness.getText()).toBe(
                 ['- ==one==', '```ts', '- inside code', 'plain code', '```', '> - [ ] ==three==', 'tail'].join('\n')
+            );
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('preserves heading and blockquote markers in a full-line mixed selection', () => {
+        const harness = createEditorHarness(
+            [
+                '## Test',
+                '',
+                '> **Suggested Shape**',
+                '> If I were reorganizing it, I would aim for five modules:',
+                '> ',
+                '> 1. `nestedEditorController`  ',
+                '>     Own session state, open/close, rebase, sync application.',
+                '> ',
+                '> 2. `nestedEditorInteractions`  ',
+                '>     Own keymaps, DOM handlers, command routing, selection flushing triggers.',
+                'tail',
+            ].join('\n')
+        );
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line11 = harness.view.state.doc.line(11);
+
+            harness.view.dispatch({
+                selection: EditorSelection.single(line1.from, line11.from),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('highlight'));
+            command();
+
+            expect(harness.getText()).toBe(
+                [
+                    '## ==Test==',
+                    '',
+                    '> ==**Suggested Shape**==',
+                    '> ==If I were reorganizing it, I would aim for five modules:==',
+                    '> ',
+                    '> 1. ==`nestedEditorController`  ==',
+                    '>     ==Own session state, open/close, rebase, sync application.==',
+                    '> ',
+                    '> 2. ==`nestedEditorInteractions`  ==',
+                    '>     ==Own keymaps, DOM handlers, command routing, selection flushing triggers.==',
+                    'tail',
+                ].join('\n')
             );
         } finally {
             harness.destroy();

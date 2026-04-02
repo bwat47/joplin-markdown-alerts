@@ -26,6 +26,7 @@ const BLOCKQUOTE_PREFIX_REGEX = /^(\s*(?:>\s*)*)(.*)$/;
 const HEADING_PREFIX_REGEX = /^(#{1,6}\s+)(.*)$/;
 const LIST_PREFIX_REGEX = /^((?:[-+*]|\d+[.)])\s+(?:\[(?: |x|X)\]\s+)?)(.*)$/;
 const INDENTED_CONTENT_REGEX = /^(\s+)(.*)$/;
+const TRAILING_WHITESPACE_REGEX = /([ \t]+)$/;
 
 function isIndexPartOfLongerDelimiter(text: string, index: number, longerDelimiters: string[] | undefined): boolean {
     if (!longerDelimiters || longerDelimiters.length === 0) {
@@ -149,6 +150,21 @@ function splitStructuralLineParts(line: string): StructuralLineParts | null {
     return null;
 }
 
+function wrapTextPreservingTrailingWhitespace(text: string, format: InlineFormatDefinition): string {
+    const trailingWhitespaceMatch = TRAILING_WHITESPACE_REGEX.exec(text);
+    if (!trailingWhitespaceMatch) {
+        return `${format.openingDelimiter}${text}${format.closingDelimiter}`;
+    }
+
+    const trailingWhitespace = trailingWhitespaceMatch[1];
+    const content = text.slice(0, text.length - trailingWhitespace.length);
+    if (content.length === 0) {
+        return `${format.openingDelimiter}${text}${format.closingDelimiter}`;
+    }
+
+    return `${format.openingDelimiter}${content}${format.closingDelimiter}${trailingWhitespace}`;
+}
+
 export function applyInlineFormattingToSelectionText(text: string, format: InlineFormatDefinition): string {
     const wrappedSegments = findWrappedSegments(text, format);
     if (wrappedSegments.length === 1 && wrappedSegments[0].from === 0 && wrappedSegments[0].to === text.length) {
@@ -156,7 +172,7 @@ export function applyInlineFormattingToSelectionText(text: string, format: Inlin
     }
 
     if (wrappedSegments.length === 0) {
-        return `${format.openingDelimiter}${text}${format.closingDelimiter}`;
+        return wrapTextPreservingTrailingWhitespace(text, format);
     }
 
     let result = '';

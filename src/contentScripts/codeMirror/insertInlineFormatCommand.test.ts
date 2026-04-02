@@ -42,6 +42,10 @@ describe('applyInlineFormattingToSelectionText', () => {
     test('does not misread strikethrough as subscript formatting', () => {
         expect(applyInlineFormattingToSelectionText('~~abc~~', getFormat('subscript'))).toBe('~~~abc~~~');
     });
+
+    test('keeps trailing spaces outside newly added delimiters', () => {
+        expect(applyInlineFormattingToSelectionText('ABC  ', getFormat('highlight'))).toBe('==ABC==  ');
+    });
 });
 
 describe('applyInlineFormattingToFullLineSelectionText', () => {
@@ -285,10 +289,10 @@ describe('createInsertInlineFormatCommand', () => {
                     '> ==**Suggested Shape**==',
                     '> ==If I were reorganizing it, I would aim for five modules:==',
                     '> ',
-                    '> 1. ==`nestedEditorController`  ==',
+                    '> 1. ==`nestedEditorController`==  ',
                     '>     ==Own session state, open/close, rebase, sync application.==',
                     '> ',
-                    '> 2. ==`nestedEditorInteractions`  ==',
+                    '> 2. ==`nestedEditorInteractions`==  ',
                     '>     ==Own keymaps, DOM handlers, command routing, selection flushing triggers.==',
                     'tail',
                 ].join('\n')

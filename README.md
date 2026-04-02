@@ -17,8 +17,8 @@ A Joplin plugin that adds the following functionality to the Markdown editor:
 
 The plugin supports GitHub-style alert syntax:
 
-- Markdown viewer: alerts render as styled callouts
-- Markdown editor: alerts are decorated as styled block quotes, with a title line showing the alert type (or custom title) and svg icon based on alert type
+- Markdown viewer: alerts render as styled callouts using markdown-it-github-alerts
+- Markdown editor: alerts are decorated as styled block quotes, with a title line showing the alert type (or custom title) and svg icon based on alert type (similar to the markdown-it-github-alerts styling in the viewer)
 
 Supported alert types:
 

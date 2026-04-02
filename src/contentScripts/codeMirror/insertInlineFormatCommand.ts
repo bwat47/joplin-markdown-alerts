@@ -215,14 +215,15 @@ export function applyInlineFormattingToFullLineSelectionText(text: string, forma
         .join('\n');
 }
 
-function isLineInsideFencedCode(view: EditorView, lineFrom: number): boolean {
+function isLineInsideCodeBlock(view: EditorView, lineFrom: number): boolean {
     const state = view.state;
     const tree = getSyntaxTree(state, lineFrom);
 
-    for (const probePosition of getProbePositions(state, lineFrom)) {
+    for (const probePosition of getProbePositions(state, lineFrom, LEADING_WHITESPACE_REGEX)) {
         let node: SyntaxNode | null = tree.resolveInner(probePosition, -1);
         while (node) {
-            if (node.name.toLowerCase() === 'fencedcode') {
+            const nodeName = node.name.toLowerCase();
+            if (nodeName === 'fencedcode' || nodeName === 'codeblock') {
                 return true;
             }
             node = node.parent;
@@ -230,7 +231,8 @@ function isLineInsideFencedCode(view: EditorView, lineFrom: number): boolean {
 
         node = tree.resolveInner(probePosition, 1);
         while (node) {
-            if (node.name.toLowerCase() === 'fencedcode') {
+            const nodeName = node.name.toLowerCase();
+            if (nodeName === 'fencedcode' || nodeName === 'codeblock') {
                 return true;
             }
             node = node.parent;
@@ -253,7 +255,7 @@ function applyInlineFormattingToFullLineSelectionRange(
     return lines
         .map((line, index) => {
             const lineFrom = state.doc.line(startLine.number + index).from;
-            if (isLineInsideFencedCode(view, lineFrom)) {
+            if (isLineInsideCodeBlock(view, lineFrom)) {
                 return line;
             }
 

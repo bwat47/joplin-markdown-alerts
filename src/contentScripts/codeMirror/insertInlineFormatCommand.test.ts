@@ -260,6 +260,30 @@ describe('createInsertInlineFormatCommand', () => {
         }
     });
 
+    test('skips indented code block lines during multiline full-line formatting', () => {
+        const harness = createEditorHarness(
+            ['Intro', '', '    const x = 1;', '    const y = 2;', '', 'Tail'].join('\n')
+        );
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line6 = harness.view.state.doc.line(6);
+
+            harness.view.dispatch({
+                selection: EditorSelection.single(line1.from, line6.to),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('highlight'));
+            command();
+
+            expect(harness.getText()).toBe(
+                ['==Intro==', '', '    const x = 1;', '    const y = 2;', '', '==Tail=='].join('\n')
+            );
+        } finally {
+            harness.destroy();
+        }
+    });
+
     test('preserves heading and blockquote markers in a full-line mixed selection', () => {
         const harness = createEditorHarness(
             [

@@ -2,7 +2,11 @@ import joplin from 'api';
 import { MenuItemLocation, ToastType, ToolbarButtonLocation } from 'api/types';
 
 import { INLINE_FORMAT_COMMANDS, type InlineFormatDefinition } from './inlineFormatCommands';
-import { isToolbarButtonEnabled, SHOW_ALERT_TOOLBAR_BUTTON_SETTING, SHOW_QUOTE_TOOLBAR_BUTTON_SETTING } from './settings';
+import {
+    isToolbarButtonEnabled,
+    SHOW_ALERT_TOOLBAR_BUTTON_SETTING,
+    SHOW_QUOTE_TOOLBAR_BUTTON_SETTING,
+} from './settings';
 
 export const INSERT_NOTE_ALERT_COMMAND_NAME = 'markdownAlerts.insertNoteAlert';
 export const INSERT_NOTE_ALERT_ACCELERATOR = 'Ctrl+Shift+A';
@@ -124,7 +128,11 @@ async function registerInlineFormatCommand(format: InlineFormatDefinition): Prom
         await joplin.views.menuItems.create(format.menuItemId, format.globalCommandName, MenuItemLocation.Edit);
     }
 
-    await createToolbarButtonIfEnabled(format.toolbarButtonSettingKey, format.toolbarButtonId, format.globalCommandName);
+    await createToolbarButtonIfEnabled(
+        format.toolbarButtonSettingKey,
+        format.toolbarButtonId,
+        format.globalCommandName
+    );
 }
 
 export async function registerInlineFormatCommands(): Promise<void> {

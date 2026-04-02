@@ -28,15 +28,15 @@ describe('applyInlineFormattingToSelectionText', () => {
     });
 
     test('removes existing inner target spans without touching other formatting', () => {
-        expect(
-            applyInlineFormattingToSelectionText('test ~~abc~~ **def** aaaa', getFormat('strikethrough'))
-        ).toBe('test abc **def** aaaa');
+        expect(applyInlineFormattingToSelectionText('test ~~abc~~ **def** aaaa', getFormat('strikethrough'))).toBe(
+            'test abc **def** aaaa'
+        );
     });
 
     test('removes repeated target-formatted spans in one selection', () => {
-        expect(
-            applyInlineFormattingToSelectionText('~~one~~ and ~~two~~', getFormat('strikethrough'))
-        ).toBe('one and two');
+        expect(applyInlineFormattingToSelectionText('~~one~~ and ~~two~~', getFormat('strikethrough'))).toBe(
+            'one and two'
+        );
     });
 
     test('does not misread strikethrough as subscript formatting', () => {
@@ -174,7 +174,9 @@ describe('createInsertInlineFormatCommand', () => {
     });
 
     test('applies multiline full-line selections line by line and preserves list markers', () => {
-        const harness = createEditorHarness(['- one', '1. ~~two~~', '> - [ ] three', '', '> 1. [x] ~~four~~', 'tail'].join('\n'));
+        const harness = createEditorHarness(
+            ['- one', '1. ~~two~~', '> - [ ] three', '', '> 1. [x] ~~four~~', 'tail'].join('\n')
+        );
 
         try {
             const line1 = harness.view.state.doc.line(1);

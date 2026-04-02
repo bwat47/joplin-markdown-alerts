@@ -54,9 +54,7 @@ function getToggledAlertLineText(line: string): string | null {
     const nextIndex = (currentIndex + 1) % GITHUB_ALERT_TYPES.length;
     const nextTypeUpper = GITHUB_ALERT_TYPES[nextIndex].toUpperCase();
 
-    return (
-        line.slice(0, alertInfo.markerRange.from) + `[!${nextTypeUpper}]` + line.slice(alertInfo.markerRange.to)
-    );
+    return line.slice(0, alertInfo.markerRange.from) + `[!${nextTypeUpper}]` + line.slice(alertInfo.markerRange.to);
 }
 
 function createAlertCursorChange(

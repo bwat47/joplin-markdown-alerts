@@ -2,7 +2,11 @@ import joplin from 'api';
 import { ContentScriptType } from 'api/types';
 
 import { logger } from './logger';
-import { registerInlineFormatCommands, registerInsertNoteAlertCommand, registerInsertNoteQuoteCommand } from './commands';
+import {
+    registerInlineFormatCommands,
+    registerInsertNoteAlertCommand,
+    registerInsertNoteQuoteCommand,
+} from './commands';
 import { registerPluginSettings } from './settings';
 
 joplin.plugins.register({

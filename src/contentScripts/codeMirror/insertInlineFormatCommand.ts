@@ -180,7 +180,10 @@ export function applyInlineFormattingToSelectionText(text: string, format: Inlin
 
     for (const segment of wrappedSegments) {
         result += text.slice(lastIndex, segment.from);
-        result += text.slice(segment.from + format.openingDelimiter.length, segment.to - format.closingDelimiter.length);
+        result += text.slice(
+            segment.from + format.openingDelimiter.length,
+            segment.to - format.closingDelimiter.length
+        );
         lastIndex = segment.to;
     }
 

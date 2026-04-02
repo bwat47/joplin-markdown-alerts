@@ -83,10 +83,7 @@ type QuoteTarget = {
     explicitSelection?: ExplicitCursorSelection;
 };
 
-function createQuoteCursorTarget(
-    state: EditorState,
-    cursorPos: number
-): QuoteTarget {
+function createQuoteCursorTarget(state: EditorState, cursorPos: number): QuoteTarget {
     const cursorLine = state.doc.lineAt(cursorPos);
     if (cursorLine.text.trim() === '') {
         return {

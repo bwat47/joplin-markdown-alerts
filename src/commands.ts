@@ -2,6 +2,7 @@ import joplin from 'api';
 import { MenuItemLocation, ToastType, ToolbarButtonLocation } from 'api/types';
 
 import { INLINE_FORMAT_COMMANDS, type InlineFormatDefinition } from './inlineFormatCommands';
+import { isToolbarButtonEnabled, SHOW_ALERT_TOOLBAR_BUTTON_SETTING, SHOW_QUOTE_TOOLBAR_BUTTON_SETTING } from './settings';
 
 export const INSERT_NOTE_ALERT_COMMAND_NAME = 'markdownAlerts.insertNoteAlert';
 export const INSERT_NOTE_ALERT_ACCELERATOR = 'Ctrl+Shift+A';
@@ -41,6 +42,18 @@ async function executeMarkdownEditorCommand(commandName: string): Promise<void> 
     }
 }
 
+async function createToolbarButtonIfEnabled(
+    settingKey: string,
+    toolbarButtonId: string,
+    commandName: string
+): Promise<void> {
+    if (!(await isToolbarButtonEnabled(settingKey))) {
+        return;
+    }
+
+    await joplin.views.toolbarButtons.create(toolbarButtonId, commandName, ToolbarButtonLocation.EditorToolbar);
+}
+
 export async function registerInsertNoteAlertCommand(): Promise<void> {
     await joplin.commands.register({
         name: INSERT_NOTE_ALERT_COMMAND_NAME,
@@ -60,10 +73,10 @@ export async function registerInsertNoteAlertCommand(): Promise<void> {
         }
     );
 
-    await joplin.views.toolbarButtons.create(
+    await createToolbarButtonIfEnabled(
+        SHOW_ALERT_TOOLBAR_BUTTON_SETTING,
         INSERT_NOTE_ALERT_TOOLBAR_BUTTON_ID,
-        INSERT_NOTE_ALERT_COMMAND_NAME,
-        ToolbarButtonLocation.EditorToolbar
+        INSERT_NOTE_ALERT_COMMAND_NAME
     );
 }
 
@@ -86,10 +99,10 @@ export async function registerInsertNoteQuoteCommand(): Promise<void> {
         }
     );
 
-    await joplin.views.toolbarButtons.create(
+    await createToolbarButtonIfEnabled(
+        SHOW_QUOTE_TOOLBAR_BUTTON_SETTING,
         INSERT_NOTE_QUOTE_TOOLBAR_BUTTON_ID,
-        INSERT_NOTE_QUOTE_COMMAND_NAME,
-        ToolbarButtonLocation.EditorToolbar
+        INSERT_NOTE_QUOTE_COMMAND_NAME
     );
 }
 
@@ -111,11 +124,7 @@ async function registerInlineFormatCommand(format: InlineFormatDefinition): Prom
         await joplin.views.menuItems.create(format.menuItemId, format.globalCommandName, MenuItemLocation.Edit);
     }
 
-    await joplin.views.toolbarButtons.create(
-        format.toolbarButtonId,
-        format.globalCommandName,
-        ToolbarButtonLocation.EditorToolbar
-    );
+    await createToolbarButtonIfEnabled(format.toolbarButtonSettingKey, format.toolbarButtonId, format.globalCommandName);
 }
 
 export async function registerInlineFormatCommands(): Promise<void> {

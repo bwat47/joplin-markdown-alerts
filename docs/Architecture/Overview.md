@@ -44,7 +44,8 @@ GitHub alert syntax:
 - `src/contentScripts/codeMirror/insertInlineFormatCommand.ts` - Shared editor command logic for inline formatting (selection-aware, multiline list-aware)
 - `src/contentScripts/codeMirror/insertQuoteCommand.ts` - Editor command logic for quoting/toggling selected text
 - `src/inlineFormatCommands.ts` - Shared inline-format command metadata (labels, delimiters, shortcuts, toolbar ids)
-- `src/commands.ts` - Registers global Joplin commands (alerts + quote + inline formatting, toolbar + shortcuts)
+- `src/settings.ts` - Plugin settings registration for toolbar button visibility
+- `src/commands.ts` - Registers global Joplin commands (alerts + quote + inline formatting, toolbar + shortcuts), gating toolbar buttons on plugin settings
 
 ### Commands
 
@@ -58,6 +59,12 @@ GitHub alert syntax:
 -   - Empty selection inserts paired delimiters and places the cursor between them.
 -   - Selected text toggles the target inline delimiter; multiline full-line selections are handled line by line.
 -   - List-aware multiline formatting preserves blockquote prefixes, list markers, and task checkboxes while formatting only item content.
+
+### Settings
+
+- Toolbar buttons are controlled by plugin boolean settings, one per button
+- Commands and menu items are always registered; only editor toolbar button creation is gated
+- Toolbar visibility settings are read at plugin startup, so changes currently require a plugin restart
 
 ## Design Principles
 

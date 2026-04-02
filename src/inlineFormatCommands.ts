@@ -6,6 +6,8 @@ export type InlineFormatDefinition = {
     globalCommandName: string;
     editorCommandName: string;
     toolbarButtonId: string;
+    toolbarButtonSettingKey: string;
+    toolbarButtonSettingLabel: string;
     menuItemId: string;
     iconName: string;
     accelerator?: string;
@@ -21,6 +23,8 @@ export const INLINE_FORMAT_COMMANDS: InlineFormatDefinition[] = [
         globalCommandName: 'markdownAlerts.insertHighlight',
         editorCommandName: 'markdownAlerts.insertHighlightOrToggle',
         toolbarButtonId: 'markdownAlerts.insertHighlight.toolbarButton',
+        toolbarButtonSettingKey: 'showHighlightToolbarButton',
+        toolbarButtonSettingLabel: 'Show Highlight toolbar button',
         menuItemId: 'markdownAlerts.insertHighlight.menuItem',
         iconName: 'fas fa-highlighter',
         accelerator: 'CmdOrCtrl+Shift+Y',
@@ -33,6 +37,8 @@ export const INLINE_FORMAT_COMMANDS: InlineFormatDefinition[] = [
         globalCommandName: 'markdownAlerts.insertStrikethrough',
         editorCommandName: 'markdownAlerts.insertStrikethroughOrToggle',
         toolbarButtonId: 'markdownAlerts.insertStrikethrough.toolbarButton',
+        toolbarButtonSettingKey: 'showStrikethroughToolbarButton',
+        toolbarButtonSettingLabel: 'Show Strikethrough toolbar button',
         menuItemId: 'markdownAlerts.insertStrikethrough.menuItem',
         iconName: 'fas fa-strikethrough',
         accelerator: 'CmdOrCtrl+Shift+`',
@@ -45,6 +51,8 @@ export const INLINE_FORMAT_COMMANDS: InlineFormatDefinition[] = [
         globalCommandName: 'markdownAlerts.insertUnderline',
         editorCommandName: 'markdownAlerts.insertUnderlineOrToggle',
         toolbarButtonId: 'markdownAlerts.insertUnderline.toolbarButton',
+        toolbarButtonSettingKey: 'showUnderlineToolbarButton',
+        toolbarButtonSettingLabel: 'Show Underline toolbar button',
         menuItemId: 'markdownAlerts.insertUnderline.menuItem',
         iconName: 'fas fa-underline',
         accelerator: 'CmdOrCtrl+Shift+U',
@@ -57,6 +65,8 @@ export const INLINE_FORMAT_COMMANDS: InlineFormatDefinition[] = [
         globalCommandName: 'markdownAlerts.insertSuperscript',
         editorCommandName: 'markdownAlerts.insertSuperscriptOrToggle',
         toolbarButtonId: 'markdownAlerts.insertSuperscript.toolbarButton',
+        toolbarButtonSettingKey: 'showSuperscriptToolbarButton',
+        toolbarButtonSettingLabel: 'Show Superscript toolbar button',
         menuItemId: 'markdownAlerts.insertSuperscript.menuItem',
         iconName: 'fas fa-superscript',
     },
@@ -68,6 +78,8 @@ export const INLINE_FORMAT_COMMANDS: InlineFormatDefinition[] = [
         globalCommandName: 'markdownAlerts.insertSubscript',
         editorCommandName: 'markdownAlerts.insertSubscriptOrToggle',
         toolbarButtonId: 'markdownAlerts.insertSubscript.toolbarButton',
+        toolbarButtonSettingKey: 'showSubscriptToolbarButton',
+        toolbarButtonSettingLabel: 'Show Subscript toolbar button',
         menuItemId: 'markdownAlerts.insertSubscript.menuItem',
         iconName: 'fas fa-subscript',
         conflictingLongerDelimiters: ['~~'],

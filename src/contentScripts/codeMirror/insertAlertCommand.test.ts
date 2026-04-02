@@ -1,4 +1,6 @@
 /** @jest-environment jsdom */
+import { EditorSelection } from '@codemirror/state';
+
 import { createInsertAlertCommand, toggleAlertSelectionText } from './insertAlertCommand';
 import { createEditorHarness } from './testUtils';
 
@@ -94,10 +96,84 @@ describe('createInsertAlertCommand', () => {
         expect(runCommand(input)).toBe(expected);
     });
 
+    test('handles a mixed selection and additional cursor', () => {
+        const harness = createEditorHarness(['Selected line', '', 'Cursor line'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line3 = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.range(line1.from, line1.to),
+                    EditorSelection.cursor(line3.from + 2),
+                ]),
+            });
+
+            const command = createInsertAlertCommand(harness.view);
+            command();
+
+            expect(harness.getText()).toBe(
+                ['> [!NOTE]', '> Selected line', '', '> [!NOTE]', '> Cursor line'].join('\n')
+            );
+        } finally {
+            harness.destroy();
+        }
+    });
+
     test('includes headings when converting selection to an alert', () => {
         const input = ['[[## Heading', '', 'Paragraph]]'].join('\n');
         const expected = ['> [!NOTE]', '> ## Heading', '> ', '> Paragraph'].join('\n');
 
         expect(runCommand(input)).toBe(expected);
+    });
+
+    test('converts each paragraph when multiple cursors are present', () => {
+        const harness = createEditorHarness(['First line', '', 'Middle line', '', 'Last line'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line5 = harness.view.state.doc.line(5);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.cursor(line1.from + 2),
+                    EditorSelection.cursor(line5.from + 2),
+                ]),
+            });
+
+            const command = createInsertAlertCommand(harness.view);
+            command();
+
+            expect(harness.getText()).toBe(
+                ['> [!NOTE]', '> First line', '', 'Middle line', '', '> [!NOTE]', '> Last line'].join('\n')
+            );
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('places each cursor after inserted alert marker on blank lines', () => {
+        const harness = createEditorHarness(['', '', ''].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line3 = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.cursor(line1.from),
+                    EditorSelection.cursor(line3.from),
+                ]),
+            });
+
+            const command = createInsertAlertCommand(harness.view);
+            command();
+
+            expect(harness.getText()).toBe(['> [!NOTE] ', '', '> [!NOTE] '].join('\n'));
+            expect(harness.view.state.selection.ranges.map((range) => range.head)).toEqual([10, 22]);
+        } finally {
+            harness.destroy();
+        }
     });
 });

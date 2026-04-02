@@ -1,12 +1,10 @@
-import { EditorSelection, type EditorState } from '@codemirror/state';
+import type { EditorState } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import type { SyntaxNode } from '@lezer/common';
-
+import { dispatchChangesWithSelections, type ExplicitCursorSelection } from './commandSelectionUtils';
 import {
     collectParagraphRanges,
     findParagraphNodeAt,
     getParagraphLineRange,
-    getProbePositions,
     getSyntaxTree,
     type ParagraphRange,
 } from './syntaxTreeUtils';
@@ -48,37 +46,6 @@ function isBlockquoteText(text: string): boolean {
     return text.split('\n').every((line) => BLOCKQUOTE_PREFIX_REGEX.test(line));
 }
 
-type NodeMatchPredicate = (node: SyntaxNode) => boolean;
-
-function findNodeAtPositions(
-    tree: ReturnType<typeof getSyntaxTree>,
-    positions: number[],
-    predicate: NodeMatchPredicate
-): SyntaxNode | null {
-    for (const position of positions) {
-        let node: SyntaxNode | null = tree.resolveInner(position, -1);
-        while (node) {
-            if (predicate(node)) {
-                return node;
-            }
-            node = node.parent;
-        }
-        node = tree.resolveInner(position, 1);
-        while (node) {
-            if (predicate(node)) {
-                return node;
-            }
-            node = node.parent;
-        }
-    }
-    return null;
-}
-
-function isPositionInBlockquote(state: EditorState, tree: ReturnType<typeof getSyntaxTree>, position: number): boolean {
-    const positions = getProbePositions(state, position, BLOCKQUOTE_PREFIX_REGEX);
-    return Boolean(findNodeAtPositions(tree, positions, (node) => node.name.toLowerCase() === 'blockquote'));
-}
-
 function collectNonParagraphLineRanges(
     state: EditorState,
     paragraphRanges: ParagraphRange[],
@@ -109,6 +76,61 @@ function collectNonParagraphLineRanges(
     return ranges;
 }
 
+type QuoteTarget = {
+    key: string;
+    range: LineRange | ParagraphRange;
+    text: string;
+    explicitSelection?: ExplicitCursorSelection;
+};
+
+function createQuoteCursorTarget(
+    state: EditorState,
+    cursorPos: number
+): QuoteTarget {
+    const cursorLine = state.doc.lineAt(cursorPos);
+    if (cursorLine.text.trim() === '') {
+        return {
+            key: `line:${cursorLine.from}:${cursorLine.to}`,
+            range: {
+                from: cursorLine.from,
+                to: cursorLine.to,
+            },
+            text: '',
+            explicitSelection: {
+                anchorBasePos: cursorLine.from,
+                anchorOffset: BLOCKQUOTE_PREFIX.length,
+                headBasePos: cursorLine.from,
+                headOffset: BLOCKQUOTE_PREFIX.length,
+            },
+        };
+    }
+
+    const tree = getSyntaxTree(state, cursorPos);
+    const paragraphNode = findParagraphNodeAt(state, tree, cursorPos, BLOCKQUOTE_PREFIX_REGEX);
+    if (!paragraphNode) {
+        return {
+            key: `line:${cursorLine.from}:${cursorLine.to}`,
+            range: {
+                from: cursorLine.from,
+                to: cursorLine.to,
+            },
+            text: cursorLine.text,
+        };
+    }
+
+    const paragraphRange = getParagraphLineRange(state, paragraphNode);
+    const paragraphText = state.doc.sliceString(paragraphRange.from, paragraphRange.to);
+
+    return {
+        key: `paragraph:${paragraphRange.from}:${paragraphRange.to}`,
+        range: {
+            from: paragraphRange.from,
+            to: paragraphRange.to,
+        },
+        text: paragraphText,
+    };
+}
+
 /**
  * Toggles blockquote formatting for the cursor or the selected ranges.
  * - Cursor only: toggles the current paragraph (or line if no paragraph) and inserts `> ` on an empty line.
@@ -119,55 +141,28 @@ export function createInsertQuoteCommand(view: EditorView): () => boolean {
         const state = view.state;
         const ranges = state.selection.ranges;
         const nonEmptyRanges = ranges.filter((range) => !range.empty);
+        const emptyRanges = ranges.filter((range) => range.empty);
 
         if (nonEmptyRanges.length === 0) {
-            const cursorPos = state.selection.main.head;
-            const cursorLine = state.doc.lineAt(cursorPos);
-            if (cursorLine.text.trim() === '') {
-                const insertionText = '> ';
-                const selectionPos = cursorLine.from + insertionText.length;
-                view.dispatch({
-                    changes: {
-                        from: cursorLine.from,
-                        to: cursorLine.to,
-                        insert: insertionText,
-                    },
-                    selection: EditorSelection.single(selectionPos),
-                });
-                view.focus();
-                return true;
-            }
-            const tree = getSyntaxTree(state, cursorPos);
-            const paragraphNode = findParagraphNodeAt(state, tree, cursorPos, BLOCKQUOTE_PREFIX_REGEX);
-            if (!paragraphNode) {
-                const updated = isBlockquoteText(cursorLine.text)
-                    ? removeBlockquotePrefix(cursorLine.text)
-                    : addBlockquotePrefix(cursorLine.text);
+            const targetMap = new Map<string, QuoteTarget>();
+            const explicitSelectionsByIndex = new Map<number, ExplicitCursorSelection>();
 
-                view.dispatch({
-                    changes: {
-                        from: cursorLine.from,
-                        to: cursorLine.to,
-                        insert: updated,
-                    },
-                });
-                view.focus();
-                return true;
-            }
-
-            const paragraphRange = getParagraphLineRange(state, paragraphNode);
-            const paragraphText = state.doc.sliceString(paragraphRange.from, paragraphRange.to);
-            const updated = isPositionInBlockquote(state, tree, cursorPos)
-                ? removeBlockquotePrefix(paragraphText)
-                : addBlockquotePrefix(paragraphText);
-
-            view.dispatch({
-                changes: {
-                    from: paragraphRange.from,
-                    to: paragraphRange.to,
-                    insert: updated,
-                },
+            ranges.forEach((range, index) => {
+                const cursorTarget = createQuoteCursorTarget(state, range.head);
+                if (!targetMap.has(cursorTarget.key)) {
+                    targetMap.set(cursorTarget.key, cursorTarget);
+                }
+                if (cursorTarget.explicitSelection) {
+                    explicitSelectionsByIndex.set(index, cursorTarget.explicitSelection);
+                }
             });
+
+            const changes = Array.from(targetMap.values()).map(({ range, text }) => {
+                const updated = isBlockquoteText(text) ? removeBlockquotePrefix(text) : addBlockquotePrefix(text);
+                return { from: range.from, to: range.to, insert: updated };
+            });
+
+            dispatchChangesWithSelections(view, changes, explicitSelectionsByIndex);
             view.focus();
             return true;
         }
@@ -205,12 +200,31 @@ export function createInsertQuoteCommand(view: EditorView): () => boolean {
         const paragraphRanges = Array.from(paragraphRangeMap.values()).sort((a, b) => a.from - b.from);
         const nonParagraphLineRanges = Array.from(nonParagraphLineRangeMap.values()).sort((a, b) => a.from - b.from);
 
-        const rangeTexts = [...paragraphRanges, ...nonParagraphLineRanges]
+        const targetMap = new Map<string, QuoteTarget>();
+
+        [...paragraphRanges, ...nonParagraphLineRanges]
             .sort((a, b) => a.from - b.from)
-            .map((range) => ({
-                range,
-                text: state.doc.sliceString(range.from, range.to),
-            }));
+            .forEach((range) => {
+                const key = `${range.from}:${range.to}`;
+                targetMap.set(key, {
+                    key,
+                    range,
+                    text: state.doc.sliceString(range.from, range.to),
+                });
+            });
+
+        const explicitSelectionsByIndex = new Map<number, ExplicitCursorSelection>();
+        emptyRanges.forEach((range, index) => {
+            const cursorTarget = createQuoteCursorTarget(state, range.head);
+            if (!targetMap.has(cursorTarget.key)) {
+                targetMap.set(cursorTarget.key, cursorTarget);
+            }
+            if (cursorTarget.explicitSelection) {
+                explicitSelectionsByIndex.set(nonEmptyRanges.length + index, cursorTarget.explicitSelection);
+            }
+        });
+
+        const rangeTexts = Array.from(targetMap.values()).sort((a, b) => a.range.from - b.range.from);
 
         if (rangeTexts.length === 0) {
             return false;
@@ -241,7 +255,7 @@ export function createInsertQuoteCommand(view: EditorView): () => boolean {
             return false;
         }
 
-        view.dispatch({ changes });
+        dispatchChangesWithSelections(view, changes, explicitSelectionsByIndex);
         view.focus();
         return true;
     };

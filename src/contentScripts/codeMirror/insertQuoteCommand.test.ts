@@ -102,6 +102,76 @@ describe('createInsertQuoteCommand', () => {
         expect(runCommand(input)).toBe(expected);
     });
 
+    test('handles a mixed selection and additional cursor', () => {
+        const harness = createEditorHarness(['Selected line', '', 'Cursor line'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line3 = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.range(line1.from, line1.to),
+                    EditorSelection.cursor(line3.from + 2),
+                ]),
+            });
+
+            const command = createInsertQuoteCommand(harness.view);
+            command();
+
+            expect(harness.getText()).toBe(['> Selected line', '', '> Cursor line'].join('\n'));
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('quotes each paragraph when multiple cursors are present', () => {
+        const harness = createEditorHarness(['First line', '', 'Middle line', '', 'Last line'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line5 = harness.view.state.doc.line(5);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.cursor(line1.from + 2),
+                    EditorSelection.cursor(line5.from + 2),
+                ]),
+            });
+
+            const command = createInsertQuoteCommand(harness.view);
+            command();
+
+            expect(harness.getText()).toBe(['> First line', '', 'Middle line', '', '> Last line'].join('\n'));
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('places each cursor after quote marker on blank lines', () => {
+        const harness = createEditorHarness(['', '', ''].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line3 = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.cursor(line1.from),
+                    EditorSelection.cursor(line3.from),
+                ]),
+            });
+
+            const command = createInsertQuoteCommand(harness.view);
+            command();
+
+            expect(harness.getText()).toBe(['> ', '', '> '].join('\n'));
+            expect(harness.view.state.selection.ranges.map((range) => range.head)).toEqual([2, 6]);
+        } finally {
+            harness.destroy();
+        }
+    });
+
     test('quotes only unquoted paragraphs in mixed selection', () => {
         const input = ['[[> Quoted line', '', 'Plain line]]'].join('\n');
         const expected = ['> Quoted line', '> ', '> Plain line'].join('\n');

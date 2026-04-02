@@ -1,7 +1,8 @@
 import type { EditorView } from '@codemirror/view';
-import { EditorSelection } from '@codemirror/state';
+import type { EditorState } from '@codemirror/state';
 import type { SyntaxNode } from '@lezer/common';
 
+import { dispatchChangesWithSelections, type ExplicitCursorSelection } from './commandSelectionUtils';
 import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine } from './alertParsing';
 import {
     collectParagraphRanges,
@@ -16,6 +17,20 @@ const BLOCKQUOTE_PREFIX_PATTERN = /^(\s*(?:>\s*)+)/;
 const DEFAULT_ALERT_TYPE = 'NOTE';
 const BLOCKQUOTE_LINE_PREFIX = /^>\s?/;
 
+type TextChange = {
+    from: number;
+    to: number;
+    insert: string;
+};
+
+function overlapsRange(change: TextChange, range: ParagraphRange): boolean {
+    if (change.from === change.to) {
+        return change.from >= range.from && change.from <= range.to;
+    }
+
+    return change.from < range.to && change.to > range.from;
+}
+
 function createAlertLine(prefix: string): string {
     return `${prefix}[!${DEFAULT_ALERT_TYPE}]`;
 }
@@ -29,23 +44,124 @@ function getBlockquotePrefix(line: string): string | null {
     return match ? match[1] : null;
 }
 
-function toggleAlertMarkerOnLine(view: EditorView, line: { from: number; text: string }): boolean {
-    const alertInfo = parseGitHubAlertTitleLine(line.text);
+function getToggledAlertLineText(line: string): string | null {
+    const alertInfo = parseGitHubAlertTitleLine(line);
     if (!alertInfo) {
-        return false;
+        return null;
     }
 
     const currentIndex = GITHUB_ALERT_TYPES.indexOf(alertInfo.type);
     const nextIndex = (currentIndex + 1) % GITHUB_ALERT_TYPES.length;
     const nextTypeUpper = GITHUB_ALERT_TYPES[nextIndex].toUpperCase();
 
-    const from = line.from + alertInfo.markerRange.from;
-    const to = line.from + alertInfo.markerRange.to;
+    return (
+        line.slice(0, alertInfo.markerRange.from) + `[!${nextTypeUpper}]` + line.slice(alertInfo.markerRange.to)
+    );
+}
 
-    view.dispatch({
-        changes: { from, to, insert: `[!${nextTypeUpper}]` },
-    });
-    return true;
+function createAlertCursorChange(
+    state: EditorState,
+    cursorPos: number
+): { key: string; change: TextChange; explicitSelection?: ExplicitCursorSelection } {
+    const cursorLine = state.doc.lineAt(cursorPos);
+    if (cursorLine.text.trim() === '') {
+        const insertionText = `> [!${DEFAULT_ALERT_TYPE}] `;
+
+        return {
+            key: `line:${cursorLine.from}:${cursorLine.to}`,
+            change: {
+                from: cursorLine.from,
+                to: cursorLine.to,
+                insert: insertionText,
+            },
+            explicitSelection: {
+                anchorBasePos: cursorLine.from,
+                anchorOffset: insertionText.length,
+                headBasePos: cursorLine.from,
+                headOffset: insertionText.length,
+            },
+        };
+    }
+
+    const updatedCursorLine = getToggledAlertLineText(cursorLine.text);
+    if (updatedCursorLine) {
+        return {
+            key: `line:${cursorLine.from}:${cursorLine.to}`,
+            change: {
+                from: cursorLine.from,
+                to: cursorLine.to,
+                insert: updatedCursorLine,
+            },
+        };
+    }
+
+    const tree = getSyntaxTree(state, cursorPos);
+    let outermostBlockquoteFrom: number | null = null;
+
+    for (const position of getProbePositions(state, cursorPos, BLOCKQUOTE_LINE_PREFIX)) {
+        let node: SyntaxNode | null = tree.resolveInner(position, -1);
+        while (node) {
+            if (node.name.toLowerCase() === 'blockquote') {
+                outermostBlockquoteFrom = node.from;
+
+                const blockquoteStartLine = state.doc.lineAt(node.from);
+                const updatedBlockquoteLine = getToggledAlertLineText(blockquoteStartLine.text);
+                if (updatedBlockquoteLine) {
+                    return {
+                        key: `line:${blockquoteStartLine.from}:${blockquoteStartLine.to}`,
+                        change: {
+                            from: blockquoteStartLine.from,
+                            to: blockquoteStartLine.to,
+                            insert: updatedBlockquoteLine,
+                        },
+                    };
+                }
+            }
+
+            node = node.parent;
+        }
+    }
+
+    if (outermostBlockquoteFrom !== null) {
+        const blockquoteStartLine = state.doc.lineAt(outermostBlockquoteFrom);
+        const match = BLOCKQUOTE_PREFIX_PATTERN.exec(blockquoteStartLine.text);
+        if (match) {
+            return {
+                key: `insert:${blockquoteStartLine.from}`,
+                change: {
+                    from: blockquoteStartLine.from,
+                    to: blockquoteStartLine.from,
+                    insert: `${createAlertLine(match[1])}\n`,
+                },
+            };
+        }
+    }
+
+    const paragraphNode = findParagraphNodeAt(state, tree, cursorPos, BLOCKQUOTE_LINE_PREFIX);
+    if (paragraphNode) {
+        const paragraphRange = getParagraphLineRange(state, paragraphNode);
+        const text = state.doc.sliceString(paragraphRange.from, paragraphRange.to);
+        const updated = toggleAlertSelectionText(text);
+
+        return {
+            key: `paragraph:${paragraphRange.from}:${paragraphRange.to}`,
+            change: {
+                from: paragraphRange.from,
+                to: paragraphRange.to,
+                insert: updated,
+            },
+        };
+    }
+
+    const updatedFallbackLine = toggleAlertSelectionText(cursorLine.text);
+    return {
+        key: `line:${cursorLine.from}:${cursorLine.to}`,
+        change: {
+            from: cursorLine.from,
+            to: cursorLine.to,
+            insert: updatedFallbackLine,
+        },
+    };
 }
 
 /**
@@ -95,6 +211,7 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
         const state = view.state;
         const ranges = state.selection.ranges;
         const nonEmptyRanges = ranges.filter((range) => !range.empty);
+        const emptyRanges = ranges.filter((range) => range.empty);
 
         if (nonEmptyRanges.length > 0) {
             const expandedRanges: ParagraphRange[] = [];
@@ -140,94 +257,55 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
                 };
             });
 
-            view.dispatch({ changes });
-            view.focus();
-            return true;
-        }
-
-        const cursorPos = state.selection.main.head;
-        const cursorLine = state.doc.lineAt(cursorPos);
-        if (cursorLine.text.trim() === '') {
-            const insertionText = `> [!${DEFAULT_ALERT_TYPE}] `;
-            const selectionPos = cursorLine.from + insertionText.length;
-            view.dispatch({
-                changes: {
-                    from: cursorLine.from,
-                    to: cursorLine.to,
-                    insert: insertionText,
-                },
-                selection: EditorSelection.single(selectionPos),
-            });
-            view.focus();
-            return true;
-        }
-        if (toggleAlertMarkerOnLine(view, cursorLine)) {
-            view.focus();
-            return true;
-        }
-        const tree = getSyntaxTree(state, cursorPos);
-        let outermostBlockquoteFrom: number | null = null;
-
-        // Walk up ancestor nodes, preferring to toggle a blockquote whose first line
-        // actually matches the GitHub alert marker syntax.
-        for (const position of getProbePositions(state, cursorPos, BLOCKQUOTE_LINE_PREFIX)) {
-            let node: SyntaxNode | null = tree.resolveInner(position, -1);
-            while (node) {
-                if (node.name.toLowerCase() === 'blockquote') {
-                    outermostBlockquoteFrom = node.from;
-
-                    const blockquoteStartLine = state.doc.lineAt(node.from);
-                    if (toggleAlertMarkerOnLine(view, blockquoteStartLine)) {
-                        view.focus();
-                        return true;
-                    }
-                }
-
-                node = node.parent;
-            }
-        }
-
-        if (outermostBlockquoteFrom !== null) {
-            // Convert standard blockquote to alert by inserting a new marker line above.
-            const blockquoteStartLine = state.doc.lineAt(outermostBlockquoteFrom);
-            const match = BLOCKQUOTE_PREFIX_PATTERN.exec(blockquoteStartLine.text);
-            if (match) {
-                const insertionPoint = blockquoteStartLine.from;
-                const insertionText = `${createAlertLine(match[1])}\n`;
-                view.dispatch({
-                    changes: { from: insertionPoint, insert: insertionText },
-                });
+            if (emptyRanges.length === 0) {
+                view.dispatch({ changes });
                 view.focus();
                 return true;
             }
-        }
 
-        const paragraphNode = findParagraphNodeAt(state, tree, cursorPos, BLOCKQUOTE_LINE_PREFIX);
-        if (paragraphNode) {
-            const paragraphRange = getParagraphLineRange(state, paragraphNode);
-            const text = state.doc.sliceString(paragraphRange.from, paragraphRange.to);
-            const updated = toggleAlertSelectionText(text);
-
-            view.dispatch({
-                changes: {
-                    from: paragraphRange.from,
-                    to: paragraphRange.to,
-                    insert: updated,
-                },
+            const changeMap = new Map<string, TextChange>();
+            changes.forEach((change) => {
+                changeMap.set(`selection:${change.from}:${change.to}`, change);
             });
+
+            const explicitSelectionsByIndex = new Map<number, ExplicitCursorSelection>();
+            ranges.forEach((range, index) => {
+                if (!range.empty) {
+                    return;
+                }
+
+                const cursorChange = createAlertCursorChange(state, range.head);
+                if (mergedRanges.some((mergedRange) => overlapsRange(cursorChange.change, mergedRange))) {
+                    return;
+                }
+
+                if (!changeMap.has(cursorChange.key)) {
+                    changeMap.set(cursorChange.key, cursorChange.change);
+                }
+                if (cursorChange.explicitSelection) {
+                    explicitSelectionsByIndex.set(index, cursorChange.explicitSelection);
+                }
+            });
+
+            dispatchChangesWithSelections(view, Array.from(changeMap.values()), explicitSelectionsByIndex);
             view.focus();
             return true;
         }
 
-        const fallbackLine = state.doc.lineAt(cursorPos);
-        const updated = toggleAlertSelectionText(fallbackLine.text);
-        view.dispatch({
-            changes: {
-                from: fallbackLine.from,
-                to: fallbackLine.to,
-                insert: updated,
-            },
+        const changeMap = new Map<string, TextChange>();
+        const explicitSelectionsByIndex = new Map<number, ExplicitCursorSelection>();
+
+        ranges.forEach((range, index) => {
+            const cursorChange = createAlertCursorChange(state, range.head);
+            if (!changeMap.has(cursorChange.key)) {
+                changeMap.set(cursorChange.key, cursorChange.change);
+            }
+            if (cursorChange.explicitSelection) {
+                explicitSelectionsByIndex.set(index, cursorChange.explicitSelection);
+            }
         });
+
+        dispatchChangesWithSelections(view, Array.from(changeMap.values()), explicitSelectionsByIndex);
         view.focus();
         return true;
     };

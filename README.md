@@ -5,7 +5,7 @@ A Joplin plugin that adds the following functionality to the Markdown editor:
 - renders GitHub-style alerts in the Markdown viewer and Markdown editor
 - adds Markdown editor commands for alerts, blockquotes, and inline formatting (for markdown syntax that joplin's builtin formatting commands don't cover)
 
-![example](https://github.com/user-attachments/assets/5cc62d52-9cd3-40f6-97bc-0bf2a51a83f7)
+![test9](https://github.com/user-attachments/assets/66383dd7-438f-4277-ad7b-32df269d1376)
 
 > [!NOTE]
 > This plugin was created entirely with AI tools.

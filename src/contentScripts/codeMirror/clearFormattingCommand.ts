@@ -15,8 +15,8 @@ type PlaceholderStore = {
     restore: (text: string) => string;
 };
 
-const PLACEHOLDER_PREFIX = '@@MDCLR';
-const PLACEHOLDER_PATTERN = /@@MDCLR(\d+)@@/g;
+const PLACEHOLDER_SENTINEL = '\u0000';
+const PLACEHOLDER_LABEL = 'MDCLR';
 const JOPLIN_RESOURCE_ID_REGEX = /^:\/[0-9a-f]{32}$/i;
 const FENCED_CODE_BLOCK_REGEX = /(^|\n)([ \t]*)(```|~~~)[^\n]*\n([\s\S]*?)\n\2\3[ \t]*(?=\n|$)/g;
 const INLINE_CODE_REGEX = /`([^`\n]+)`/g;
@@ -37,17 +37,33 @@ const FOOTNOTE_REFERENCE_REGEX = /\[\^([^\]]+)\]/g;
 const HTML_FORMATTING_TAGS = ['sup', 'sub', 'u', 's', 'strong', 'b', 'em', 'i', 'mark', 'del', 'strike'];
 const MAX_CLEARING_PASSES = 10;
 
-function createPlaceholderStore(): PlaceholderStore {
+function escapeRegex(text: string): string {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function createPlaceholderStore(sourceText: string): PlaceholderStore {
     const values: string[] = [];
+    let nonce = 0;
+    let placeholderPrefix = `${PLACEHOLDER_SENTINEL}${PLACEHOLDER_LABEL}${nonce}${PLACEHOLDER_SENTINEL}`;
+
+    while (sourceText.includes(placeholderPrefix)) {
+        nonce += 1;
+        placeholderPrefix = `${PLACEHOLDER_SENTINEL}${PLACEHOLDER_LABEL}${nonce}${PLACEHOLDER_SENTINEL}`;
+    }
+
+    const placeholderPattern = new RegExp(
+        `${escapeRegex(placeholderPrefix)}(\\d+)${escapeRegex(PLACEHOLDER_SENTINEL)}`,
+        'g'
+    );
 
     return {
         create: (value: string) => {
-            const placeholder = `${PLACEHOLDER_PREFIX}${values.length}@@`;
+            const placeholder = `${placeholderPrefix}${values.length}${PLACEHOLDER_SENTINEL}`;
             values.push(value);
             return placeholder;
         },
         restore: (text: string) =>
-            text.replace(PLACEHOLDER_PATTERN, (match, indexText) => {
+            text.replace(placeholderPattern, (match, indexText) => {
                 const index = Number(indexText);
                 return Number.isInteger(index) && values[index] !== undefined ? values[index] : match;
             }),
@@ -328,7 +344,7 @@ function createExplicitSelection(range: SelectionRange, updatedTextLength: numbe
 }
 
 export function clearMarkdownFormattingSelectionText(text: string): string {
-    const store = createPlaceholderStore();
+    const store = createPlaceholderStore(text);
     let updatedText = replaceFencedCodeBlocks(text, store);
     updatedText = replaceInlineCode(updatedText, store);
     updatedText = replaceMarkdownLinksAndImages(updatedText, store);

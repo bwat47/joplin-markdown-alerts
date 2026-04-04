@@ -14,6 +14,13 @@ describe('clearMarkdownFormattingSelectionText', () => {
         expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
     });
 
+    test('does not rewrite literal text that matches the old printable placeholder format', () => {
+        const input = '@@MDCLR0@@ [Link](https://example.com)';
+        const expected = '@@MDCLR0@@ https://example.com';
+
+        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
+    });
+
     test('removes heading and blockquote markers without breaking table pipes', () => {
         const input = ['> ## **Title**', '| **A** | [B](https://example.com/path) |'].join('\n');
         const expected = ['Title', '| A | https://example.com/path |'].join('\n');

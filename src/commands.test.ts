@@ -24,24 +24,32 @@ const mockJoplin = {
     },
 };
 
-jest.mock('api', () => ({
-    __esModule: true,
-    default: mockJoplin,
-}), { virtual: true });
+jest.mock(
+    'api',
+    () => ({
+        __esModule: true,
+        default: mockJoplin,
+    }),
+    { virtual: true }
+);
 
-jest.mock('api/types', () => ({
-    __esModule: true,
-    MenuItemLocation: {
-        Edit: 'edit',
-    },
-    ToastType: {
-        Info: 'info',
-        Error: 'error',
-    },
-    ToolbarButtonLocation: {
-        EditorToolbar: 'editorToolbar',
-    },
-}), { virtual: true });
+jest.mock(
+    'api/types',
+    () => ({
+        __esModule: true,
+        MenuItemLocation: {
+            Edit: 'edit',
+        },
+        ToastType: {
+            Info: 'info',
+            Error: 'error',
+        },
+        ToolbarButtonLocation: {
+            EditorToolbar: 'editorToolbar',
+        },
+    }),
+    { virtual: true }
+);
 
 import { registerInlineFormatCommands } from './commands';
 import {

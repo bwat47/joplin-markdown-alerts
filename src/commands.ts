@@ -71,9 +71,7 @@ async function resolveInlineFormatEditorCommandName(format: InlineFormatCommandD
     }
 
     const syntaxMode =
-        format.id === 'superscript'
-            ? await getSuperscriptSyntaxSettingValue()
-            : await getSubscriptSyntaxSettingValue();
+        format.id === 'superscript' ? await getSuperscriptSyntaxSettingValue() : await getSubscriptSyntaxSettingValue();
 
     return getInlineFormatEditorCommandName(format.id, syntaxMode);
 }

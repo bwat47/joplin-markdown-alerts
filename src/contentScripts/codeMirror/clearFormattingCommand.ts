@@ -27,14 +27,11 @@ const BLOCKQUOTE_PREFIX_REGEX = /^\s*(?:>\s*)+/;
 const HEADING_PREFIX_REGEX = /^\s{0,3}#{1,6}[ \t]+/;
 const LIST_MARKER_REGEX = /^\s*(?:[-+*]|\d+[.)])\s+/;
 const TASK_LIST_MARKER_REGEX = /^\[(?: |x|X)\]\s+/;
-const PLAIN_ALERT_TITLE_LINE_REGEX = new RegExp(
-    `^\\s*\\[!(${GITHUB_ALERT_TYPES.join('|')})\\](?:[ \\t]+(.*))?$`,
-    'i'
-);
+const PLAIN_ALERT_TITLE_LINE_REGEX = new RegExp(`^\\s*\\[!(${GITHUB_ALERT_TYPES.join('|')})\\](?:[ \\t]+(.*))?$`, 'i');
 const REFERENCE_STYLE_IMAGE_REGEX = /!\[([^\]]*)\]\[([^\]]+)\]/g;
 const REFERENCE_LINK_REGEX = /\[([^\]]+)\]\[[^\]]+\]/g;
 const FOOTNOTE_REFERENCE_REGEX = /\[\^([^\]]+)\]/g;
-const HTML_FORMATTING_TAGS = ['sup', 'sub', 'u', 's', 'strong', 'b', 'em', 'i', 'mark', 'del', 'strike'];
+const HTML_FORMATTING_TAGS = ['sup', 'sub', 'u', 's', 'strong', 'b', 'em', 'i', 'mark', 'del', 'strike', 'ins', 'span'];
 const MAX_CLEARING_PASSES = 10;
 
 function escapeRegex(text: string): string {

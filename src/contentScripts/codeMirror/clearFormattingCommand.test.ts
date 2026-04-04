@@ -32,6 +32,7 @@ describe('clearMarkdownFormattingSelectionText', () => {
         const input = [
             '[Joplin Cloud](https://joplinapp.org/plans/)',
             '![External](https://example.com/image.png)',
+            '![Alt][https://examples.com/image.png]',
             `![Resource](${RESOURCE_ID})`,
             '<img src="https://example.com/external.png" alt="External">',
             `<img src="${RESOURCE_ID}" alt="Resource">`,
@@ -39,6 +40,7 @@ describe('clearMarkdownFormattingSelectionText', () => {
         const expected = [
             'https://joplinapp.org/plans/',
             'https://example.com/image.png',
+            'Alt https://examples.com/image.png',
             `![Resource](${RESOURCE_ID})`,
             'https://example.com/external.png',
             `<img src="${RESOURCE_ID}" alt="Resource">`,

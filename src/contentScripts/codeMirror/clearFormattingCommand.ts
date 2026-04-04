@@ -31,6 +31,7 @@ const PLAIN_ALERT_TITLE_LINE_REGEX = new RegExp(
     `^\\s*\\[!(${GITHUB_ALERT_TYPES.join('|')})\\](?:[ \\t]+(.*))?$`,
     'i'
 );
+const REFERENCE_STYLE_IMAGE_REGEX = /!\[([^\]]*)\]\[([^\]]+)\]/g;
 const REFERENCE_LINK_REGEX = /\[([^\]]+)\]\[[^\]]+\]/g;
 const FOOTNOTE_REFERENCE_REGEX = /\[\^([^\]]+)\]/g;
 const HTML_FORMATTING_TAGS = ['sup', 'sub', 'u', 's', 'strong', 'b', 'em', 'i', 'mark', 'del', 'strike'];
@@ -224,6 +225,19 @@ function clearAlertTitleLine(line: string): string | null {
     return plainAlertMatch[2]?.trim() ?? '';
 }
 
+function replaceReferenceStyleImages(text: string): string {
+    return text.replace(REFERENCE_STYLE_IMAGE_REGEX, (_match, altText: string, target: string) => {
+        const trimmedAltText = altText.trim();
+        const trimmedTarget = target.trim();
+
+        if (isResourceLinkTarget(trimmedTarget)) {
+            return trimmedAltText.length > 0 ? `${trimmedAltText} ${trimmedTarget}` : trimmedTarget;
+        }
+
+        return trimmedAltText.length > 0 ? `${trimmedAltText} ${trimmedTarget}` : trimmedTarget;
+    });
+}
+
 function clearStructuralLineFormatting(line: string, store: PlaceholderStore): string {
     const referenceDefinitionMatch = REFERENCE_LINK_DEFINITION_REGEX.exec(line);
     if (referenceDefinitionMatch) {
@@ -281,7 +295,7 @@ function stripPairedHtmlFormattingTags(text: string): string {
 }
 
 function stripMarkdownInlineFormatting(text: string): string {
-    return text
+    return replaceReferenceStyleImages(text)
         .replace(REFERENCE_LINK_REGEX, '$1')
         .replace(FOOTNOTE_REFERENCE_REGEX, '$1')
         .replace(/\*\*(?=\S)([^\n]*?\S)\*\*/g, '$1')

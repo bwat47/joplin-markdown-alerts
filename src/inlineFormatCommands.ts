@@ -1,27 +1,45 @@
-export type InlineFormatDefinition = {
-    id: 'highlight' | 'strikethrough' | 'underline' | 'superscript' | 'subscript';
+export type InlineFormatId = 'highlight' | 'strikethrough' | 'underline' | 'superscript' | 'subscript';
+
+export type ConfigurableInlineFormatId = 'superscript' | 'subscript';
+
+export type InlineFormatSyntaxMode = 'html' | 'markdown';
+
+export type InlineFormatCommandDefinition = {
+    id: InlineFormatId;
     label: string;
-    openingDelimiter: string;
-    closingDelimiter: string;
+    defaultEditorCommandName: string;
     globalCommandName: string;
-    editorCommandName: string;
     toolbarButtonId: string;
     toolbarButtonSettingKey: string;
     toolbarButtonSettingLabel: string;
     menuItemId: string;
     iconName: string;
     accelerator?: string;
-    conflictingLongerDelimiters?: string[];
 };
 
-export const INLINE_FORMAT_COMMANDS: InlineFormatDefinition[] = [
+export type InlineFormatDefinition = {
+    id: InlineFormatId;
+    editorCommandName: string;
+    openingDelimiter: string;
+    closingDelimiter: string;
+    conflictingLongerDelimiters?: string[];
+    syntaxMode?: InlineFormatSyntaxMode;
+};
+
+export const INLINE_FORMAT_HTML_SYNTAX: InlineFormatSyntaxMode = 'html';
+export const INLINE_FORMAT_MARKDOWN_SYNTAX: InlineFormatSyntaxMode = 'markdown';
+
+const DEFAULT_CONFIGURABLE_INLINE_FORMAT_SYNTAX: Record<ConfigurableInlineFormatId, InlineFormatSyntaxMode> = {
+    superscript: INLINE_FORMAT_HTML_SYNTAX,
+    subscript: INLINE_FORMAT_HTML_SYNTAX,
+};
+
+export const INLINE_FORMAT_COMMANDS: InlineFormatCommandDefinition[] = [
     {
         id: 'highlight',
         label: 'Insert or Toggle Highlight',
-        openingDelimiter: '==',
-        closingDelimiter: '==',
+        defaultEditorCommandName: 'markdownAlerts.insertHighlightOrToggle',
         globalCommandName: 'markdownAlerts.insertHighlight',
-        editorCommandName: 'markdownAlerts.insertHighlightOrToggle',
         toolbarButtonId: 'markdownAlerts.insertHighlight.toolbarButton',
         toolbarButtonSettingKey: 'showHighlightToolbarButton',
         toolbarButtonSettingLabel: 'Show Highlight toolbar button',
@@ -32,10 +50,8 @@ export const INLINE_FORMAT_COMMANDS: InlineFormatDefinition[] = [
     {
         id: 'strikethrough',
         label: 'Insert or Toggle Strikethrough',
-        openingDelimiter: '~~',
-        closingDelimiter: '~~',
+        defaultEditorCommandName: 'markdownAlerts.insertStrikethroughOrToggle',
         globalCommandName: 'markdownAlerts.insertStrikethrough',
-        editorCommandName: 'markdownAlerts.insertStrikethroughOrToggle',
         toolbarButtonId: 'markdownAlerts.insertStrikethrough.toolbarButton',
         toolbarButtonSettingKey: 'showStrikethroughToolbarButton',
         toolbarButtonSettingLabel: 'Show Strikethrough toolbar button',
@@ -46,10 +62,8 @@ export const INLINE_FORMAT_COMMANDS: InlineFormatDefinition[] = [
     {
         id: 'underline',
         label: 'Insert or Toggle Underline',
-        openingDelimiter: '++',
-        closingDelimiter: '++',
+        defaultEditorCommandName: 'markdownAlerts.insertUnderlineOrToggle',
         globalCommandName: 'markdownAlerts.insertUnderline',
-        editorCommandName: 'markdownAlerts.insertUnderlineOrToggle',
         toolbarButtonId: 'markdownAlerts.insertUnderline.toolbarButton',
         toolbarButtonSettingKey: 'showUnderlineToolbarButton',
         toolbarButtonSettingLabel: 'Show Underline toolbar button',
@@ -60,10 +74,8 @@ export const INLINE_FORMAT_COMMANDS: InlineFormatDefinition[] = [
     {
         id: 'superscript',
         label: 'Insert or Toggle Superscript',
-        openingDelimiter: '^',
-        closingDelimiter: '^',
+        defaultEditorCommandName: 'markdownAlerts.insertSuperscriptHtmlOrToggle',
         globalCommandName: 'markdownAlerts.insertSuperscript',
-        editorCommandName: 'markdownAlerts.insertSuperscriptOrToggle',
         toolbarButtonId: 'markdownAlerts.insertSuperscript.toolbarButton',
         toolbarButtonSettingKey: 'showSuperscriptToolbarButton',
         toolbarButtonSettingLabel: 'Show Superscript toolbar button',
@@ -73,15 +85,100 @@ export const INLINE_FORMAT_COMMANDS: InlineFormatDefinition[] = [
     {
         id: 'subscript',
         label: 'Insert or Toggle Subscript',
-        openingDelimiter: '~',
-        closingDelimiter: '~',
+        defaultEditorCommandName: 'markdownAlerts.insertSubscriptHtmlOrToggle',
         globalCommandName: 'markdownAlerts.insertSubscript',
-        editorCommandName: 'markdownAlerts.insertSubscriptOrToggle',
         toolbarButtonId: 'markdownAlerts.insertSubscript.toolbarButton',
         toolbarButtonSettingKey: 'showSubscriptToolbarButton',
         toolbarButtonSettingLabel: 'Show Subscript toolbar button',
         menuItemId: 'markdownAlerts.insertSubscript.menuItem',
         iconName: 'fas fa-subscript',
-        conflictingLongerDelimiters: ['~~'],
     },
 ];
+
+export const INLINE_FORMAT_DEFINITIONS: InlineFormatDefinition[] = [
+    {
+        id: 'highlight',
+        editorCommandName: 'markdownAlerts.insertHighlightOrToggle',
+        openingDelimiter: '==',
+        closingDelimiter: '==',
+    },
+    {
+        id: 'strikethrough',
+        editorCommandName: 'markdownAlerts.insertStrikethroughOrToggle',
+        openingDelimiter: '~~',
+        closingDelimiter: '~~',
+    },
+    {
+        id: 'underline',
+        editorCommandName: 'markdownAlerts.insertUnderlineOrToggle',
+        openingDelimiter: '++',
+        closingDelimiter: '++',
+    },
+    {
+        id: 'superscript',
+        syntaxMode: INLINE_FORMAT_MARKDOWN_SYNTAX,
+        editorCommandName: 'markdownAlerts.insertSuperscriptMarkdownOrToggle',
+        openingDelimiter: '^',
+        closingDelimiter: '^',
+    },
+    {
+        id: 'superscript',
+        syntaxMode: INLINE_FORMAT_HTML_SYNTAX,
+        editorCommandName: 'markdownAlerts.insertSuperscriptHtmlOrToggle',
+        openingDelimiter: '<sup>',
+        closingDelimiter: '</sup>',
+    },
+    {
+        id: 'subscript',
+        syntaxMode: INLINE_FORMAT_MARKDOWN_SYNTAX,
+        editorCommandName: 'markdownAlerts.insertSubscriptMarkdownOrToggle',
+        openingDelimiter: '~',
+        closingDelimiter: '~',
+        conflictingLongerDelimiters: ['~~'],
+    },
+    {
+        id: 'subscript',
+        syntaxMode: INLINE_FORMAT_HTML_SYNTAX,
+        editorCommandName: 'markdownAlerts.insertSubscriptHtmlOrToggle',
+        openingDelimiter: '<sub>',
+        closingDelimiter: '</sub>',
+    },
+];
+
+export function isConfigurableInlineFormatId(id: InlineFormatId): id is ConfigurableInlineFormatId {
+    return id === 'superscript' || id === 'subscript';
+}
+
+export function getDefaultInlineFormatSyntaxMode(id: ConfigurableInlineFormatId): InlineFormatSyntaxMode {
+    return DEFAULT_CONFIGURABLE_INLINE_FORMAT_SYNTAX[id];
+}
+
+export function getInlineFormatDefinition(
+    id: InlineFormatId,
+    syntaxMode?: InlineFormatSyntaxMode
+): InlineFormatDefinition {
+    const resolvedSyntaxMode = isConfigurableInlineFormatId(id)
+        ? (syntaxMode ?? getDefaultInlineFormatSyntaxMode(id))
+        : undefined;
+
+    const format = INLINE_FORMAT_DEFINITIONS.find(
+        (entry) => entry.id === id && entry.syntaxMode === resolvedSyntaxMode
+    );
+
+    if (!format) {
+        throw new Error(
+            resolvedSyntaxMode
+                ? `Missing inline format definition for ${id} (${resolvedSyntaxMode})`
+                : `Missing inline format definition for ${id}`
+        );
+    }
+
+    return format;
+}
+
+export function getInlineFormatEditorCommandName(
+    id: ConfigurableInlineFormatId,
+    syntaxMode: InlineFormatSyntaxMode
+): string {
+    return getInlineFormatDefinition(id, syntaxMode).editorCommandName;
+}

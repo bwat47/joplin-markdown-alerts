@@ -86,8 +86,8 @@ Joplin supports various inline Markdown extensions, but the Markdown editor does
 - Highlight: `==text==`
 - Strikethrough: `~~text~~`
 - Underline: `++text++`
-- Superscript: `^text^`
-- Subscript: `~text~`
+- Superscript: `<sup>text</sup>` by default, optionally `^text^`
+- Subscript: `<sub>text</sub>` by default, optionally `~text~`
 
 Default shortcuts:
 
@@ -140,6 +140,8 @@ Highlight becomes:
 
 The plugin includes settings to enable or disable each editor toolbar button independently.
 
+It also includes separate syntax settings for the superscript and subscript commands. Both default to inline HTML because Joplin renders that syntax in both the editor and the viewer.
+
 Available toolbar visibility settings:
 
 - Alert
@@ -155,3 +157,4 @@ All toolbar buttons are enabled by default.
 These settings only affect the editor toolbar buttons. The commands themselves, menu items, and shortcuts still remain available.
 
 Changing a toolbar visibility setting currently requires restarting the plugin to take effect.
+Changing the superscript or subscript syntax setting applies to commands immediately and does not require a restart.

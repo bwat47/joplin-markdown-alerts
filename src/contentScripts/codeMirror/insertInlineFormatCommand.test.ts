@@ -1,7 +1,11 @@
 /** @jest-environment jsdom */
 import { EditorSelection } from '@codemirror/state';
 
-import { INLINE_FORMAT_COMMANDS } from '../../inlineFormatCommands';
+import {
+    getInlineFormatDefinition,
+    type InlineFormatId,
+    type InlineFormatSyntaxMode,
+} from '../../inlineFormatCommands';
 import {
     applyInlineFormattingToFullLineSelectionText,
     applyInlineFormattingToSelectionText,
@@ -9,13 +13,8 @@ import {
 } from './insertInlineFormatCommand';
 import { createEditorHarness } from './testUtils';
 
-function getFormat(id: (typeof INLINE_FORMAT_COMMANDS)[number]['id']) {
-    const format = INLINE_FORMAT_COMMANDS.find((entry) => entry.id === id);
-    if (!format) {
-        throw new Error(`Missing inline format definition for ${id}`);
-    }
-
-    return format;
+function getFormat(id: InlineFormatId, syntaxMode?: InlineFormatSyntaxMode) {
+    return getInlineFormatDefinition(id, syntaxMode);
 }
 
 describe('applyInlineFormattingToSelectionText', () => {
@@ -40,7 +39,7 @@ describe('applyInlineFormattingToSelectionText', () => {
     });
 
     test('does not misread strikethrough as subscript formatting', () => {
-        expect(applyInlineFormattingToSelectionText('~~abc~~', getFormat('subscript'))).toBe('~~~abc~~~');
+        expect(applyInlineFormattingToSelectionText('~~abc~~', getFormat('subscript', 'markdown'))).toBe('~~~abc~~~');
     });
 
     test('keeps trailing spaces outside newly added delimiters', () => {
@@ -49,6 +48,22 @@ describe('applyInlineFormattingToSelectionText', () => {
 
     test('keeps leading spaces outside newly added delimiters', () => {
         expect(applyInlineFormattingToSelectionText('  ABC', getFormat('highlight'))).toBe('  ==ABC==');
+    });
+
+    test('wraps the whole selection with superscript HTML when configured', () => {
+        expect(applyInlineFormattingToSelectionText('abc', getFormat('superscript', 'html'))).toBe('<sup>abc</sup>');
+    });
+
+    test('unwraps exact superscript HTML markup when configured', () => {
+        expect(applyInlineFormattingToSelectionText('<sup>abc</sup>', getFormat('superscript', 'html'))).toBe('abc');
+    });
+
+    test('wraps the whole selection with subscript HTML when configured', () => {
+        expect(applyInlineFormattingToSelectionText('abc', getFormat('subscript', 'html'))).toBe('<sub>abc</sub>');
+    });
+
+    test('unwraps exact subscript HTML markup when configured', () => {
+        expect(applyInlineFormattingToSelectionText('<sub>abc</sub>', getFormat('subscript', 'html'))).toBe('abc');
     });
 });
 
@@ -59,14 +74,21 @@ describe('applyInlineFormattingToFullLineSelectionText', () => {
 
         expect(applyInlineFormattingToFullLineSelectionText(input, getFormat('strikethrough'))).toBe(expected);
     });
+
+    test('formats multiline full-line selections with superscript HTML while preserving structure', () => {
+        const input = ['> - one', '## two', '', 'tail'].join('\n');
+        const expected = ['> - <sup>one</sup>', '## <sup>two</sup>', '', '<sup>tail</sup>'].join('\n');
+
+        expect(applyInlineFormattingToFullLineSelectionText(input, getFormat('superscript', 'html'))).toBe(expected);
+    });
 });
 
 describe('createInsertInlineFormatCommand', () => {
-    function runCommand(input: string, formatId: (typeof INLINE_FORMAT_COMMANDS)[number]['id']): string {
+    function runCommand(input: string, formatId: InlineFormatId, syntaxMode?: InlineFormatSyntaxMode): string {
         const harness = createEditorHarness(input);
 
         try {
-            const command = createInsertInlineFormatCommand(harness.view, getFormat(formatId));
+            const command = createInsertInlineFormatCommand(harness.view, getFormat(formatId, syntaxMode));
             command();
             return harness.getText();
         } finally {
@@ -76,12 +98,13 @@ describe('createInsertInlineFormatCommand', () => {
 
     function runCommandWithCursor(
         input: string,
-        formatId: (typeof INLINE_FORMAT_COMMANDS)[number]['id']
+        formatId: InlineFormatId,
+        syntaxMode?: InlineFormatSyntaxMode
     ): { text: string; cursor: number } {
         const harness = createEditorHarness(input);
 
         try {
-            const command = createInsertInlineFormatCommand(harness.view, getFormat(formatId));
+            const command = createInsertInlineFormatCommand(harness.view, getFormat(formatId, syntaxMode));
             command();
             return { text: harness.getText(), cursor: harness.getCursor() };
         } finally {
@@ -101,6 +124,20 @@ describe('createInsertInlineFormatCommand', () => {
 
         expect(result.text).toBe('====');
         expect(result.cursor).toBe(2);
+    });
+
+    test('inserts superscript HTML tags at the cursor and places the cursor between them', () => {
+        const result = runCommandWithCursor('|', 'superscript', 'html');
+
+        expect(result.text).toBe('<sup></sup>');
+        expect(result.cursor).toBe(5);
+    });
+
+    test('inserts subscript HTML tags at the cursor and places the cursor between them', () => {
+        const result = runCommandWithCursor('|', 'subscript', 'html');
+
+        expect(result.text).toBe('<sub></sub>');
+        expect(result.cursor).toBe(5);
     });
 
     test('supports multiple cursors', () => {

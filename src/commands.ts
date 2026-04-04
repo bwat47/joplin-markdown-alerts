@@ -1,8 +1,15 @@
 import joplin from 'api';
 import { MenuItemLocation, ToastType, ToolbarButtonLocation } from 'api/types';
 
-import { INLINE_FORMAT_COMMANDS, type InlineFormatDefinition } from './inlineFormatCommands';
 import {
+    getInlineFormatEditorCommandName,
+    isConfigurableInlineFormatId,
+    INLINE_FORMAT_COMMANDS,
+    type InlineFormatCommandDefinition,
+} from './inlineFormatCommands';
+import {
+    getSubscriptSyntaxSettingValue,
+    getSuperscriptSyntaxSettingValue,
     isToolbarButtonEnabled,
     SHOW_ALERT_TOOLBAR_BUTTON_SETTING,
     SHOW_QUOTE_TOOLBAR_BUTTON_SETTING,
@@ -58,6 +65,19 @@ async function createToolbarButtonIfEnabled(
     await joplin.views.toolbarButtons.create(toolbarButtonId, commandName, ToolbarButtonLocation.EditorToolbar);
 }
 
+async function resolveInlineFormatEditorCommandName(format: InlineFormatCommandDefinition): Promise<string> {
+    if (!isConfigurableInlineFormatId(format.id)) {
+        return format.defaultEditorCommandName;
+    }
+
+    const syntaxMode =
+        format.id === 'superscript'
+            ? await getSuperscriptSyntaxSettingValue()
+            : await getSubscriptSyntaxSettingValue();
+
+    return getInlineFormatEditorCommandName(format.id, syntaxMode);
+}
+
 export async function registerInsertNoteAlertCommand(): Promise<void> {
     await joplin.commands.register({
         name: INSERT_NOTE_ALERT_COMMAND_NAME,
@@ -110,13 +130,13 @@ export async function registerInsertNoteQuoteCommand(): Promise<void> {
     );
 }
 
-async function registerInlineFormatCommand(format: InlineFormatDefinition): Promise<void> {
+async function registerInlineFormatCommand(format: InlineFormatCommandDefinition): Promise<void> {
     await joplin.commands.register({
         name: format.globalCommandName,
         label: format.label,
         iconName: format.iconName,
         execute: async () => {
-            await executeMarkdownEditorCommand(format.editorCommandName);
+            await executeMarkdownEditorCommand(await resolveInlineFormatEditorCommandName(format));
         },
     });
 

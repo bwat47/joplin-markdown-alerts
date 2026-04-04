@@ -12,6 +12,7 @@ import {
     getSuperscriptSyntaxSettingValue,
     isToolbarButtonEnabled,
     SHOW_ALERT_TOOLBAR_BUTTON_SETTING,
+    SHOW_CLEAR_FORMATTING_TOOLBAR_BUTTON_SETTING,
     SHOW_QUOTE_TOOLBAR_BUTTON_SETTING,
 } from './settings';
 
@@ -23,6 +24,9 @@ export const INSERT_NOTE_QUOTE_COMMAND_NAME = 'markdownAlerts.insertNoteQuote';
 export const INSERT_NOTE_QUOTE_ACCELERATOR = 'Ctrl+Shift+.';
 const INSERT_QUOTE_OR_TOGGLE_COMMAND = 'markdownAlerts.insertQuoteOrToggle';
 
+export const CLEAR_MARKDOWN_FORMATTING_COMMAND_NAME = 'markdownAlerts.clearMarkdownFormatting';
+const CLEAR_FORMATTING_COMMAND = 'markdownAlerts.clearFormatting';
+
 const INSERT_NOTE_ALERT_MENU_ITEM_ID = 'markdownAlerts.insertNoteAlert.menuItem';
 const INSERT_NOTE_ALERT_TOOLBAR_BUTTON_ID = 'markdownAlerts.insertNoteAlert.toolbarButton';
 const INSERT_NOTE_ALERT_ICON_NAME = 'fas fa-exclamation-circle';
@@ -30,6 +34,10 @@ const INSERT_NOTE_ALERT_ICON_NAME = 'fas fa-exclamation-circle';
 const INSERT_NOTE_QUOTE_MENU_ITEM_ID = 'markdownAlerts.insertNoteQuote.menuItem';
 const INSERT_NOTE_QUOTE_TOOLBAR_BUTTON_ID = 'markdownAlerts.insertNoteQuote.toolbarButton';
 const INSERT_NOTE_QUOTE_ICON_NAME = 'fas fa-quote-right';
+
+const CLEAR_MARKDOWN_FORMATTING_MENU_ITEM_ID = 'markdownAlerts.clearMarkdownFormatting.menuItem';
+const CLEAR_MARKDOWN_FORMATTING_TOOLBAR_BUTTON_ID = 'markdownAlerts.clearMarkdownFormatting.toolbarButton';
+const CLEAR_MARKDOWN_FORMATTING_ICON_NAME = 'fas fa-eraser';
 
 async function executeMarkdownEditorCommand(commandName: string): Promise<void> {
     const isMarkdown = !!(await joplin.settings.globalValue('editor.codeView'));
@@ -125,6 +133,29 @@ export async function registerInsertNoteQuoteCommand(): Promise<void> {
         SHOW_QUOTE_TOOLBAR_BUTTON_SETTING,
         INSERT_NOTE_QUOTE_TOOLBAR_BUTTON_ID,
         INSERT_NOTE_QUOTE_COMMAND_NAME
+    );
+}
+
+export async function registerClearMarkdownFormattingCommand(): Promise<void> {
+    await joplin.commands.register({
+        name: CLEAR_MARKDOWN_FORMATTING_COMMAND_NAME,
+        label: 'Clear Markdown Formatting in Selection',
+        iconName: CLEAR_MARKDOWN_FORMATTING_ICON_NAME,
+        execute: async () => {
+            await executeMarkdownEditorCommand(CLEAR_FORMATTING_COMMAND);
+        },
+    });
+
+    await joplin.views.menuItems.create(
+        CLEAR_MARKDOWN_FORMATTING_MENU_ITEM_ID,
+        CLEAR_MARKDOWN_FORMATTING_COMMAND_NAME,
+        MenuItemLocation.Edit
+    );
+
+    await createToolbarButtonIfEnabled(
+        SHOW_CLEAR_FORMATTING_TOOLBAR_BUTTON_SETTING,
+        CLEAR_MARKDOWN_FORMATTING_TOOLBAR_BUTTON_ID,
+        CLEAR_MARKDOWN_FORMATTING_COMMAND_NAME
     );
 }
 

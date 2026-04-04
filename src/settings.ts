@@ -12,6 +12,7 @@ const SETTINGS_SECTION = 'markdownAlerts.toolbarButtons';
 
 export const SHOW_ALERT_TOOLBAR_BUTTON_SETTING = 'showAlertToolbarButton';
 export const SHOW_QUOTE_TOOLBAR_BUTTON_SETTING = 'showQuoteToolbarButton';
+export const SHOW_CLEAR_FORMATTING_TOOLBAR_BUTTON_SETTING = 'showClearFormattingToolbarButton';
 export const SUPERSCRIPT_SYNTAX_SETTING = 'superscriptSyntax';
 export const SUBSCRIPT_SYNTAX_SETTING = 'subscriptSyntax';
 
@@ -69,6 +70,14 @@ export async function registerPluginSettings(): Promise<void> {
             public: true,
             section: SETTINGS_SECTION,
             label: 'Show Blockquote toolbar button',
+            description: 'Requires a plugin restart to take effect.',
+        },
+        [SHOW_CLEAR_FORMATTING_TOOLBAR_BUTTON_SETTING]: {
+            value: true,
+            type: SettingItemType.Bool,
+            public: true,
+            section: SETTINGS_SECTION,
+            label: 'Show Clear Formatting toolbar button',
             description: 'Requires a plugin restart to take effect.',
         },
         ...Object.fromEntries(

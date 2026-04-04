@@ -3,6 +3,7 @@ import { ContentScriptType } from 'api/types';
 
 import { logger } from './logger';
 import {
+    registerClearMarkdownFormattingCommand,
     registerInlineFormatCommands,
     registerInsertNoteAlertCommand,
     registerInsertNoteQuoteCommand,
@@ -16,6 +17,7 @@ joplin.plugins.register({
         await registerPluginSettings();
         await registerInsertNoteAlertCommand();
         await registerInsertNoteQuoteCommand();
+        await registerClearMarkdownFormattingCommand();
         await registerInlineFormatCommands();
 
         await joplin.contentScripts.register(

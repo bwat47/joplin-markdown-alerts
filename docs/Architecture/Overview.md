@@ -45,7 +45,7 @@ GitHub alert syntax:
 - `src/contentScripts/codeMirror/insertQuoteCommand.ts` - Editor command logic for quoting/toggling selected text
 - `src/inlineFormatCommands.ts` - Shared inline-format command metadata plus syntax-specific editor command definitions for configurable inline formats
 - `src/settings.ts` - Plugin settings registration for toolbar button visibility plus superscript/subscript syntax selection
-- `src/commands.ts` - Registers global Joplin commands (alerts + quote + inline formatting, toolbar + shortcuts), gates toolbar buttons on plugin settings, and resolves superscript/subscript syntax at execution time
+- `src/commands.ts` - Registers global Joplin commands (alerts + quote + clear-formatting + inline formatting, toolbar + shortcuts), gates toolbar buttons on plugin settings, and resolves superscript/subscript syntax at execution time
 
 ### Commands
 
@@ -54,6 +54,11 @@ GitHub alert syntax:
 -   - When text is selected, it operates on the selection: non-quotes become an alert; quoted selections toggle alert type or get a new marker line.
 - `markdownAlerts.insertNoteQuote`: Global command (toolbar + shortcut)
 -   - Executes `markdownAlerts.insertQuoteOrToggle` in the editor to quote selected text or remove quote markers when all selected lines are quoted.
+- `markdownAlerts.clearMarkdownFormatting`: Global command (menu/command palette)
+-   - Executes `markdownAlerts.clearFormatting` in the editor to remove supported markdown formatting from the current non-empty selection ranges.
+-   - Uses a regex-first transformer with targeted structural handling for GitHub alert title lines, headings, blockquotes, ordered/unordered/task lists, links/images, reference links, footnotes, HTML formatting tags, and inline/fenced code placeholders.
+-   - Preserves Joplin resource markdown links and embeds (`:/<32 hex>`) while extracting external link/image destinations as raw URLs.
+-   - Exposes an optional toolbar button controlled by plugin settings; no default shortcut is assigned.
 - `markdownAlerts.insertHighlight` / `markdownAlerts.insertStrikethrough` / `markdownAlerts.insertUnderline` / `markdownAlerts.insertSuperscript` / `markdownAlerts.insertSubscript`
 -   - Execute matching inline-format editor commands registered by the CodeMirror content script.
 -   - Superscript and subscript resolve to either HTML-tag or markdown-delimiter editor commands based on plugin settings.

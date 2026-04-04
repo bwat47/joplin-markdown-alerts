@@ -56,6 +56,7 @@ The plugin adds toolbar buttons and Edit menu commands for:
 
 - Insert or Toggle alert
 - Insert or Toggle blockquote
+- Clear Markdown formatting in selection
 
 #### Insert or Toggle alert
 
@@ -78,6 +79,19 @@ Behavior:
 - On an empty line, insert `> ` and place the cursor after the marker
 - With no selection, convert the current paragraph or line into a blockquote
 - With a selection, convert the selected paragraphs or lines into blockquotes
+
+#### Clear Markdown formatting in selection
+
+Default shortcut: none
+
+Behavior:
+
+- Works on the current non-empty selection ranges
+- Removes supported markdown and inline HTML formatting syntax
+- Removes GitHub alert marker lines like `> [!NOTE]` while preserving any custom alert title text
+- Strips headings, blockquotes, ordered/unordered/nested lists, and task list markers back to plain text
+- Converts external markdown links and image embeds to their raw URLs
+- Preserves Joplin resource links and embeds that target `:/<32 hex>`
 
 ## Inline Formatting Commands
 
@@ -146,6 +160,7 @@ Available toolbar visibility settings:
 
 - Alert
 - Blockquote
+- Clear Formatting
 - Highlight
 - Strikethrough
 - Underline

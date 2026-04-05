@@ -234,6 +234,36 @@ describe('createInsertInlineFormatCommand', () => {
         }
     });
 
+    test('applies line-aware formatting to fully selected trailing lines in a mixed multiline selection', () => {
+        const input = [
+            'Joplin is a free, [[open source note taking and to-do application.',
+            '',
+            'Notes exported from Evernote into Joplin can also be imported.]]',
+        ].join('\n');
+        const expected = [
+            'Joplin is a free, ~~open source note taking and to-do application.~~',
+            '',
+            '~~Notes exported from Evernote into Joplin can also be imported.~~',
+        ].join('\n');
+
+        expect(runCommand(input, 'strikethrough')).toBe(expected);
+    });
+
+    test('applies line-aware formatting to fully selected leading lines in a mixed multiline selection', () => {
+        const input = [
+            '[[Joplin is a free, open source note taking and to-do application.',
+            '',
+            'Notes exported from Evernote into Joplin]] can also be imported.',
+        ].join('\n');
+        const expected = [
+            '~~Joplin is a free, open source note taking and to-do application.~~',
+            '',
+            '~~Notes exported from Evernote into Joplin~~ can also be imported.',
+        ].join('\n');
+
+        expect(runCommand(input, 'strikethrough')).toBe(expected);
+    });
+
     test('preserves blockquote-prefixed list markers while formatting only item content', () => {
         const harness = createEditorHarness(['> - one', '> - two', 'tail'].join('\n'));
 

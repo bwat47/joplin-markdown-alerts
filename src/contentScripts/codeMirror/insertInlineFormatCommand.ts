@@ -294,6 +294,49 @@ function isFullLineSelection(view: EditorView, range: SelectionRange): boolean {
     return range.to === lineAtEnd.from || range.to === lineAtEnd.to;
 }
 
+function applyInlineFormattingToSelectionRange(
+    view: EditorView,
+    range: SelectionRange,
+    format: InlineFormatDefinition
+): string {
+    const state = view.state;
+    const selectedText = state.doc.sliceString(range.from, range.to);
+
+    if (isFullLineSelection(view, range)) {
+        return applyInlineFormattingToFullLineSelectionRange(view, range, format);
+    }
+
+    if (!selectedText.includes('\n')) {
+        return applyInlineFormattingToSelectionText(selectedText, format);
+    }
+
+    const startLine = state.doc.lineAt(range.from);
+    const lines = selectedText.split('\n');
+
+    return lines
+        .map((line, index) => {
+            if (line.length === 0) {
+                return line;
+            }
+
+            const docLine = state.doc.line(startLine.number + index);
+            const selectionStart = index === 0 ? range.from - docLine.from : 0;
+            const selectionEnd = index === lines.length - 1 ? range.to - docLine.from : docLine.length;
+            const isFullLineSelection = selectionStart === 0 && selectionEnd === docLine.length;
+
+            if (!isFullLineSelection) {
+                return applyInlineFormattingToSelectionText(line, format);
+            }
+
+            if (isLineInsideCodeBlock(view, docLine.from) || shouldSkipMarkdownTableLine(line, view, docLine.from)) {
+                return line;
+            }
+
+            return formatFullLineText(line, format);
+        })
+        .join('\n');
+}
+
 function createCursorInsertion(
     cursorPos: number,
     format: InlineFormatDefinition
@@ -350,9 +393,7 @@ export function createInsertInlineFormatCommand(view: EditorView, format: Inline
             }
 
             const selectedText = state.doc.sliceString(range.from, range.to);
-            const updatedText = isFullLineSelection(view, range)
-                ? applyInlineFormattingToFullLineSelectionRange(view, range, format)
-                : applyInlineFormattingToSelectionText(selectedText, format);
+            const updatedText = applyInlineFormattingToSelectionRange(view, range, format);
 
             if (updatedText === selectedText) {
                 return;

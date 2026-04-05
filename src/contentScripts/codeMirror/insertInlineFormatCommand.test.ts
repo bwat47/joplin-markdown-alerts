@@ -321,6 +321,52 @@ describe('createInsertInlineFormatCommand', () => {
         }
     });
 
+    test('skips markdown table lines during multiline full-line formatting', () => {
+        const harness = createEditorHarness(['Intro', '| A | B |', '| - | - |', '| one | two |', 'Tail'].join('\n'), {
+            rawInput: true,
+        });
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line5 = harness.view.state.doc.line(5);
+
+            harness.view.dispatch({
+                selection: EditorSelection.single(line1.from, line5.to),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('highlight'));
+            command();
+
+            expect(harness.getText()).toBe(
+                ['==Intro==', '| A | B |', '| - | - |', '| one | two |', '==Tail=='].join('\n')
+            );
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('skips blockquoted markdown table lines during multiline full-line formatting', () => {
+        const harness = createEditorHarness(['> | A | B |', '> | - | - |', '> | one | two |', 'Tail'].join('\n'), {
+            rawInput: true,
+        });
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line4 = harness.view.state.doc.line(4);
+
+            harness.view.dispatch({
+                selection: EditorSelection.single(line1.from, line4.to),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('highlight'));
+            command();
+
+            expect(harness.getText()).toBe(['> | A | B |', '> | - | - |', '> | one | two |', '==Tail=='].join('\n'));
+        } finally {
+            harness.destroy();
+        }
+    });
+
     test('preserves heading and blockquote markers in a full-line mixed selection', () => {
         const harness = createEditorHarness(
             [

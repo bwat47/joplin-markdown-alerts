@@ -60,11 +60,11 @@ GitHub alert syntax:
 -   - Preserves Joplin resource markdown links and embeds (`:/<32 hex>`) while extracting external link/image destinations as raw URLs.
 -   - Exposes an optional toolbar button controlled by plugin settings; no default shortcut is assigned.
 - `markdownAlerts.insertHighlight` / `markdownAlerts.insertStrikethrough` / `markdownAlerts.insertUnderline` / `markdownAlerts.insertSuperscript` / `markdownAlerts.insertSubscript`
--   - Execute matching inline-format editor commands registered by the CodeMirror content script.
--   - Superscript and subscript resolve to either HTML-tag or markdown-delimiter editor commands based on plugin settings.
--   - Empty selection inserts paired delimiters and places the cursor between them.
--   - Selected text toggles the target inline delimiter; multiline full-line selections are handled line by line.
--   - List-aware multiline formatting preserves blockquote prefixes, list markers, and task checkboxes while formatting only item content.
+  -   - Execute matching inline-format editor commands registered by the CodeMirror content script.
+  -   - Superscript and subscript resolve to either HTML-tag or markdown-delimiter editor commands based on plugin settings.
+  -   - Empty selection inserts paired delimiters and places the cursor between them.
+  -   - Selected text toggles the target inline delimiter; multiline full-line selections are handled line by line.
+  -   - List-aware multiline formatting preserves blockquote prefixes, list markers, and task checkboxes while formatting only item content, and skips code blocks and markdown tables.
 
 ### Settings
 

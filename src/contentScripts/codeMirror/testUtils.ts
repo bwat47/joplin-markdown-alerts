@@ -1,6 +1,7 @@
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
+import { GFM } from '@lezer/markdown';
 
 type SelectionSpec = {
     anchor: number;
@@ -12,6 +13,10 @@ type EditorHarness = {
     destroy: () => void;
     getText: () => string;
     getCursor: () => number;
+};
+
+type CreateEditorHarnessOptions = {
+    rawInput?: boolean;
 };
 
 const SELECTION_START = '[[';
@@ -48,12 +53,14 @@ function parseSelectionMarkers(input: string): { doc: string; selection: Selecti
     return { doc: input, selection: { anchor: 0, head: 0 } };
 }
 
-export function createEditorHarness(input: string): EditorHarness {
-    const { doc, selection } = parseSelectionMarkers(input);
+export function createEditorHarness(input: string, options?: CreateEditorHarnessOptions): EditorHarness {
+    const { doc, selection } = options?.rawInput
+        ? { doc: input, selection: { anchor: 0, head: 0 } }
+        : parseSelectionMarkers(input);
     const state = EditorState.create({
         doc,
         selection,
-        extensions: [markdown(), EditorState.allowMultipleSelections.of(true)],
+        extensions: [markdown({ extensions: [GFM] }), EditorState.allowMultipleSelections.of(true)],
     });
     const parent = document.createElement('div');
     const view = new EditorView({ state, parent });

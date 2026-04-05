@@ -94,6 +94,13 @@ describe('clearMarkdownFormattingSelectionText', () => {
 
         expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
     });
+
+    test('preserves thematic break lines instead of partially stripping them', () => {
+        const input = ['***', '* * *', '---', '- - -', '___', '_ _ _', '> ---', '> * * *'].join('\n');
+        const expected = ['***', '* * *', '---', '- - -', '___', '_ _ _', '---', '* * *'].join('\n');
+
+        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
+    });
 });
 
 describe('createClearFormattingCommand', () => {

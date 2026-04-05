@@ -27,6 +27,7 @@ const BLOCKQUOTE_PREFIX_REGEX = /^\s*(?:>\s*)+/;
 const HEADING_PREFIX_REGEX = /^\s{0,3}#{1,6}[ \t]+/;
 const LIST_MARKER_REGEX = /^\s*(?:[-+*]|\d+[.)])\s+/;
 const TASK_LIST_MARKER_REGEX = /^\[(?: |x|X)\]\s+/;
+const THEMATIC_BREAK_LINE_REGEX = /^\s{0,3}(?:(?:\*(?:[ \t]*\*){2,})|(?:-(?:[ \t]*-){2,})|(?:_(?:[ \t]*_){2,}))\s*$/;
 const PLAIN_ALERT_TITLE_LINE_REGEX = new RegExp(`^\\s*\\[!(${GITHUB_ALERT_TYPES.join('|')})\\](?:[ \\t]+(.*))?$`, 'i');
 const REFERENCE_STYLE_IMAGE_REGEX = /!\[([^\]]*)\]\[([^\]]+)\]/g;
 const REFERENCE_LINK_REGEX = /\[([^\]]+)\]\[[^\]]+\]/g;
@@ -251,6 +252,10 @@ function replaceReferenceStyleImages(text: string): string {
     });
 }
 
+function isThematicBreakLine(line: string): boolean {
+    return THEMATIC_BREAK_LINE_REGEX.test(line);
+}
+
 function clearStructuralLineFormatting(line: string, store: PlaceholderStore): string {
     const referenceDefinitionMatch = REFERENCE_LINK_DEFINITION_REGEX.exec(line);
     if (referenceDefinitionMatch) {
@@ -273,6 +278,9 @@ function clearStructuralLineFormatting(line: string, store: PlaceholderStore): s
     }
 
     let updatedLine = line.replace(BLOCKQUOTE_PREFIX_REGEX, '').replace(HEADING_PREFIX_REGEX, '');
+    if (isThematicBreakLine(updatedLine)) {
+        return updatedLine;
+    }
     let strippedListSyntax = false;
 
     while (true) {
@@ -349,6 +357,7 @@ export function clearMarkdownFormattingSelectionText(text: string): string {
     updatedText = updatedText
         .split('\n')
         .map((line) => clearStructuralLineFormatting(line, store))
+        .map((line) => (isThematicBreakLine(line) ? store.create(line) : line))
         .join('\n');
 
     for (let pass = 0; pass < MAX_CLEARING_PASSES; pass += 1) {

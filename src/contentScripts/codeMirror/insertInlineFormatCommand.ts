@@ -350,6 +350,44 @@ function applyInlineFormattingToSelectionRange(
         .join('\n');
 }
 
+function findCursorFormattingRemoval(
+    view: EditorView,
+    cursorPos: number,
+    format: InlineFormatDefinition
+): { key: string; change: TextChange; explicitSelection: ExplicitCursorSelection } | null {
+    const state = view.state;
+    const line = state.doc.lineAt(cursorPos);
+    const cursorOffset = cursorPos - line.from;
+
+    const segments = findWrappedSegments(line.text, format);
+    const segment = segments.find((s) => cursorOffset > s.from && cursorOffset < s.to);
+    if (!segment) {
+        return null;
+    }
+
+    const content = line.text.slice(
+        segment.from + format.openingDelimiter.length,
+        segment.to - format.closingDelimiter.length
+    );
+    const docSegmentFrom = line.from + segment.from;
+    const docSegmentTo = line.from + segment.to;
+
+    return {
+        key: `removal:${docSegmentFrom}:${docSegmentTo}`,
+        change: {
+            from: docSegmentFrom,
+            to: docSegmentTo,
+            insert: content,
+        },
+        explicitSelection: {
+            anchorBasePos: docSegmentFrom,
+            anchorOffset: 0,
+            headBasePos: docSegmentFrom,
+            headOffset: content.length,
+        },
+    };
+}
+
 function createCursorInsertion(
     cursorPos: number,
     format: InlineFormatDefinition
@@ -393,6 +431,15 @@ export function createInsertInlineFormatCommand(view: EditorView, format: Inline
 
         state.selection.ranges.forEach((range, index) => {
             if (range.empty) {
+                const removal = findCursorFormattingRemoval(view, range.head, format);
+                if (removal) {
+                    if (!changeMap.has(removal.key)) {
+                        changeMap.set(removal.key, removal.change);
+                    }
+                    explicitSelectionsByIndex.set(index, removal.explicitSelection);
+                    return;
+                }
+
                 const cursorInsertion = createCursorInsertion(range.head, format);
                 if (nonEmptyRanges.some((nonEmptyRange) => overlapsRange(cursorInsertion.change, nonEmptyRange))) {
                     return;

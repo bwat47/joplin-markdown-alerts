@@ -112,6 +112,22 @@ describe('createInsertInlineFormatCommand', () => {
         }
     }
 
+    function runCommandWithSelection(
+        input: string,
+        formatId: InlineFormatId,
+        syntaxMode?: InlineFormatSyntaxMode
+    ): { text: string; selection: { anchor: number; head: number } } {
+        const harness = createEditorHarness(input);
+
+        try {
+            const command = createInsertInlineFormatCommand(harness.view, getFormat(formatId, syntaxMode));
+            command();
+            return { text: harness.getText(), selection: harness.getSelection() };
+        } finally {
+            harness.destroy();
+        }
+    }
+
     test('wraps a selection when the target formatting is absent', () => {
         const input = '[[test ~~abc~~ **def** aaaa]]';
         const expected = '==test ~~abc~~ **def** aaaa==';
@@ -503,5 +519,111 @@ describe('createInsertInlineFormatCommand', () => {
         } finally {
             harness.destroy();
         }
+    });
+
+    describe('cursor inside existing formatting — removes formatting and selects content', () => {
+        test('removes strikethrough when cursor is inside formatted text', () => {
+            // cursor after 'strike' in '~~strikethrough~~'
+            const input = 'this is a ~~strikethrough~~ test';
+            const cursorPos = 'this is a ~~strike'.length;
+            const harness = createEditorHarness(input.slice(0, cursorPos) + '|' + input.slice(cursorPos));
+
+            try {
+                const command = createInsertInlineFormatCommand(harness.view, getFormat('strikethrough'));
+                command();
+                expect(harness.getText()).toBe('this is a strikethrough test');
+                const sel = harness.getSelection();
+                expect(sel.anchor).toBe('this is a '.length);
+                expect(sel.head).toBe('this is a strikethrough'.length);
+            } finally {
+                harness.destroy();
+            }
+        });
+
+        test('removes highlight when cursor is inside formatted text', () => {
+            const result = runCommandWithSelection('==hig|hlight==', 'highlight');
+            expect(result.text).toBe('highlight');
+            expect(result.selection.anchor).toBe(0);
+            expect(result.selection.head).toBe('highlight'.length);
+        });
+
+        test('removes only the matching format for nested formatting', () => {
+            // cursor inside strikethrough text that is also highlighted
+            const result = runCommandWithSelection('==~~strike|through~~==', 'strikethrough');
+            expect(result.text).toBe('==strikethrough==');
+            expect(result.selection.anchor).toBe('=='.length);
+            expect(result.selection.head).toBe('==strikethrough'.length);
+        });
+
+        test('removes only highlight when cursor is inside nested formatting and highlight command is used', () => {
+            const result = runCommandWithSelection('==~~strike|through~~==', 'highlight');
+            expect(result.text).toBe('~~strikethrough~~');
+            expect(result.selection.anchor).toBe(0);
+            expect(result.selection.head).toBe('~~strikethrough~~'.length);
+        });
+
+        test('does not remove formatting when cursor is right before the opening delimiter', () => {
+            // cursor at position 0 — check is cursorOffset > segment.from (0 > 0 is false), so no removal
+            const result = runCommandWithSelection('|~~text~~', 'strikethrough');
+            expect(result.text).toBe('~~~~~~text~~');
+        });
+
+        test('does not remove formatting when cursor is right after the closing delimiter', () => {
+            // cursor right after '~~text~~'
+            const result = runCommandWithSelection('~~text~~|', 'strikethrough');
+            expect(result.text).toBe('~~text~~~~~~');
+        });
+
+        test('does not remove empty delimiters (no content) when cursor is inside ~~~~', () => {
+            // '~~~~': findWrappedSegments skips the closing delimiter when it equals contentStart (empty content),
+            // so no segment is found and the cursor insertion path runs instead
+            const result = runCommandWithSelection('~~|~~', 'strikethrough');
+            expect(result.text).toBe('~~~~~~~~');
+        });
+
+        test('removes formatting when cursor is on the opening delimiter', () => {
+            // cursor at position 1 (inside '~~' opening delimiter)
+            const result = runCommandWithSelection('~|~text~~', 'strikethrough');
+            expect(result.text).toBe('text');
+            expect(result.selection.anchor).toBe(0);
+            expect(result.selection.head).toBe('text'.length);
+        });
+
+        test('removes formatting when cursor is on the closing delimiter', () => {
+            // cursor at position inside the closing '~~'
+            const result = runCommandWithSelection('~~text~|~', 'strikethrough');
+            expect(result.text).toBe('text');
+            expect(result.selection.anchor).toBe(0);
+            expect(result.selection.head).toBe('text'.length);
+        });
+
+        test('removes correct segment when multiple formatted segments exist on a line', () => {
+            // cursor inside second segment
+            const result = runCommandWithSelection('~~foo~~ bar ~~ba|z~~', 'strikethrough');
+            expect(result.text).toBe('~~foo~~ bar baz');
+            expect(result.selection.anchor).toBe('~~foo~~ bar '.length);
+            expect(result.selection.head).toBe('~~foo~~ bar baz'.length);
+        });
+
+        test('removes formatting inside blockquote prefix', () => {
+            const result = runCommandWithSelection('> ~~str|ike~~', 'strikethrough');
+            expect(result.text).toBe('> strike');
+            expect(result.selection.anchor).toBe('> '.length);
+            expect(result.selection.head).toBe('> strike'.length);
+        });
+
+        test('removes HTML superscript tags when cursor is inside them', () => {
+            const result = runCommandWithSelection('<sup>te|xt</sup>', 'superscript', 'html');
+            expect(result.text).toBe('text');
+            expect(result.selection.anchor).toBe(0);
+            expect(result.selection.head).toBe('text'.length);
+        });
+
+        test('does not remove strikethrough delimiters with subscript command due to conflicting delimiters', () => {
+            // subscript markdown uses '~' but has conflictingLongerDelimiters: ['~~']
+            // so '~~text~~' is not detected as subscript formatting — cursor insertion runs instead
+            const result = runCommandWithSelection('~~tex|t~~', 'subscript', 'markdown');
+            expect(result.text).toBe('~~tex~~t~~');
+        });
     });
 });

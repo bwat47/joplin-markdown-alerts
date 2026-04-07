@@ -13,6 +13,7 @@ type EditorHarness = {
     destroy: () => void;
     getText: () => string;
     getCursor: () => number;
+    getSelection: () => { anchor: number; head: number };
 };
 
 type CreateEditorHarnessOptions = {
@@ -70,5 +71,9 @@ export function createEditorHarness(input: string, options?: CreateEditorHarness
         destroy: () => view.destroy(),
         getText: () => view.state.doc.toString(),
         getCursor: () => view.state.selection.main.head,
+        getSelection: () => ({
+            anchor: view.state.selection.main.anchor,
+            head: view.state.selection.main.head,
+        }),
     };
 }

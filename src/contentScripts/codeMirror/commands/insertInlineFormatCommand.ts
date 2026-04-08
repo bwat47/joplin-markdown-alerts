@@ -357,6 +357,122 @@ function applyInlineFormattingToSelectionRange(
         .join('\n');
 }
 
+function createExplicitSelection(anchorPos: number, headPos: number, basePos: number): ExplicitCursorSelection {
+    return {
+        anchorBasePos: basePos,
+        anchorOffset: anchorPos - basePos,
+        headBasePos: basePos,
+        headOffset: headPos - basePos,
+    };
+}
+
+function unwrapWrappedSegments(
+    text: string,
+    segments: WrappedSegment[],
+    format: InlineFormatDefinition,
+    expandedFrom: number
+): string {
+    let result = '';
+    let lastIndex = 0;
+
+    for (const segment of segments) {
+        const relativeFrom = segment.from - expandedFrom;
+        const relativeTo = segment.to - expandedFrom;
+        const contentFrom = relativeFrom + format.openingDelimiter.length;
+        const contentTo = relativeTo - format.closingDelimiter.length;
+
+        result += text.slice(lastIndex, relativeFrom);
+        result += text.slice(contentFrom, contentTo);
+        lastIndex = relativeTo;
+    }
+
+    result += text.slice(lastIndex);
+    return result;
+}
+
+function mapOffsetAfterUnwrapping(offset: number, segments: WrappedSegment[], format: InlineFormatDefinition): number {
+    let removedLength = 0;
+
+    for (const segment of segments) {
+        const openingEnd = segment.from + format.openingDelimiter.length;
+        const contentEnd = segment.to - format.closingDelimiter.length;
+
+        if (offset < segment.from) {
+            return offset - removedLength;
+        }
+
+        if (offset < openingEnd) {
+            return segment.from - removedLength;
+        }
+
+        if (offset <= contentEnd) {
+            return offset - removedLength - format.openingDelimiter.length;
+        }
+
+        if (offset < segment.to) {
+            return contentEnd - removedLength - format.openingDelimiter.length;
+        }
+
+        removedLength += format.openingDelimiter.length + format.closingDelimiter.length;
+    }
+
+    return offset - removedLength;
+}
+
+function findSelectionFormattingAction(
+    view: EditorView,
+    range: SelectionRange,
+    format: InlineFormatDefinition
+): { key: string; change: TextChange; explicitSelection: ExplicitCursorSelection } | null {
+    if (range.empty) {
+        return null;
+    }
+
+    const state = view.state;
+    const selectedText = state.doc.sliceString(range.from, range.to);
+    if (selectedText.includes('\n')) {
+        return null;
+    }
+
+    const line = state.doc.lineAt(range.from);
+    const selectionFrom = range.from - line.from;
+    const selectionTo = range.to - line.from;
+    const overlappingSegments = findWrappedSegments(line.text, format).filter((wrappedSegment) => {
+        const selectionOverlapsSegment = selectionFrom < wrappedSegment.to && selectionTo > wrappedSegment.from;
+
+        return selectionOverlapsSegment;
+    });
+
+    if (overlappingSegments.length === 0) {
+        return null;
+    }
+
+    const firstSegment = overlappingSegments[0];
+    const lastSegment = overlappingSegments[overlappingSegments.length - 1];
+    const expandedFrom = firstSegment.from;
+    const expandedTo = lastSegment.to;
+    const docExpandedFrom = line.from + expandedFrom;
+    const docExpandedTo = line.from + expandedTo;
+    const updatedText = unwrapWrappedSegments(
+        line.text.slice(expandedFrom, expandedTo),
+        overlappingSegments,
+        format,
+        expandedFrom
+    );
+    const mappedAnchor = line.from + mapOffsetAfterUnwrapping(range.anchor - line.from, overlappingSegments, format);
+    const mappedHead = line.from + mapOffsetAfterUnwrapping(range.head - line.from, overlappingSegments, format);
+
+    return {
+        key: `selection-removal:${docExpandedFrom}:${docExpandedTo}`,
+        change: {
+            from: docExpandedFrom,
+            to: docExpandedTo,
+            insert: updatedText,
+        },
+        explicitSelection: createExplicitSelection(mappedAnchor, mappedHead, docExpandedFrom),
+    };
+}
+
 function findCursorFormattingAction(
     view: EditorView,
     cursorPos: number,
@@ -491,6 +607,15 @@ export function createInsertInlineFormatCommand(view: EditorView, format: Inline
                     changeMap.set(cursorInsertion.key, cursorInsertion.change);
                 }
                 explicitSelectionsByIndex.set(index, cursorInsertion.explicitSelection);
+                return;
+            }
+
+            const selectionRemoval = findSelectionFormattingAction(view, range, format);
+            if (selectionRemoval) {
+                if (!changeMap.has(selectionRemoval.key)) {
+                    changeMap.set(selectionRemoval.key, selectionRemoval.change);
+                }
+                explicitSelectionsByIndex.set(index, selectionRemoval.explicitSelection);
                 return;
             }
 

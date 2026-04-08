@@ -135,6 +135,54 @@ describe('createInsertInlineFormatCommand', () => {
         expect(runCommand(input, 'highlight')).toBe(expected);
     });
 
+    test('removes strikethrough when the selection is inside formatted content but excludes delimiters', () => {
+        const result = runCommandWithSelection('open ~~[[source]]~~ note taking', 'strikethrough');
+
+        expect(result.text).toBe('open source note taking');
+        expect(result.selection.anchor).toBe('open '.length);
+        expect(result.selection.head).toBe('open source'.length);
+    });
+
+    test('removes strikethrough when the selection covers content and only part of the delimiters', () => {
+        const result = runCommandWithSelection('open ~[[~sourc]]e~~ note taking', 'strikethrough');
+
+        expect(result.text).toBe('open source note taking');
+        expect(result.selection.anchor).toBe('open '.length);
+        expect(result.selection.head).toBe('open sourc'.length);
+    });
+
+    test('removes only the selected target format for partial selections in nested formatting', () => {
+        const result = runCommandWithSelection('==~~[[source]]~~==', 'strikethrough');
+
+        expect(result.text).toBe('==source==');
+        expect(result.selection.anchor).toBe('=='.length);
+        expect(result.selection.head).toBe('==source'.length);
+    });
+
+    test('removes strikethrough when the selection overlaps formatted content and preceding plain text', () => {
+        const result = runCommandWithSelection('[[Test ~~AB]]C~~', 'strikethrough');
+
+        expect(result.text).toBe('Test ABC');
+        expect(result.selection.anchor).toBe(0);
+        expect(result.selection.head).toBe('Test AB'.length);
+    });
+
+    test('removes strikethrough when the selection overlaps formatted content and trailing plain text', () => {
+        const result = runCommandWithSelection('~~A[[BC~~ Test]]', 'strikethrough');
+
+        expect(result.text).toBe('ABC Test');
+        expect(result.selection.anchor).toBe('A'.length);
+        expect(result.selection.head).toBe('ABC Test'.length);
+    });
+
+    test('removes strikethrough when the selection ends immediately after the opening delimiters', () => {
+        const result = runCommandWithSelection('[[Joplin is a free ~~]]open source~~ note taking', 'strikethrough');
+
+        expect(result.text).toBe('Joplin is a free open source note taking');
+        expect(result.selection.anchor).toBe(0);
+        expect(result.selection.head).toBe('Joplin is a free '.length);
+    });
+
     test('inserts delimiters at the cursor and places the cursor between them', () => {
         const result = runCommandWithCursor('|', 'highlight');
 

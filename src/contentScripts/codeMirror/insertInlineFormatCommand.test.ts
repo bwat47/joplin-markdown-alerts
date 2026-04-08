@@ -568,10 +568,26 @@ describe('createInsertInlineFormatCommand', () => {
             expect(result.text).toBe('~~~~~~text~~');
         });
 
-        test('does not remove formatting when cursor is right after the closing delimiter', () => {
-            // cursor right after '~~text~~'
+        test('moves cursor past closing delimiter when cursor is right before it', () => {
+            // cursor between last content char and closing '~~' — jump out
+            const result = runCommandWithSelection('~~text|~~', 'strikethrough');
+            expect(result.text).toBe('~~text~~');
+            expect(result.selection.anchor).toBe('~~text~~'.length);
+            expect(result.selection.head).toBe('~~text~~'.length);
+        });
+
+        test('moves cursor past closing HTML tags when cursor is right before them', () => {
+            const result = runCommandWithSelection('<sup>text|</sup>', 'superscript', 'html');
+            expect(result.text).toBe('<sup>text</sup>');
+            expect(result.selection.anchor).toBe('<sup>text</sup>'.length);
+            expect(result.selection.head).toBe('<sup>text</sup>'.length);
+        });
+
+        test('removes formatting and selects content when cursor is right after the closing delimiter', () => {
             const result = runCommandWithSelection('~~text~~|', 'strikethrough');
-            expect(result.text).toBe('~~text~~~~~~');
+            expect(result.text).toBe('text');
+            expect(result.selection.anchor).toBe(0);
+            expect(result.selection.head).toBe('text'.length);
         });
 
         test('does not remove empty delimiters (no content) when cursor is inside ~~~~', () => {

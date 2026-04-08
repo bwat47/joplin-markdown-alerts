@@ -350,7 +350,7 @@ function applyInlineFormattingToSelectionRange(
         .join('\n');
 }
 
-function findCursorFormattingRemoval(
+function findCursorFormattingAction(
     view: EditorView,
     cursorPos: number,
     format: InlineFormatDefinition
@@ -360,17 +360,37 @@ function findCursorFormattingRemoval(
     const cursorOffset = cursorPos - line.from;
 
     const segments = findWrappedSegments(line.text, format);
-    const segment = segments.find((s) => cursorOffset > s.from && cursorOffset < s.to);
+    const contentEnd = (s: WrappedSegment) => s.to - format.closingDelimiter.length;
+
+    const segment = segments.find(
+        (s) => cursorOffset === contentEnd(s) || (cursorOffset > s.from && cursorOffset <= s.to)
+    );
     if (!segment) {
         return null;
     }
 
+    const docSegmentFrom = line.from + segment.from;
+    const docSegmentTo = line.from + segment.to;
+
+    // Cursor right before the closing delimiter: jump out past the closing delimiter
+    if (cursorOffset === contentEnd(segment)) {
+        return {
+            key: `jump:${cursorPos}`,
+            change: { from: cursorPos, to: cursorPos, insert: '' },
+            explicitSelection: {
+                anchorBasePos: docSegmentTo,
+                anchorOffset: 0,
+                headBasePos: docSegmentTo,
+                headOffset: 0,
+            },
+        };
+    }
+
+    // Cursor inside the segment or right after the closing delimiter: remove formatting
     const content = line.text.slice(
         segment.from + format.openingDelimiter.length,
         segment.to - format.closingDelimiter.length
     );
-    const docSegmentFrom = line.from + segment.from;
-    const docSegmentTo = line.from + segment.to;
 
     return {
         key: `removal:${docSegmentFrom}:${docSegmentTo}`,
@@ -431,7 +451,7 @@ export function createInsertInlineFormatCommand(view: EditorView, format: Inline
 
         state.selection.ranges.forEach((range, index) => {
             if (range.empty) {
-                const removal = findCursorFormattingRemoval(view, range.head, format);
+                const removal = findCursorFormattingAction(view, range.head, format);
                 if (removal) {
                     if (!changeMap.has(removal.key)) {
                         changeMap.set(removal.key, removal.change);

@@ -454,6 +454,33 @@ describe('createInsertInlineFormatCommand', () => {
         }
     });
 
+    test('skips GitHub alert title lines during multiline full-line formatting', () => {
+        const harness = createEditorHarness(['> [!NOTE] Custom title', '> body line', 'Tail'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line3 = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.single(line1.from, line3.to),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('highlight'));
+            command();
+
+            expect(harness.getText()).toBe(['> [!NOTE] Custom title', '> ==body line==', '==Tail=='].join('\n'));
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('skips fully selected GitHub alert title lines in mixed multiline selections', () => {
+        const input = ['[[> [!NOTE] Custom title', '> body line', 'Tail]] suffix'].join('\n');
+        const expected = ['> [!NOTE] Custom title', '> ==body line==', '==Tail== suffix'].join('\n');
+
+        expect(runCommand(input, 'highlight')).toBe(expected);
+    });
+
     test('preserves heading and blockquote markers in a full-line mixed selection', () => {
         const harness = createEditorHarness(
             [

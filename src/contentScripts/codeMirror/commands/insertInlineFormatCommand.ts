@@ -3,6 +3,7 @@ import type { EditorView } from '@codemirror/view';
 import type { SyntaxNode } from '@lezer/common';
 
 import { type InlineFormatDefinition } from '../../../inlineFormatCommands';
+import { parseGitHubAlertTitleLine } from '../alerts/alertParsing';
 import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 import { getProbePositions, getSyntaxTree } from '../shared/syntaxTreeUtils';
 
@@ -258,6 +259,10 @@ function shouldSkipMarkdownTableLine(line: string, view: EditorView, lineFrom: n
     return content.includes('|');
 }
 
+function isGitHubAlertTitleLine(line: string): boolean {
+    return parseGitHubAlertTitleLine(line) !== null;
+}
+
 function applyInlineFormattingToFullLineSelectionRange(
     view: EditorView,
     range: SelectionRange,
@@ -274,6 +279,7 @@ function applyInlineFormattingToFullLineSelectionRange(
             if (
                 isLineInsideCodeBlock(view, lineFrom) ||
                 shouldSkipMarkdownTableLine(line, view, lineFrom) ||
+                isGitHubAlertTitleLine(line) ||
                 isLineHorizontalRule(view, lineFrom)
             ) {
                 return line;
@@ -340,6 +346,7 @@ function applyInlineFormattingToSelectionRange(
             if (
                 isLineInsideCodeBlock(view, docLine.from) ||
                 shouldSkipMarkdownTableLine(line, view, docLine.from) ||
+                isGitHubAlertTitleLine(line) ||
                 isLineHorizontalRule(view, docLine.from)
             ) {
                 return line;

@@ -6,82 +6,12 @@ import {
     type InlineFormatId,
     type InlineFormatSyntaxMode,
 } from '../../../inlineFormatCommands';
-import {
-    applyInlineFormattingToFullLineSelectionText,
-    applyInlineFormattingToSelectionText,
-    createInsertInlineFormatCommand,
-} from './insertInlineFormatCommand';
+import { createInsertInlineFormatCommand } from './insertInlineFormatCommand';
 import { createEditorHarness } from '../shared/testUtils';
 
 function getFormat(id: InlineFormatId, syntaxMode?: InlineFormatSyntaxMode) {
     return getInlineFormatDefinition(id, syntaxMode);
 }
-
-describe('applyInlineFormattingToSelectionText', () => {
-    test('wraps the whole selection when the target formatting is not present', () => {
-        expect(applyInlineFormattingToSelectionText('abc', getFormat('highlight'))).toBe('==abc==');
-    });
-
-    test('unwraps the whole selection when it is already wrapped', () => {
-        expect(applyInlineFormattingToSelectionText('==abc==', getFormat('highlight'))).toBe('abc');
-    });
-
-    test('removes existing inner target spans without touching other formatting', () => {
-        expect(applyInlineFormattingToSelectionText('test ~~abc~~ **def** aaaa', getFormat('strikethrough'))).toBe(
-            'test abc **def** aaaa'
-        );
-    });
-
-    test('removes repeated target-formatted spans in one selection', () => {
-        expect(applyInlineFormattingToSelectionText('~~one~~ and ~~two~~', getFormat('strikethrough'))).toBe(
-            'one and two'
-        );
-    });
-
-    test('does not misread strikethrough as subscript formatting', () => {
-        expect(applyInlineFormattingToSelectionText('~~abc~~', getFormat('subscript', 'markdown'))).toBe('~~~abc~~~');
-    });
-
-    test('keeps trailing spaces outside newly added delimiters', () => {
-        expect(applyInlineFormattingToSelectionText('ABC  ', getFormat('highlight'))).toBe('==ABC==  ');
-    });
-
-    test('keeps leading spaces outside newly added delimiters', () => {
-        expect(applyInlineFormattingToSelectionText('  ABC', getFormat('highlight'))).toBe('  ==ABC==');
-    });
-
-    test('wraps the whole selection with superscript HTML when configured', () => {
-        expect(applyInlineFormattingToSelectionText('abc', getFormat('superscript', 'html'))).toBe('<sup>abc</sup>');
-    });
-
-    test('unwraps exact superscript HTML markup when configured', () => {
-        expect(applyInlineFormattingToSelectionText('<sup>abc</sup>', getFormat('superscript', 'html'))).toBe('abc');
-    });
-
-    test('wraps the whole selection with subscript HTML when configured', () => {
-        expect(applyInlineFormattingToSelectionText('abc', getFormat('subscript', 'html'))).toBe('<sub>abc</sub>');
-    });
-
-    test('unwraps exact subscript HTML markup when configured', () => {
-        expect(applyInlineFormattingToSelectionText('<sub>abc</sub>', getFormat('subscript', 'html'))).toBe('abc');
-    });
-});
-
-describe('applyInlineFormattingToFullLineSelectionText', () => {
-    test('formats multiline full-line list selections item by item and preserves blank lines', () => {
-        const input = ['- one', '1. ~~two~~', '> - [ ] three', '', '> 1. [x] ~~four~~'].join('\n');
-        const expected = ['- ~~one~~', '1. two', '> - [ ] ~~three~~', '', '> 1. [x] four'].join('\n');
-
-        expect(applyInlineFormattingToFullLineSelectionText(input, getFormat('strikethrough'))).toBe(expected);
-    });
-
-    test('formats multiline full-line selections with superscript HTML while preserving structure', () => {
-        const input = ['> - one', '## two', '', 'tail'].join('\n');
-        const expected = ['> - <sup>one</sup>', '## <sup>two</sup>', '', '<sup>tail</sup>'].join('\n');
-
-        expect(applyInlineFormattingToFullLineSelectionText(input, getFormat('superscript', 'html'))).toBe(expected);
-    });
-});
 
 describe('createInsertInlineFormatCommand', () => {
     function runCommand(input: string, formatId: InlineFormatId, syntaxMode?: InlineFormatSyntaxMode): string {
@@ -133,6 +63,54 @@ describe('createInsertInlineFormatCommand', () => {
         const expected = '==test ~~abc~~ **def** aaaa==';
 
         expect(runCommand(input, 'highlight')).toBe(expected);
+    });
+
+    test('removes strikethrough when the selection is inside formatted content but excludes delimiters', () => {
+        const result = runCommandWithSelection('open ~~[[source]]~~ note taking', 'strikethrough');
+
+        expect(result.text).toBe('open source note taking');
+        expect(result.selection.anchor).toBe('open '.length);
+        expect(result.selection.head).toBe('open source'.length);
+    });
+
+    test('removes strikethrough when the selection covers content and only part of the delimiters', () => {
+        const result = runCommandWithSelection('open ~[[~sourc]]e~~ note taking', 'strikethrough');
+
+        expect(result.text).toBe('open source note taking');
+        expect(result.selection.anchor).toBe('open '.length);
+        expect(result.selection.head).toBe('open sourc'.length);
+    });
+
+    test('removes only the selected target format for partial selections in nested formatting', () => {
+        const result = runCommandWithSelection('==~~[[source]]~~==', 'strikethrough');
+
+        expect(result.text).toBe('==source==');
+        expect(result.selection.anchor).toBe('=='.length);
+        expect(result.selection.head).toBe('==source'.length);
+    });
+
+    test('removes strikethrough when the selection overlaps formatted content and preceding plain text', () => {
+        const result = runCommandWithSelection('[[Test ~~AB]]C~~', 'strikethrough');
+
+        expect(result.text).toBe('Test ABC');
+        expect(result.selection.anchor).toBe(0);
+        expect(result.selection.head).toBe('Test AB'.length);
+    });
+
+    test('removes strikethrough when the selection overlaps formatted content and trailing plain text', () => {
+        const result = runCommandWithSelection('~~A[[BC~~ Test]]', 'strikethrough');
+
+        expect(result.text).toBe('ABC Test');
+        expect(result.selection.anchor).toBe('A'.length);
+        expect(result.selection.head).toBe('ABC Test'.length);
+    });
+
+    test('removes strikethrough when the selection ends immediately after the opening delimiters', () => {
+        const result = runCommandWithSelection('[[Joplin is a free ~~]]open source~~ note taking', 'strikethrough');
+
+        expect(result.text).toBe('Joplin is a free open source note taking');
+        expect(result.selection.anchor).toBe(0);
+        expect(result.selection.head).toBe('Joplin is a free '.length);
     });
 
     test('inserts delimiters at the cursor and places the cursor between them', () => {
@@ -243,7 +221,29 @@ describe('createInsertInlineFormatCommand', () => {
             command();
 
             expect(harness.getText()).toBe(
-                ['- ~~one~~', '1. two', '> - [ ] ~~three~~', '', '> 1. [x] four', 'tail'].join('\n')
+                ['- one', '1. two', '> - [ ] three', '', '> 1. [x] four', 'tail'].join('\n')
+            );
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('applies multiline full-line selections with superscript HTML while preserving structure', () => {
+        const harness = createEditorHarness(['> - one', '## two', '', 'tail'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line4 = harness.view.state.doc.line(4);
+
+            harness.view.dispatch({
+                selection: EditorSelection.single(line1.from, line4.to),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('superscript', 'html'));
+            command();
+
+            expect(harness.getText()).toBe(
+                ['> - <sup>one</sup>', '## <sup>two</sup>', '', '<sup>tail</sup>'].join('\n')
             );
         } finally {
             harness.destroy();
@@ -261,6 +261,56 @@ describe('createInsertInlineFormatCommand', () => {
             '',
             '~~Notes exported from Evernote into Joplin can also be imported.~~',
         ].join('\n');
+
+        expect(runCommand(input, 'strikethrough')).toBe(expected);
+    });
+
+    test('uses removal-only mode for multiline full-line selections when any selected line already has formatting', () => {
+        const harness = createEditorHarness(['~~ABC~~', '', 'TEST'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line3 = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.single(line1.from, line3.to),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('strikethrough'));
+            command();
+
+            expect(harness.getText()).toBe(['ABC', '', 'TEST'].join('\n'));
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('uses removal-only mode across multiple independent selections', () => {
+        const harness = createEditorHarness(['~~ABC~~', '', 'TEST'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line3 = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.range(line1.from, line1.to),
+                    EditorSelection.range(line3.from, line3.to),
+                ]),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('strikethrough'));
+            command();
+
+            expect(harness.getText()).toBe(['ABC', '', '~~TEST~~'].join('\n'));
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('uses removal-only mode for fully selected middle lines inside a mixed multiline selection', () => {
+        const input = ['prefix [[start', '~~ABC~~', 'TEST', 'end]] suffix'].join('\n');
+        const expected = ['prefix ~~start~~', 'ABC', 'TEST', '~~end~~ suffix'].join('\n');
 
         expect(runCommand(input, 'strikethrough')).toBe(expected);
     });
@@ -452,6 +502,33 @@ describe('createInsertInlineFormatCommand', () => {
         } finally {
             harness.destroy();
         }
+    });
+
+    test('skips GitHub alert title lines during multiline full-line formatting', () => {
+        const harness = createEditorHarness(['> [!NOTE] Custom title', '> body line', 'Tail'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line3 = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.single(line1.from, line3.to),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('highlight'));
+            command();
+
+            expect(harness.getText()).toBe(['> [!NOTE] Custom title', '> ==body line==', '==Tail=='].join('\n'));
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('skips fully selected GitHub alert title lines in mixed multiline selections', () => {
+        const input = ['[[> [!NOTE] Custom title', '> body line', 'Tail]] suffix'].join('\n');
+        const expected = ['> [!NOTE] Custom title', '> ==body line==', '==Tail== suffix'].join('\n');
+
+        expect(runCommand(input, 'highlight')).toBe(expected);
     });
 
     test('preserves heading and blockquote markers in a full-line mixed selection', () => {

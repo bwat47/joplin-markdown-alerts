@@ -129,7 +129,7 @@ For full-line selections, the inline formatting commands are line-aware instead 
 - blockquote markers are preserved
 - heading markers are preserved
 - task list markers are preserved
-- fenced code blocks are left alone
+- fenced code blocks, tables, and horizontal rules are left alone
 - leading and trailing spaces stay outside newly inserted delimiters
 
 Examples:

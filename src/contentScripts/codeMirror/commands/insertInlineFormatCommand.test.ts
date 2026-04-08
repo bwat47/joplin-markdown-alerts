@@ -333,6 +333,29 @@ describe('createInsertInlineFormatCommand', () => {
         }
     });
 
+    test('uses removal-only mode across multiple independent selections', () => {
+        const harness = createEditorHarness(['~~ABC~~', '', 'TEST'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line3 = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.range(line1.from, line1.to),
+                    EditorSelection.range(line3.from, line3.to),
+                ]),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('strikethrough'));
+            command();
+
+            expect(harness.getText()).toBe(['ABC', '', 'TEST'].join('\n'));
+        } finally {
+            harness.destroy();
+        }
+    });
+
     test('uses removal-only mode for fully selected middle lines inside a mixed multiline selection', () => {
         const input = ['prefix [[start', '~~ABC~~', 'TEST', 'end]] suffix'].join('\n');
         const expected = ['prefix ~~start~~', 'ABC', 'TEST', '~~end~~ suffix'].join('\n');

@@ -23,6 +23,13 @@ type StructuralLineParts = {
     content: string;
 };
 
+type SelectedLineEntry = {
+    line: string;
+    lineFrom: number;
+    isFullySelected: boolean;
+    isEligibleForLineAwareFormatting: boolean;
+};
+
 const BLOCKQUOTE_PREFIX_REGEX = /^(\s*(?:>\s*)*)(.*)$/;
 const HEADING_PREFIX_REGEX = /^(#{1,6}\s+)(.*)$/;
 const LIST_PREFIX_REGEX = /^((?:[-+*]|\d+[.)])\s+(?:\[(?: |x|X)\]\s+)?)(.*)$/;
@@ -172,14 +179,18 @@ function wrapTextPreservingTrailingWhitespace(text: string, format: InlineFormat
 
 export function applyInlineFormattingToSelectionText(text: string, format: InlineFormatDefinition): string {
     const wrappedSegments = findWrappedSegments(text, format);
-    if (wrappedSegments.length === 1 && wrappedSegments[0].from === 0 && wrappedSegments[0].to === text.length) {
-        return text.slice(format.openingDelimiter.length, text.length - format.closingDelimiter.length);
-    }
-
     if (wrappedSegments.length === 0) {
         return wrapTextPreservingTrailingWhitespace(text, format);
     }
 
+    return stripWrappedSegmentsFromText(text, wrappedSegments, format);
+}
+
+function stripWrappedSegmentsFromText(
+    text: string,
+    wrappedSegments: WrappedSegment[],
+    format: InlineFormatDefinition
+): string {
     let result = '';
     let lastIndex = 0;
 
@@ -197,25 +208,7 @@ export function applyInlineFormattingToSelectionText(text: string, format: Inlin
 }
 
 function removeInlineFormattingFromText(text: string, format: InlineFormatDefinition): string {
-    const wrappedSegments = findWrappedSegments(text, format);
-    if (wrappedSegments.length === 0) {
-        return text;
-    }
-
-    let result = '';
-    let lastIndex = 0;
-
-    for (const segment of wrappedSegments) {
-        result += text.slice(lastIndex, segment.from);
-        result += text.slice(
-            segment.from + format.openingDelimiter.length,
-            segment.to - format.closingDelimiter.length
-        );
-        lastIndex = segment.to;
-    }
-
-    result += text.slice(lastIndex);
-    return result;
+    return stripWrappedSegmentsFromText(text, findWrappedSegments(text, format), format);
 }
 
 function formatFullLineText(line: string, format: InlineFormatDefinition, removalOnly = false): string {
@@ -240,14 +233,6 @@ function formatFullLineText(line: string, format: InlineFormatDefinition, remova
         ? removeInlineFormattingFromText(line, format)
         : applyInlineFormattingToSelectionText(line, format);
 }
-
-export function applyInlineFormattingToFullLineSelectionText(text: string, format: InlineFormatDefinition): string {
-    return text
-        .split('\n')
-        .map((line) => formatFullLineText(line, format))
-        .join('\n');
-}
-
 function isLineInsideSyntaxNodes(view: EditorView, lineFrom: number, nodeNames: ReadonlySet<string>): boolean {
     const state = view.state;
     const tree = getSyntaxTree(state, lineFrom);
@@ -311,6 +296,28 @@ function lineHasTargetFormatting(line: string, format: InlineFormatDefinition): 
     return findWrappedSegments(content, format).length > 0;
 }
 
+function getSelectedLineEntries(view: EditorView, range: SelectionRange): SelectedLineEntry[] {
+    const state = view.state;
+    const startLine = state.doc.lineAt(range.from);
+    const selectedText = state.doc.sliceString(range.from, range.to);
+    const lines = selectedText.split('\n');
+
+    return lines.map((line, index) => {
+        const docLine = state.doc.line(startLine.number + index);
+        const lineFrom = docLine.from;
+        const selectionStart = index === 0 ? range.from - lineFrom : 0;
+        const selectionEnd = index === lines.length - 1 ? range.to - lineFrom : docLine.length;
+        const isFullySelected = selectionStart === 0 && selectionEnd === docLine.length;
+
+        return {
+            line,
+            lineFrom,
+            isFullySelected,
+            isEligibleForLineAwareFormatting: lineCanUseLineAwareFormatting(view, line, lineFrom),
+        };
+    });
+}
+
 function selectionHasEligibleFormattedFullLine(
     view: EditorView,
     range: SelectionRange,
@@ -320,34 +327,10 @@ function selectionHasEligibleFormattedFullLine(
         return false;
     }
 
-    const state = view.state;
-    const startLine = state.doc.lineAt(range.from);
-    const selectedText = state.doc.sliceString(range.from, range.to);
-    const lines = selectedText.split('\n');
-
-    if (isFullLineSelection(view, range)) {
-        return lines.some((line, index) => {
-            const lineFrom = state.doc.line(startLine.number + index).from;
-            return lineCanUseLineAwareFormatting(view, line, lineFrom) && lineHasTargetFormatting(line, format);
-        });
-    }
-
-    if (!selectedText.includes('\n')) {
-        return false;
-    }
-
-    return lines.some((line, index) => {
-        const docLine = state.doc.line(startLine.number + index);
-        const selectionStart = index === 0 ? range.from - docLine.from : 0;
-        const selectionEnd = index === lines.length - 1 ? range.to - docLine.from : docLine.length;
-        const fullLineSelected = selectionStart === 0 && selectionEnd === docLine.length;
-
-        return (
-            fullLineSelected &&
-            lineCanUseLineAwareFormatting(view, line, docLine.from) &&
-            lineHasTargetFormatting(line, format)
-        );
-    });
+    return getSelectedLineEntries(view, range).some(
+        ({ line, isFullySelected, isEligibleForLineAwareFormatting }) =>
+            isFullySelected && isEligibleForLineAwareFormatting && lineHasTargetFormatting(line, format)
+    );
 }
 
 function applyInlineFormattingToFullLineSelectionRange(
@@ -356,23 +339,17 @@ function applyInlineFormattingToFullLineSelectionRange(
     format: InlineFormatDefinition,
     removalOnlyOverride?: boolean
 ): string {
-    const state = view.state;
-    const startLine = state.doc.lineAt(range.from);
-    const selectedText = state.doc.sliceString(range.from, range.to);
-    const lines = selectedText.split('\n');
-    const eligibleLineEntries = lines
-        .map((line, index) => ({
-            line,
-            lineFrom: state.doc.line(startLine.number + index).from,
-        }))
-        .filter(({ line, lineFrom }) => lineCanUseLineAwareFormatting(view, line, lineFrom));
+    const lineEntries = getSelectedLineEntries(view, range);
     const removalOnly =
-        removalOnlyOverride ?? eligibleLineEntries.some(({ line }) => lineHasTargetFormatting(line, format));
+        removalOnlyOverride ??
+        lineEntries.some(
+            ({ line, isEligibleForLineAwareFormatting }) =>
+                isEligibleForLineAwareFormatting && lineHasTargetFormatting(line, format)
+        );
 
-    return lines
-        .map((line, index) => {
-            const lineFrom = state.doc.line(startLine.number + index).from;
-            if (!lineCanUseLineAwareFormatting(view, line, lineFrom)) {
+    return lineEntries
+        .map(({ line, isEligibleForLineAwareFormatting }) => {
+            if (!isEligibleForLineAwareFormatting) {
                 return line;
             }
 
@@ -417,34 +394,21 @@ function applyInlineFormattingToSelectionRange(
         return applyInlineFormattingToSelectionText(selectedText, format);
     }
 
-    const startLine = state.doc.lineAt(range.from);
-    const lines = selectedText.split('\n');
-    const lineEntries = lines.map((line, index) => {
-        const docLine = state.doc.line(startLine.number + index);
-        const selectionStart = index === 0 ? range.from - docLine.from : 0;
-        const selectionEnd = index === lines.length - 1 ? range.to - docLine.from : docLine.length;
-        const isFullLineSelection = selectionStart === 0 && selectionEnd === docLine.length;
-
-        return {
-            line,
-            docLine,
-            isFullLineSelection,
-        };
-    });
+    const lineEntries = getSelectedLineEntries(view, range);
     const removalOnly = lineEntries
-        .filter(({ line, docLine, isFullLineSelection }) => {
-            return isFullLineSelection && lineCanUseLineAwareFormatting(view, line, docLine.from);
+        .filter(({ isFullySelected, isEligibleForLineAwareFormatting }) => {
+            return isFullySelected && isEligibleForLineAwareFormatting;
         })
         .some(({ line }) => lineHasTargetFormatting(line, format));
     const lineAwareRemovalOnly = lineAwareRemovalOnlyOverride ?? removalOnly;
 
     return lineEntries
-        .map(({ line, docLine, isFullLineSelection }) => {
-            if (!isFullLineSelection) {
+        .map(({ line, isFullySelected, isEligibleForLineAwareFormatting }) => {
+            if (!isFullySelected) {
                 return applyInlineFormattingToSelectionText(line, format);
             }
 
-            if (!lineCanUseLineAwareFormatting(view, line, docLine.from)) {
+            if (!isEligibleForLineAwareFormatting) {
                 return line;
             }
 

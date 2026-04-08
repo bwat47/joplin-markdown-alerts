@@ -6,11 +6,7 @@ import {
     type InlineFormatId,
     type InlineFormatSyntaxMode,
 } from '../../../inlineFormatCommands';
-import {
-    applyInlineFormattingToFullLineSelectionText,
-    applyInlineFormattingToSelectionText,
-    createInsertInlineFormatCommand,
-} from './insertInlineFormatCommand';
+import { applyInlineFormattingToSelectionText, createInsertInlineFormatCommand } from './insertInlineFormatCommand';
 import { createEditorHarness } from '../shared/testUtils';
 
 function getFormat(id: InlineFormatId, syntaxMode?: InlineFormatSyntaxMode) {
@@ -64,22 +60,6 @@ describe('applyInlineFormattingToSelectionText', () => {
 
     test('unwraps exact subscript HTML markup when configured', () => {
         expect(applyInlineFormattingToSelectionText('<sub>abc</sub>', getFormat('subscript', 'html'))).toBe('abc');
-    });
-});
-
-describe('applyInlineFormattingToFullLineSelectionText', () => {
-    test('formats multiline full-line list selections item by item and preserves blank lines', () => {
-        const input = ['- one', '1. ~~two~~', '> - [ ] three', '', '> 1. [x] ~~four~~'].join('\n');
-        const expected = ['- ~~one~~', '1. two', '> - [ ] ~~three~~', '', '> 1. [x] four'].join('\n');
-
-        expect(applyInlineFormattingToFullLineSelectionText(input, getFormat('strikethrough'))).toBe(expected);
-    });
-
-    test('formats multiline full-line selections with superscript HTML while preserving structure', () => {
-        const input = ['> - one', '## two', '', 'tail'].join('\n');
-        const expected = ['> - <sup>one</sup>', '## <sup>two</sup>', '', '<sup>tail</sup>'].join('\n');
-
-        expect(applyInlineFormattingToFullLineSelectionText(input, getFormat('superscript', 'html'))).toBe(expected);
     });
 });
 
@@ -292,6 +272,28 @@ describe('createInsertInlineFormatCommand', () => {
 
             expect(harness.getText()).toBe(
                 ['- one', '1. two', '> - [ ] three', '', '> 1. [x] four', 'tail'].join('\n')
+            );
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('applies multiline full-line selections with superscript HTML while preserving structure', () => {
+        const harness = createEditorHarness(['> - one', '## two', '', 'tail'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line4 = harness.view.state.doc.line(4);
+
+            harness.view.dispatch({
+                selection: EditorSelection.single(line1.from, line4.to),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('superscript', 'html'));
+            command();
+
+            expect(harness.getText()).toBe(
+                ['> - <sup>one</sup>', '## <sup>two</sup>', '', '<sup>tail</sup>'].join('\n')
             );
         } finally {
             harness.destroy();

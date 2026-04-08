@@ -3,6 +3,14 @@ import type { EditorView } from '@codemirror/view';
 import type { SyntaxNode } from '@lezer/common';
 
 import { type InlineFormatDefinition } from '../../../inlineFormatCommands';
+import {
+    analyzeSingleLineCursorAction,
+    analyzeSingleLineSelectionRemoval,
+    applyInlineFormattingToSelectionText,
+    formatFullLineText,
+    lineHasTargetFormatting,
+    splitStructuralLineParts,
+} from './inlineFormatSingleLineActions';
 import { parseGitHubAlertTitleLine } from '../alerts/alertParsing';
 import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 import { getProbePositions, getSyntaxTree } from '../shared/syntaxTreeUtils';
@@ -13,16 +21,6 @@ type TextChange = {
     insert: string;
 };
 
-type WrappedSegment = {
-    from: number;
-    to: number;
-};
-
-type StructuralLineParts = {
-    prefix: string;
-    content: string;
-};
-
 type SelectedLineEntry = {
     line: string;
     lineFrom: number;
@@ -30,209 +28,11 @@ type SelectedLineEntry = {
     isEligibleForLineAwareFormatting: boolean;
 };
 
-const BLOCKQUOTE_PREFIX_REGEX = /^(\s*(?:>\s*)*)(.*)$/;
-const HEADING_PREFIX_REGEX = /^(#{1,6}\s+)(.*)$/;
-const LIST_PREFIX_REGEX = /^((?:[-+*]|\d+[.)])\s+(?:\[(?: |x|X)\]\s+)?)(.*)$/;
-const INDENTED_CONTENT_REGEX = /^(\s+)(.*)$/;
-const LEADING_WHITESPACE_REGEX = /^([ \t]+)/;
-const TRAILING_WHITESPACE_REGEX = /([ \t]+)$/;
 const STRUCTURAL_PREFIX_PROBE_REGEX = /^[ \t]*(?:>\s*)*/;
 const CODE_BLOCK_NODE_NAMES = new Set(['fencedcode', 'codeblock']);
 const TABLE_NODE_NAMES = new Set(['table', 'tableheader', 'tablerow', 'tablecell', 'tabledelimiter']);
 const HORIZONTAL_RULE_NODE_NAMES = new Set(['horizontalrule']);
 
-function isIndexPartOfLongerDelimiter(text: string, index: number, longerDelimiters: string[] | undefined): boolean {
-    if (!longerDelimiters || longerDelimiters.length === 0) {
-        return false;
-    }
-
-    return longerDelimiters.some((delimiter) => {
-        const start = Math.max(0, index - delimiter.length + 1);
-        const end = Math.min(index, text.length - delimiter.length);
-
-        for (let position = start; position <= end; position += 1) {
-            if (text.slice(position, position + delimiter.length) === delimiter) {
-                return true;
-            }
-        }
-
-        return false;
-    });
-}
-
-function isDelimiterAt(
-    text: string,
-    index: number,
-    delimiter: string,
-    longerDelimiters: string[] | undefined
-): boolean {
-    if (text.slice(index, index + delimiter.length) !== delimiter) {
-        return false;
-    }
-
-    return !isIndexPartOfLongerDelimiter(text, index, longerDelimiters);
-}
-
-function findWrappedSegments(text: string, format: InlineFormatDefinition): WrappedSegment[] {
-    const segments: WrappedSegment[] = [];
-    let index = 0;
-
-    while (index <= text.length - format.openingDelimiter.length) {
-        if (!isDelimiterAt(text, index, format.openingDelimiter, format.conflictingLongerDelimiters)) {
-            index += 1;
-            continue;
-        }
-
-        const contentStart = index + format.openingDelimiter.length;
-        let closingIndex = -1;
-
-        for (let position = contentStart; position <= text.length - format.closingDelimiter.length; position += 1) {
-            if (!isDelimiterAt(text, position, format.closingDelimiter, format.conflictingLongerDelimiters)) {
-                continue;
-            }
-
-            if (position === contentStart) {
-                continue;
-            }
-
-            closingIndex = position;
-            break;
-        }
-
-        if (closingIndex === -1) {
-            index += 1;
-            continue;
-        }
-
-        segments.push({
-            from: index,
-            to: closingIndex + format.closingDelimiter.length,
-        });
-        index = closingIndex + format.closingDelimiter.length;
-    }
-
-    return segments;
-}
-
-function splitStructuralLineParts(line: string): StructuralLineParts | null {
-    const blockquoteMatch = BLOCKQUOTE_PREFIX_REGEX.exec(line);
-    if (!blockquoteMatch) {
-        return null;
-    }
-
-    const [, blockquotePrefix, rest] = blockquoteMatch;
-
-    if (blockquotePrefix && rest.length === 0) {
-        return {
-            prefix: line,
-            content: '',
-        };
-    }
-
-    const headingMatch = HEADING_PREFIX_REGEX.exec(rest);
-    if (headingMatch) {
-        return {
-            prefix: `${blockquotePrefix}${headingMatch[1]}`,
-            content: headingMatch[2],
-        };
-    }
-
-    const listMatch = LIST_PREFIX_REGEX.exec(rest);
-    if (listMatch) {
-        return {
-            prefix: `${blockquotePrefix}${listMatch[1]}`,
-            content: listMatch[2],
-        };
-    }
-
-    const indentedContentMatch = INDENTED_CONTENT_REGEX.exec(rest);
-    if (indentedContentMatch && indentedContentMatch[2].length > 0) {
-        return {
-            prefix: `${blockquotePrefix}${indentedContentMatch[1]}`,
-            content: indentedContentMatch[2],
-        };
-    }
-
-    if (blockquotePrefix) {
-        return {
-            prefix: blockquotePrefix,
-            content: rest,
-        };
-    }
-
-    return null;
-}
-
-function wrapTextPreservingTrailingWhitespace(text: string, format: InlineFormatDefinition): string {
-    const leadingWhitespaceMatch = LEADING_WHITESPACE_REGEX.exec(text);
-    const trailingWhitespaceMatch = TRAILING_WHITESPACE_REGEX.exec(text);
-    const leadingWhitespace = leadingWhitespaceMatch ? leadingWhitespaceMatch[1] : '';
-    const trailingWhitespace = trailingWhitespaceMatch ? trailingWhitespaceMatch[1] : '';
-    const content = text.slice(leadingWhitespace.length, text.length - trailingWhitespace.length);
-
-    if (content.length === 0) {
-        return `${format.openingDelimiter}${text}${format.closingDelimiter}`;
-    }
-
-    return `${leadingWhitespace}${format.openingDelimiter}${content}${format.closingDelimiter}${trailingWhitespace}`;
-}
-
-export function applyInlineFormattingToSelectionText(text: string, format: InlineFormatDefinition): string {
-    const wrappedSegments = findWrappedSegments(text, format);
-    if (wrappedSegments.length === 0) {
-        return wrapTextPreservingTrailingWhitespace(text, format);
-    }
-
-    return stripWrappedSegmentsFromText(text, wrappedSegments, format);
-}
-
-function stripWrappedSegmentsFromText(
-    text: string,
-    wrappedSegments: WrappedSegment[],
-    format: InlineFormatDefinition
-): string {
-    let result = '';
-    let lastIndex = 0;
-
-    for (const segment of wrappedSegments) {
-        result += text.slice(lastIndex, segment.from);
-        result += text.slice(
-            segment.from + format.openingDelimiter.length,
-            segment.to - format.closingDelimiter.length
-        );
-        lastIndex = segment.to;
-    }
-
-    result += text.slice(lastIndex);
-    return result;
-}
-
-function removeInlineFormattingFromText(text: string, format: InlineFormatDefinition): string {
-    return stripWrappedSegmentsFromText(text, findWrappedSegments(text, format), format);
-}
-
-function formatFullLineText(line: string, format: InlineFormatDefinition, removalOnly = false): string {
-    if (line.trim() === '') {
-        return line;
-    }
-
-    const structuralParts = splitStructuralLineParts(line);
-    if (structuralParts) {
-        if (structuralParts.content.length === 0) {
-            return line;
-        }
-
-        return `${structuralParts.prefix}${
-            removalOnly
-                ? removeInlineFormattingFromText(structuralParts.content, format)
-                : applyInlineFormattingToSelectionText(structuralParts.content, format)
-        }`;
-    }
-
-    return removalOnly
-        ? removeInlineFormattingFromText(line, format)
-        : applyInlineFormattingToSelectionText(line, format);
-}
 function isLineInsideSyntaxNodes(view: EditorView, lineFrom: number, nodeNames: ReadonlySet<string>): boolean {
     const state = view.state;
     const tree = getSyntaxTree(state, lineFrom);
@@ -283,17 +83,6 @@ function lineCanUseLineAwareFormatting(view: EditorView, line: string, lineFrom:
         isGitHubAlertTitleLine(line) ||
         isLineHorizontalRule(view, lineFrom)
     );
-}
-
-function lineHasTargetFormatting(line: string, format: InlineFormatDefinition): boolean {
-    if (line.trim() === '') {
-        return false;
-    }
-
-    const structuralParts = splitStructuralLineParts(line);
-    const content = structuralParts ? structuralParts.content : line;
-
-    return findWrappedSegments(content, format).length > 0;
 }
 
 function getSelectedLineEntries(view: EditorView, range: SelectionRange): SelectedLineEntry[] {
@@ -426,59 +215,6 @@ function createExplicitSelection(anchorPos: number, headPos: number, basePos: nu
     };
 }
 
-function unwrapWrappedSegments(
-    text: string,
-    segments: WrappedSegment[],
-    format: InlineFormatDefinition,
-    expandedFrom: number
-): string {
-    let result = '';
-    let lastIndex = 0;
-
-    for (const segment of segments) {
-        const relativeFrom = segment.from - expandedFrom;
-        const relativeTo = segment.to - expandedFrom;
-        const contentFrom = relativeFrom + format.openingDelimiter.length;
-        const contentTo = relativeTo - format.closingDelimiter.length;
-
-        result += text.slice(lastIndex, relativeFrom);
-        result += text.slice(contentFrom, contentTo);
-        lastIndex = relativeTo;
-    }
-
-    result += text.slice(lastIndex);
-    return result;
-}
-
-function mapOffsetAfterUnwrapping(offset: number, segments: WrappedSegment[], format: InlineFormatDefinition): number {
-    let removedLength = 0;
-
-    for (const segment of segments) {
-        const openingEnd = segment.from + format.openingDelimiter.length;
-        const contentEnd = segment.to - format.closingDelimiter.length;
-
-        if (offset < segment.from) {
-            return offset - removedLength;
-        }
-
-        if (offset < openingEnd) {
-            return segment.from - removedLength;
-        }
-
-        if (offset <= contentEnd) {
-            return offset - removedLength - format.openingDelimiter.length;
-        }
-
-        if (offset < segment.to) {
-            return contentEnd - removedLength - format.openingDelimiter.length;
-        }
-
-        removedLength += format.openingDelimiter.length + format.closingDelimiter.length;
-    }
-
-    return offset - removedLength;
-}
-
 function findSelectionFormattingAction(
     view: EditorView,
     range: SelectionRange,
@@ -495,41 +231,33 @@ function findSelectionFormattingAction(
     }
 
     const line = state.doc.lineAt(range.from);
-    const selectionFrom = range.from - line.from;
-    const selectionTo = range.to - line.from;
-    const overlappingSegments = findWrappedSegments(line.text, format).filter((wrappedSegment) => {
-        const selectionOverlapsSegment = selectionFrom < wrappedSegment.to && selectionTo > wrappedSegment.from;
-
-        return selectionOverlapsSegment;
-    });
-
-    if (overlappingSegments.length === 0) {
+    const action = analyzeSingleLineSelectionRemoval(
+        line.text,
+        {
+            from: range.from - line.from,
+            to: range.to - line.from,
+            anchor: range.anchor - line.from,
+            head: range.head - line.from,
+        },
+        format
+    );
+    if (!action) {
         return null;
     }
 
-    const firstSegment = overlappingSegments[0];
-    const lastSegment = overlappingSegments[overlappingSegments.length - 1];
-    const expandedFrom = firstSegment.from;
-    const expandedTo = lastSegment.to;
-    const docExpandedFrom = line.from + expandedFrom;
-    const docExpandedTo = line.from + expandedTo;
-    const updatedText = unwrapWrappedSegments(
-        line.text.slice(expandedFrom, expandedTo),
-        overlappingSegments,
-        format,
-        expandedFrom
-    );
-    const mappedAnchor = line.from + mapOffsetAfterUnwrapping(range.anchor - line.from, overlappingSegments, format);
-    const mappedHead = line.from + mapOffsetAfterUnwrapping(range.head - line.from, overlappingSegments, format);
+    const docExpandedFrom = line.from + action.replaceFrom;
+    const docExpandedTo = line.from + action.replaceTo;
+    const mappedAnchor = line.from + action.nextAnchor;
+    const mappedHead = line.from + action.nextHead;
 
     return {
         key: `selection-removal:${docExpandedFrom}:${docExpandedTo}`,
         change: {
             from: docExpandedFrom,
             to: docExpandedTo,
-            insert: updatedText,
+            insert: action.insert,
         },
-        explicitSelection: createExplicitSelection(mappedAnchor, mappedHead, docExpandedFrom),
+        explicitSelection: createExplicitSelection(mappedAnchor, mappedHead, line.from + action.selectionBase),
     };
 }
 
@@ -540,69 +268,30 @@ function findCursorFormattingAction(
 ): { key: string; change: TextChange; explicitSelection: ExplicitCursorSelection } | null {
     const state = view.state;
     const line = state.doc.lineAt(cursorPos);
-    const cursorOffset = cursorPos - line.from;
-
-    const segments = findWrappedSegments(line.text, format);
-    const contentEnd = (s: WrappedSegment) => s.to - format.closingDelimiter.length;
-
-    const segment = segments.find(
-        (s) =>
-            cursorOffset === s.from || cursorOffset === contentEnd(s) || (cursorOffset > s.from && cursorOffset <= s.to)
-    );
-    if (!segment) {
+    const action = analyzeSingleLineCursorAction(line.text, cursorPos - line.from, format);
+    if (!action) {
         return null;
     }
 
-    const docSegmentFrom = line.from + segment.from;
-    const docSegmentTo = line.from + segment.to;
-
-    // Cursor right before the opening delimiter: jump in past the opening delimiter
-    if (cursorOffset === segment.from) {
-        return {
-            key: `jump-in:${cursorPos}`,
-            change: { from: cursorPos, to: cursorPos, insert: '' },
-            explicitSelection: {
-                anchorBasePos: cursorPos,
-                anchorOffset: format.openingDelimiter.length,
-                headBasePos: cursorPos,
-                headOffset: format.openingDelimiter.length,
-            },
-        };
-    }
-
-    // Cursor right before the closing delimiter: jump out past the closing delimiter
-    if (cursorOffset === contentEnd(segment)) {
-        return {
-            key: `jump:${cursorPos}`,
-            change: { from: cursorPos, to: cursorPos, insert: '' },
-            explicitSelection: {
-                anchorBasePos: docSegmentTo,
-                anchorOffset: 0,
-                headBasePos: docSegmentTo,
-                headOffset: 0,
-            },
-        };
-    }
-
-    // Cursor inside the segment or right after the closing delimiter: remove formatting
-    const content = line.text.slice(
-        segment.from + format.openingDelimiter.length,
-        segment.to - format.closingDelimiter.length
-    );
+    const docChangeFrom = line.from + action.replaceFrom;
+    const docChangeTo = line.from + action.replaceTo;
+    const absoluteAnchor = line.from + action.nextAnchor;
+    const absoluteHead = line.from + action.nextHead;
+    const key =
+        action.kind === 'cursor-jump-in'
+            ? `jump-in:${cursorPos}`
+            : action.kind === 'cursor-jump-out'
+              ? `jump:${cursorPos}`
+              : `removal:${docChangeFrom}:${docChangeTo}`;
 
     return {
-        key: `removal:${docSegmentFrom}:${docSegmentTo}`,
+        key,
         change: {
-            from: docSegmentFrom,
-            to: docSegmentTo,
-            insert: content,
+            from: docChangeFrom,
+            to: docChangeTo,
+            insert: action.insert,
         },
-        explicitSelection: {
-            anchorBasePos: docSegmentFrom,
-            anchorOffset: 0,
-            headBasePos: docSegmentFrom,
-            headOffset: content.length,
-        },
+        explicitSelection: createExplicitSelection(absoluteAnchor, absoluteHead, line.from + action.selectionBase),
     };
 }
 

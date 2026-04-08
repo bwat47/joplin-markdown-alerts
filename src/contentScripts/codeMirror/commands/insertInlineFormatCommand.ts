@@ -2,9 +2,9 @@ import type { SelectionRange } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { SyntaxNode } from '@lezer/common';
 
-import { type InlineFormatDefinition } from '../../inlineFormatCommands';
-import { dispatchChangesWithSelections, type ExplicitCursorSelection } from './commandSelectionUtils';
-import { getProbePositions, getSyntaxTree } from './syntaxTreeUtils';
+import { type InlineFormatDefinition } from '../../../inlineFormatCommands';
+import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
+import { getProbePositions, getSyntaxTree } from '../shared/syntaxTreeUtils';
 
 type TextChange = {
     from: number;

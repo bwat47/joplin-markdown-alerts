@@ -2,8 +2,8 @@ import type { EditorView } from '@codemirror/view';
 import type { EditorState } from '@codemirror/state';
 import type { SyntaxNode } from '@lezer/common';
 
-import { dispatchChangesWithSelections, type ExplicitCursorSelection } from './commandSelectionUtils';
-import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine } from './alertParsing';
+import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine } from '../alerts/alertParsing';
+import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 import {
     collectParagraphRanges,
     findParagraphNodeAt,
@@ -11,7 +11,7 @@ import {
     getProbePositions,
     getSyntaxTree,
     type ParagraphRange,
-} from './syntaxTreeUtils';
+} from '../shared/syntaxTreeUtils';
 
 const BLOCKQUOTE_PREFIX_PATTERN = /^(\s*(?:>\s*)+)/;
 const DEFAULT_ALERT_TYPE = 'NOTE';

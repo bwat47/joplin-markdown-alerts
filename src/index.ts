@@ -7,7 +7,7 @@ import {
     registerInlineFormatCommands,
     registerInsertNoteAlertCommand,
     registerInsertNoteQuoteCommand,
-} from './commands';
+} from './joplinCommandRegistration';
 import { registerPluginSettings } from './settings';
 
 joplin.plugins.register({

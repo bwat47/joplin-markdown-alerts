@@ -1,7 +1,7 @@
 /** @jest-environment jsdom */
 import { EditorSelection } from '@codemirror/state';
 import { createInsertQuoteCommand, toggleBlockquoteText } from './insertQuoteCommand';
-import { createEditorHarness } from './testUtils';
+import { createEditorHarness } from '../shared/testUtils';
 
 describe('toggleBlockquoteText', () => {
     test('removes blockquote prefix when all lines are quoted', () => {

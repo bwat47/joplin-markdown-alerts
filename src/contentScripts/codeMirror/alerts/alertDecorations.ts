@@ -4,7 +4,7 @@ import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate
 import { ALERT_COLORS } from './alertColors';
 import { ALERT_ICONS } from './alertIcons';
 import { GITHUB_ALERT_TYPES, type GitHubAlertType, parseGitHubAlertTitleLine } from './alertParsing';
-import { getSyntaxTree } from './syntaxTreeUtils';
+import { getSyntaxTree } from '../shared/syntaxTreeUtils';
 
 /** Base structural styles (no colors) */
 const alertsBaseTheme = EditorView.baseTheme({

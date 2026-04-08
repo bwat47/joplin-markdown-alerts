@@ -5,13 +5,13 @@ import {
     getInlineFormatDefinition,
     type InlineFormatId,
     type InlineFormatSyntaxMode,
-} from '../../inlineFormatCommands';
+} from '../../../inlineFormatCommands';
 import {
     applyInlineFormattingToFullLineSelectionText,
     applyInlineFormattingToSelectionText,
     createInsertInlineFormatCommand,
 } from './insertInlineFormatCommand';
-import { createEditorHarness } from './testUtils';
+import { createEditorHarness } from '../shared/testUtils';
 
 function getFormat(id: InlineFormatId, syntaxMode?: InlineFormatSyntaxMode) {
     return getInlineFormatDefinition(id, syntaxMode);

@@ -2,7 +2,7 @@
 import { EditorSelection } from '@codemirror/state';
 
 import { clearMarkdownFormattingSelectionText, createClearFormattingCommand } from './clearFormattingCommand';
-import { createEditorHarness } from './testUtils';
+import { createEditorHarness } from '../shared/testUtils';
 
 const RESOURCE_ID = ':/5622253ddc404beaa9becd86d48095c5';
 

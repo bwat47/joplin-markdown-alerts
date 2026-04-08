@@ -363,7 +363,8 @@ function findCursorFormattingAction(
     const contentEnd = (s: WrappedSegment) => s.to - format.closingDelimiter.length;
 
     const segment = segments.find(
-        (s) => cursorOffset === contentEnd(s) || (cursorOffset > s.from && cursorOffset <= s.to)
+        (s) =>
+            cursorOffset === s.from || cursorOffset === contentEnd(s) || (cursorOffset > s.from && cursorOffset <= s.to)
     );
     if (!segment) {
         return null;
@@ -371,6 +372,20 @@ function findCursorFormattingAction(
 
     const docSegmentFrom = line.from + segment.from;
     const docSegmentTo = line.from + segment.to;
+
+    // Cursor right before the opening delimiter: jump in past the opening delimiter
+    if (cursorOffset === segment.from) {
+        return {
+            key: `jump-in:${cursorPos}`,
+            change: { from: cursorPos, to: cursorPos, insert: '' },
+            explicitSelection: {
+                anchorBasePos: cursorPos,
+                anchorOffset: format.openingDelimiter.length,
+                headBasePos: cursorPos,
+                headOffset: format.openingDelimiter.length,
+            },
+        };
+    }
 
     // Cursor right before the closing delimiter: jump out past the closing delimiter
     if (cursorOffset === contentEnd(segment)) {

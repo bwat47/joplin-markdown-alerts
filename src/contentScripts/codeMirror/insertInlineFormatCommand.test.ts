@@ -562,10 +562,18 @@ describe('createInsertInlineFormatCommand', () => {
             expect(result.selection.head).toBe('~~strikethrough~~'.length);
         });
 
-        test('does not remove formatting when cursor is right before the opening delimiter', () => {
-            // cursor at position 0 — check is cursorOffset > segment.from (0 > 0 is false), so no removal
-            const result = runCommandWithSelection('|~~text~~', 'strikethrough');
-            expect(result.text).toBe('~~~~~~text~~');
+        test('moves cursor inside opening delimiter when cursor is right before it', () => {
+            const result = runCommandWithSelection('foo |~~text~~', 'strikethrough');
+            expect(result.text).toBe('foo ~~text~~');
+            expect(result.selection.anchor).toBe('foo ~~'.length);
+            expect(result.selection.head).toBe('foo ~~'.length);
+        });
+
+        test('moves cursor inside opening HTML tags when cursor is right before them', () => {
+            const result = runCommandWithSelection('|<sup>text</sup>', 'superscript', 'html');
+            expect(result.text).toBe('<sup>text</sup>');
+            expect(result.selection.anchor).toBe('<sup>'.length);
+            expect(result.selection.head).toBe('<sup>'.length);
         });
 
         test('moves cursor past closing delimiter when cursor is right before it', () => {

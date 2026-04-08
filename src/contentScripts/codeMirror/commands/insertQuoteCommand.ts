@@ -1,13 +1,13 @@
 import type { EditorState } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import { dispatchChangesWithSelections, type ExplicitCursorSelection } from './commandSelectionUtils';
+import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 import {
     collectParagraphRanges,
     findParagraphNodeAt,
     getParagraphLineRange,
     getSyntaxTree,
     type ParagraphRange,
-} from './syntaxTreeUtils';
+} from '../shared/syntaxTreeUtils';
 
 const BLOCKQUOTE_PREFIX = '> ';
 const BLOCKQUOTE_PREFIX_REGEX = /^>\s?/;

@@ -1,8 +1,8 @@
 import type { SelectionRange } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 
-import { dispatchChangesWithSelections, type ExplicitCursorSelection } from './commandSelectionUtils';
-import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine } from './alertParsing';
+import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine } from '../alerts/alertParsing';
+import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 
 type TextChange = {
     from: number;

@@ -1,11 +1,11 @@
 import { EditorView } from '@codemirror/view';
 import type { CodeMirrorControl } from 'api/types';
 
-import { createAlertDecorationExtensions } from './alertDecorations';
-import { createClearFormattingCommand } from './clearFormattingCommand';
-import { createInsertAlertCommand } from './insertAlertCommand';
-import { createInsertInlineFormatCommand } from './insertInlineFormatCommand';
-import { createInsertQuoteCommand } from './insertQuoteCommand';
+import { createAlertDecorationExtensions } from './alerts/alertDecorations';
+import { createClearFormattingCommand } from './commands/clearFormattingCommand';
+import { createInsertAlertCommand } from './commands/insertAlertCommand';
+import { createInsertInlineFormatCommand } from './commands/insertInlineFormatCommand';
+import { createInsertQuoteCommand } from './commands/insertQuoteCommand';
 import { INLINE_FORMAT_DEFINITIONS } from '../../inlineFormatCommands';
 import { logger } from '../../logger';
 

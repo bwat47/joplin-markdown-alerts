@@ -2,7 +2,7 @@
 import { EditorSelection } from '@codemirror/state';
 
 import { createInsertAlertCommand, toggleAlertSelectionText } from './insertAlertCommand';
-import { createEditorHarness } from './testUtils';
+import { createEditorHarness } from '../shared/testUtils';
 
 describe('toggleAlertSelectionText', () => {
     test('adds an alert line and quotes when selection is not a blockquote', () => {

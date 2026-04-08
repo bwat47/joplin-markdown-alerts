@@ -7,7 +7,6 @@ export type InlineFormatSyntaxMode = 'html' | 'markdown';
 export type InlineFormatCommandDefinition = {
     id: InlineFormatId;
     label: string;
-    defaultEditorCommandName: string;
     globalCommandName: string;
     toolbarButtonId: string;
     toolbarButtonSettingKey: string;
@@ -38,7 +37,6 @@ export const INLINE_FORMAT_COMMANDS: InlineFormatCommandDefinition[] = [
     {
         id: 'highlight',
         label: 'Insert or Toggle Highlight',
-        defaultEditorCommandName: 'markdownAlerts.insertHighlightOrToggle',
         globalCommandName: 'markdownAlerts.insertHighlight',
         toolbarButtonId: 'markdownAlerts.insertHighlight.toolbarButton',
         toolbarButtonSettingKey: 'showHighlightToolbarButton',
@@ -50,7 +48,6 @@ export const INLINE_FORMAT_COMMANDS: InlineFormatCommandDefinition[] = [
     {
         id: 'strikethrough',
         label: 'Insert or Toggle Strikethrough',
-        defaultEditorCommandName: 'markdownAlerts.insertStrikethroughOrToggle',
         globalCommandName: 'markdownAlerts.insertStrikethrough',
         toolbarButtonId: 'markdownAlerts.insertStrikethrough.toolbarButton',
         toolbarButtonSettingKey: 'showStrikethroughToolbarButton',
@@ -62,7 +59,6 @@ export const INLINE_FORMAT_COMMANDS: InlineFormatCommandDefinition[] = [
     {
         id: 'underline',
         label: 'Insert or Toggle Underline',
-        defaultEditorCommandName: 'markdownAlerts.insertUnderlineOrToggle',
         globalCommandName: 'markdownAlerts.insertUnderline',
         toolbarButtonId: 'markdownAlerts.insertUnderline.toolbarButton',
         toolbarButtonSettingKey: 'showUnderlineToolbarButton',
@@ -74,7 +70,6 @@ export const INLINE_FORMAT_COMMANDS: InlineFormatCommandDefinition[] = [
     {
         id: 'superscript',
         label: 'Insert or Toggle Superscript',
-        defaultEditorCommandName: 'markdownAlerts.insertSuperscriptHtmlOrToggle',
         globalCommandName: 'markdownAlerts.insertSuperscript',
         toolbarButtonId: 'markdownAlerts.insertSuperscript.toolbarButton',
         toolbarButtonSettingKey: 'showSuperscriptToolbarButton',
@@ -85,7 +80,6 @@ export const INLINE_FORMAT_COMMANDS: InlineFormatCommandDefinition[] = [
     {
         id: 'subscript',
         label: 'Insert or Toggle Subscript',
-        defaultEditorCommandName: 'markdownAlerts.insertSubscriptHtmlOrToggle',
         globalCommandName: 'markdownAlerts.insertSubscript',
         toolbarButtonId: 'markdownAlerts.insertSubscript.toolbarButton',
         toolbarButtonSettingKey: 'showSubscriptToolbarButton',
@@ -176,9 +170,6 @@ export function getInlineFormatDefinition(
     return format;
 }
 
-export function getInlineFormatEditorCommandName(
-    id: ConfigurableInlineFormatId,
-    syntaxMode: InlineFormatSyntaxMode
-): string {
+export function getInlineFormatEditorCommandName(id: InlineFormatId, syntaxMode?: InlineFormatSyntaxMode): string {
     return getInlineFormatDefinition(id, syntaxMode).editorCommandName;
 }

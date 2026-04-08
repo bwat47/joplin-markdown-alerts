@@ -36,16 +36,19 @@ GitHub alert syntax:
 **Files:**
 
 - `src/contentScripts/codeMirror/contentScript.ts` - Content script entry point; registers extensions and editor commands.
-- `src/contentScripts/codeMirror/alertDecorations.ts` - CM6 decorations extension (base styles + themed colors + view plugin)
-- `src/contentScripts/codeMirror/alertParsing.ts` - Parses `> [!TYPE]` title lines and defines alert type constants
-- `src/contentScripts/codeMirror/alertIcons.ts` - Octicon SVG icons used in the inline title widget
-- `src/contentScripts/codeMirror/alertColors.ts` - Light/dark theme color tokens used by the CM6 decorations
-- `src/contentScripts/codeMirror/insertAlertCommand.ts` - Editor command logic (insert/toggle/convert blockquote, selection-aware)
-- `src/contentScripts/codeMirror/insertInlineFormatCommand.ts` - Shared editor command logic for inline formatting (selection-aware, multiline list-aware)
-- `src/contentScripts/codeMirror/insertQuoteCommand.ts` - Editor command logic for quoting/toggling selected text
+- `src/contentScripts/codeMirror/alerts/alertDecorations.ts` - CM6 decorations extension (base styles + themed colors + view plugin)
+- `src/contentScripts/codeMirror/alerts/alertParsing.ts` - Parses `> [!TYPE]` title lines and defines alert type constants
+- `src/contentScripts/codeMirror/alerts/alertIcons.ts` - Octicon SVG icons used in the inline title widget
+- `src/contentScripts/codeMirror/alerts/alertColors.ts` - Light/dark theme color tokens used by the CM6 decorations
+- `src/contentScripts/codeMirror/commands/insertAlertCommand.ts` - Editor command logic (insert/toggle/convert blockquote, selection-aware)
+- `src/contentScripts/codeMirror/commands/insertInlineFormatCommand.ts` - Shared editor command logic for inline formatting (selection-aware, multiline list-aware)
+- `src/contentScripts/codeMirror/commands/insertQuoteCommand.ts` - Editor command logic for quoting/toggling selected text
+- `src/contentScripts/codeMirror/commands/clearFormattingCommand.ts` - Editor command logic for removing supported markdown formatting from selections
+- `src/contentScripts/codeMirror/shared/syntaxTreeUtils.ts` - Shared syntax-tree probing helpers used by CodeMirror commands and decorations
+- `src/contentScripts/codeMirror/shared/commandSelectionUtils.ts` - Shared selection-preserving dispatch helper for CodeMirror commands
 - `src/inlineFormatCommands.ts` - Shared inline-format command metadata plus syntax-specific editor command definitions for configurable inline formats
 - `src/settings.ts` - Plugin settings registration for toolbar button visibility plus superscript/subscript syntax selection
-- `src/commands.ts` - Registers global Joplin commands (alerts + quote + clear-formatting + inline formatting, toolbar + shortcuts), gates toolbar buttons on plugin settings, and resolves superscript/subscript syntax at execution time
+- `src/joplinCommandRegistration.ts` - Registers global Joplin commands (alerts + quote + clear-formatting + inline formatting, toolbar + shortcuts), gates toolbar buttons on plugin settings, and resolves superscript/subscript syntax at execution time
 
 ### Commands
 

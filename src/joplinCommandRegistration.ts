@@ -7,6 +7,7 @@ import {
     INLINE_FORMAT_COMMANDS,
     type InlineFormatCommandDefinition,
 } from './inlineFormatCommands';
+import { logger } from './logger';
 import {
     getSubscriptSyntaxSettingValue,
     getSuperscriptSyntaxSettingValue,
@@ -53,7 +54,8 @@ async function executeMarkdownEditorCommand(commandName: string): Promise<void> 
         await joplin.commands.execute('editor.execCommand', {
             name: commandName,
         });
-    } catch {
+    } catch (error) {
+        logger.error('Failed to execute editor command:', commandName, error);
         await joplin.views.dialogs.showToast({
             message: 'Markdown Alerts: Failed to run editor command.',
             type: ToastType.Error,
@@ -75,7 +77,7 @@ async function createToolbarButtonIfEnabled(
 
 async function resolveInlineFormatEditorCommandName(format: InlineFormatCommandDefinition): Promise<string> {
     if (!isConfigurableInlineFormatId(format.id)) {
-        return format.defaultEditorCommandName;
+        return getInlineFormatEditorCommandName(format.id);
     }
 
     const syntaxMode =

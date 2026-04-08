@@ -50,7 +50,7 @@ Example:
 > This alert uses a custom title
 ```
 
-### 2. Markdown Editor Commands For Block Structures
+## 2. Markdown Editor Commands For Block Structures
 
 The plugin adds toolbar buttons and Edit menu commands for:
 
@@ -58,7 +58,7 @@ The plugin adds toolbar buttons and Edit menu commands for:
 - Insert or Toggle blockquote
 - Clear Markdown formatting in selection
 
-#### Insert or Toggle alert
+### Insert or Toggle alert
 
 Default shortcut: `Ctrl + Shift + A`
 
@@ -70,7 +70,7 @@ Behavior:
 - With no selection, convert the current paragraph or line into an alert
 - With a selection, convert the selected paragraphs or lines into an alert
 
-#### Insert or Toggle blockquote
+### Insert or Toggle blockquote
 
 Default shortcut: `Ctrl + Shift + .`
 
@@ -80,7 +80,7 @@ Behavior:
 - With no selection, convert the current paragraph or line into a blockquote
 - With a selection, convert the selected paragraphs or lines into blockquotes
 
-#### Clear Markdown formatting in selection
+### Clear Markdown formatting in selection
 
 Default shortcut: none
 
@@ -93,7 +93,7 @@ Behavior:
 - Converts external markdown links and image embeds to their raw URLs
 - Preserves Joplin resource links and embeds that target `:/<32 hex>`
 
-## Inline Formatting Commands
+## 3. Inline Formatting Commands
 
 Joplin supports various inline Markdown extensions, but the Markdown editor does not provide built-in commands for all of them. This plugin adds commands, toolbar buttons, and Edit menu entries for:
 

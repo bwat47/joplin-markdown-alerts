@@ -302,7 +302,7 @@ describe('createInsertInlineFormatCommand', () => {
             const command = createInsertInlineFormatCommand(harness.view, getFormat('strikethrough'));
             command();
 
-            expect(harness.getText()).toBe(['ABC', '', 'TEST'].join('\n'));
+            expect(harness.getText()).toBe(['ABC', '', '~~TEST~~'].join('\n'));
         } finally {
             harness.destroy();
         }

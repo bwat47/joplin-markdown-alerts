@@ -291,7 +291,7 @@ describe('createInsertInlineFormatCommand', () => {
             command();
 
             expect(harness.getText()).toBe(
-                ['- ~~one~~', '1. two', '> - [ ] ~~three~~', '', '> 1. [x] four', 'tail'].join('\n')
+                ['- one', '1. two', '> - [ ] three', '', '> 1. [x] four', 'tail'].join('\n')
             );
         } finally {
             harness.destroy();
@@ -309,6 +309,33 @@ describe('createInsertInlineFormatCommand', () => {
             '',
             '~~Notes exported from Evernote into Joplin can also be imported.~~',
         ].join('\n');
+
+        expect(runCommand(input, 'strikethrough')).toBe(expected);
+    });
+
+    test('uses removal-only mode for multiline full-line selections when any selected line already has formatting', () => {
+        const harness = createEditorHarness(['~~ABC~~', '', 'TEST'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line3 = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.single(line1.from, line3.to),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('strikethrough'));
+            command();
+
+            expect(harness.getText()).toBe(['ABC', '', 'TEST'].join('\n'));
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('uses removal-only mode for fully selected middle lines inside a mixed multiline selection', () => {
+        const input = ['prefix [[start', '~~ABC~~', 'TEST', 'end]] suffix'].join('\n');
+        const expected = ['prefix ~~start~~', 'ABC', 'TEST', '~~end~~ suffix'].join('\n');
 
         expect(runCommand(input, 'strikethrough')).toBe(expected);
     });

@@ -196,7 +196,29 @@ export function applyInlineFormattingToSelectionText(text: string, format: Inlin
     return result;
 }
 
-function formatFullLineText(line: string, format: InlineFormatDefinition): string {
+function removeInlineFormattingFromText(text: string, format: InlineFormatDefinition): string {
+    const wrappedSegments = findWrappedSegments(text, format);
+    if (wrappedSegments.length === 0) {
+        return text;
+    }
+
+    let result = '';
+    let lastIndex = 0;
+
+    for (const segment of wrappedSegments) {
+        result += text.slice(lastIndex, segment.from);
+        result += text.slice(
+            segment.from + format.openingDelimiter.length,
+            segment.to - format.closingDelimiter.length
+        );
+        lastIndex = segment.to;
+    }
+
+    result += text.slice(lastIndex);
+    return result;
+}
+
+function formatFullLineText(line: string, format: InlineFormatDefinition, removalOnly = false): string {
     if (line.trim() === '') {
         return line;
     }
@@ -207,10 +229,16 @@ function formatFullLineText(line: string, format: InlineFormatDefinition): strin
             return line;
         }
 
-        return `${structuralParts.prefix}${applyInlineFormattingToSelectionText(structuralParts.content, format)}`;
+        return `${structuralParts.prefix}${
+            removalOnly
+                ? removeInlineFormattingFromText(structuralParts.content, format)
+                : applyInlineFormattingToSelectionText(structuralParts.content, format)
+        }`;
     }
 
-    return applyInlineFormattingToSelectionText(line, format);
+    return removalOnly
+        ? removeInlineFormattingFromText(line, format)
+        : applyInlineFormattingToSelectionText(line, format);
 }
 
 export function applyInlineFormattingToFullLineSelectionText(text: string, format: InlineFormatDefinition): string {
@@ -263,6 +291,26 @@ function isGitHubAlertTitleLine(line: string): boolean {
     return parseGitHubAlertTitleLine(line) !== null;
 }
 
+function lineCanUseLineAwareFormatting(view: EditorView, line: string, lineFrom: number): boolean {
+    return !(
+        isLineInsideCodeBlock(view, lineFrom) ||
+        shouldSkipMarkdownTableLine(line, view, lineFrom) ||
+        isGitHubAlertTitleLine(line) ||
+        isLineHorizontalRule(view, lineFrom)
+    );
+}
+
+function lineHasTargetFormatting(line: string, format: InlineFormatDefinition): boolean {
+    if (line.trim() === '') {
+        return false;
+    }
+
+    const structuralParts = splitStructuralLineParts(line);
+    const content = structuralParts ? structuralParts.content : line;
+
+    return findWrappedSegments(content, format).length > 0;
+}
+
 function applyInlineFormattingToFullLineSelectionRange(
     view: EditorView,
     range: SelectionRange,
@@ -272,20 +320,22 @@ function applyInlineFormattingToFullLineSelectionRange(
     const startLine = state.doc.lineAt(range.from);
     const selectedText = state.doc.sliceString(range.from, range.to);
     const lines = selectedText.split('\n');
+    const eligibleLineEntries = lines
+        .map((line, index) => ({
+            line,
+            lineFrom: state.doc.line(startLine.number + index).from,
+        }))
+        .filter(({ line, lineFrom }) => lineCanUseLineAwareFormatting(view, line, lineFrom));
+    const removalOnly = eligibleLineEntries.some(({ line }) => lineHasTargetFormatting(line, format));
 
     return lines
         .map((line, index) => {
             const lineFrom = state.doc.line(startLine.number + index).from;
-            if (
-                isLineInsideCodeBlock(view, lineFrom) ||
-                shouldSkipMarkdownTableLine(line, view, lineFrom) ||
-                isGitHubAlertTitleLine(line) ||
-                isLineHorizontalRule(view, lineFrom)
-            ) {
+            if (!lineCanUseLineAwareFormatting(view, line, lineFrom)) {
                 return line;
             }
 
-            return formatFullLineText(line, format);
+            return formatFullLineText(line, format, removalOnly);
         })
         .join('\n');
 }
@@ -327,32 +377,35 @@ function applyInlineFormattingToSelectionRange(
 
     const startLine = state.doc.lineAt(range.from);
     const lines = selectedText.split('\n');
+    const lineEntries = lines.map((line, index) => {
+        const docLine = state.doc.line(startLine.number + index);
+        const selectionStart = index === 0 ? range.from - docLine.from : 0;
+        const selectionEnd = index === lines.length - 1 ? range.to - docLine.from : docLine.length;
+        const isFullLineSelection = selectionStart === 0 && selectionEnd === docLine.length;
 
-    return lines
-        .map((line, index) => {
-            if (line.length === 0) {
-                return line;
-            }
+        return {
+            line,
+            docLine,
+            isFullLineSelection,
+        };
+    });
+    const removalOnly = lineEntries
+        .filter(({ line, docLine, isFullLineSelection }) => {
+            return isFullLineSelection && lineCanUseLineAwareFormatting(view, line, docLine.from);
+        })
+        .some(({ line }) => lineHasTargetFormatting(line, format));
 
-            const docLine = state.doc.line(startLine.number + index);
-            const selectionStart = index === 0 ? range.from - docLine.from : 0;
-            const selectionEnd = index === lines.length - 1 ? range.to - docLine.from : docLine.length;
-            const isFullLineSelection = selectionStart === 0 && selectionEnd === docLine.length;
-
+    return lineEntries
+        .map(({ line, docLine, isFullLineSelection }) => {
             if (!isFullLineSelection) {
                 return applyInlineFormattingToSelectionText(line, format);
             }
 
-            if (
-                isLineInsideCodeBlock(view, docLine.from) ||
-                shouldSkipMarkdownTableLine(line, view, docLine.from) ||
-                isGitHubAlertTitleLine(line) ||
-                isLineHorizontalRule(view, docLine.from)
-            ) {
+            if (!lineCanUseLineAwareFormatting(view, line, docLine.from)) {
                 return line;
             }
 
-            return formatFullLineText(line, format);
+            return formatFullLineText(line, format, removalOnly);
         })
         .join('\n');
 }

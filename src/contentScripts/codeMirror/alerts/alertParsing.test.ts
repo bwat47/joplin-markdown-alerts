@@ -7,6 +7,11 @@ describe('parseGitHubAlertTitleLine', () => {
         expect(parseGitHubAlertTitleLine('> [!unknown] Title')).toBeNull();
     });
 
+    test('parses new types', () => {
+        expect(parseGitHubAlertTitleLine('> [!abstract]')).toMatchObject({ type: 'abstract' });
+        expect(parseGitHubAlertTitleLine('> [!BUG] My bug')).toMatchObject({ type: 'bug', title: 'My bug' });
+    });
+
     test('parses type-only title line', () => {
         const line = '> [!NOTE]';
         const parsed = parseGitHubAlertTitleLine(line);

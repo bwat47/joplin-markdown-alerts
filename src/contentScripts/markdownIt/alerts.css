@@ -73,3 +73,93 @@
     color: var(--color-caution);
 }
 
+.markdown-alert.markdown-alert-abstract {
+    border-left-color: var(--color-abstract);
+    background-color: var(--color-abstract-bg);
+}
+
+.markdown-alert.markdown-alert-abstract .markdown-alert-title {
+    color: var(--color-abstract);
+}
+
+.markdown-alert.markdown-alert-info {
+    border-left-color: var(--color-info);
+    background-color: var(--color-info-bg);
+}
+
+.markdown-alert.markdown-alert-info .markdown-alert-title {
+    color: var(--color-info);
+}
+
+.markdown-alert.markdown-alert-todo {
+    border-left-color: var(--color-todo);
+    background-color: var(--color-todo-bg);
+}
+
+.markdown-alert.markdown-alert-todo .markdown-alert-title {
+    color: var(--color-todo);
+}
+
+.markdown-alert.markdown-alert-success {
+    border-left-color: var(--color-success);
+    background-color: var(--color-success-bg);
+}
+
+.markdown-alert.markdown-alert-success .markdown-alert-title {
+    color: var(--color-success);
+}
+
+.markdown-alert.markdown-alert-question {
+    border-left-color: var(--color-question);
+    background-color: var(--color-question-bg);
+}
+
+.markdown-alert.markdown-alert-question .markdown-alert-title {
+    color: var(--color-question);
+}
+
+.markdown-alert.markdown-alert-failure {
+    border-left-color: var(--color-failure);
+    background-color: var(--color-failure-bg);
+}
+
+.markdown-alert.markdown-alert-failure .markdown-alert-title {
+    color: var(--color-failure);
+}
+
+.markdown-alert.markdown-alert-danger {
+    border-left-color: var(--color-danger);
+    background-color: var(--color-danger-bg);
+}
+
+.markdown-alert.markdown-alert-danger .markdown-alert-title {
+    color: var(--color-danger);
+}
+
+.markdown-alert.markdown-alert-bug {
+    border-left-color: var(--color-bug);
+    background-color: var(--color-bug-bg);
+}
+
+.markdown-alert.markdown-alert-bug .markdown-alert-title {
+    color: var(--color-bug);
+}
+
+.markdown-alert.markdown-alert-example {
+    border-left-color: var(--color-example);
+    background-color: var(--color-example-bg);
+}
+
+.markdown-alert.markdown-alert-example .markdown-alert-title {
+    color: var(--color-example);
+}
+
+.markdown-alert.markdown-alert-quote {
+    border-left-color: var(--color-quote);
+    background-color: var(--color-quote-bg);
+}
+
+.markdown-alert.markdown-alert-quote .markdown-alert-title {
+    color: var(--color-quote);
+}
+

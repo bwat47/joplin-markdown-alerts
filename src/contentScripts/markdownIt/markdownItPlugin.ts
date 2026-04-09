@@ -2,12 +2,19 @@ import type MarkdownIt from 'markdown-it';
 
 import MarkdownItGitHubAlerts from 'markdown-it-github-alerts';
 
+import { GITHUB_ALERT_TYPES } from '../codeMirror/alerts/alertParsing';
+import { ALERT_ICONS } from '../codeMirror/alerts/alertIcons';
+
 type AssetsItem = { name: string };
 
 export default function () {
     return {
         plugin: function (md: MarkdownIt, pluginOptions: unknown) {
-            md.use(MarkdownItGitHubAlerts, (pluginOptions ?? {}) as Record<string, unknown>);
+            md.use(MarkdownItGitHubAlerts, {
+                ...((pluginOptions as Record<string, unknown>) ?? {}),
+                markers: GITHUB_ALERT_TYPES,
+                icons: ALERT_ICONS,
+            });
         },
 
         assets: function (): AssetsItem[] {

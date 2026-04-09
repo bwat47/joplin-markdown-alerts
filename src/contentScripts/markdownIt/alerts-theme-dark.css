@@ -9,4 +9,24 @@
     --color-caution-bg: rgba(248, 81, 73, 0.08);
     --color-important: #a371f7;
     --color-important-bg: rgba(163, 113, 247, 0.08);
+    --color-abstract: #00b0ff;
+    --color-abstract-bg: rgba(0, 176, 255, 0.08);
+    --color-info: #00b8d4;
+    --color-info-bg: rgba(83, 211, 230, 0.08);
+    --color-todo: #306cd6;
+    --color-todo-bg: rgba(48, 108, 214, 0.08);
+    --color-success: #00c853;
+    --color-success-bg: rgba(0, 200, 83, 0.08);
+    --color-question: #64dd17;
+    --color-question-bg: rgba(100, 221, 23, 0.08);
+    --color-failure: #ff5252;
+    --color-failure-bg: rgba(255, 82, 82, 0.08);
+    --color-danger: #ff1744;
+    --color-danger-bg: rgba(68, 138, 255, 0.08);
+    --color-bug: #f50057;
+    --color-bug-bg: rgba(255, 23, 68, 0.08);
+    --color-example: #651fff;
+    --color-example-bg: rgba(101, 31, 255, 0.08);
+    --color-quote: #9e9e9e;
+    --color-quote-bg: rgba(159, 159, 159, 0.08);
 }

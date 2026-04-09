@@ -2,7 +2,7 @@
     "manifest_version": 1,
     "id": "com.bwat47.joplin-markdown-alerts",
     "app_min_version": "3.3",
-    "version": "1.4.7",
+    "version": "1.5.0",
     "platforms": ["desktop", "mobile"],
     "name": "Markdown Alerts and Formatting Commands",
     "description": "Add support for GitHub-style alerts (callouts) in the markdown editor/viewer, plus editor commands for alerts, blockquotes, and inline formatting (strikethrough, highlight, underline, superscript, subscript).",
@@ -14,7 +14,8 @@
     "screenshots": [
         { "src": "images/screenshot1.png", "label": "markdown alerts example 1" },
         { "src": "images/screenshot2.png", "label": "markdown alerts example 2" },
-        { "src": "images/screenshot3.png", "label": "markdown alerts example 3" }
+        { "src": "images/screenshot3.png", "label": "markdown alerts example 3" },
+        { "src": "images/screenshot4.png", "label": "markdown alerts example 4" }
     ],
     "icons": {},
     "promo_tile": {

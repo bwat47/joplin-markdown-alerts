@@ -1,4 +1,20 @@
-export const GITHUB_ALERT_TYPES = ['note', 'tip', 'important', 'warning', 'caution'] as const;
+export const GITHUB_ALERT_TYPES = [
+    'note',
+    'tip',
+    'important',
+    'warning',
+    'caution',
+    'abstract',
+    'info',
+    'todo',
+    'success',
+    'question',
+    'failure',
+    'danger',
+    'bug',
+    'example',
+    'quote',
+] as const;
 
 export type GitHubAlertType = (typeof GITHUB_ALERT_TYPES)[number];
 

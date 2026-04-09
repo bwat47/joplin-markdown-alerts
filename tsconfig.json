@@ -5,13 +5,15 @@
         "target": "es2015",
         "jsx": "react",
         "allowJs": true,
-        "baseUrl": ".",
         "esModuleInterop": true,
         "forceConsistentCasingInFileNames": true,
-        "moduleResolution": "node",
+        "moduleResolution": "bundler",
         "strict": true,
         "skipLibCheck": true,
         "types": ["node", "jest"],
-        "ignoreDeprecations": "6.0"
+        "paths": {
+            "api": ["./api/index.ts"],
+            "api/*": ["./api/*"]
+        }
     }
 }

@@ -46,7 +46,7 @@ export const ALERT_COLORS: ThemeColors = {
         failure: { color: '#ff5252', bg: 'rgba(255, 82, 82, 0.08)' },
         danger: { color: '#ff1744', bg: 'rgba(68, 138, 255, 0.08)' },
         bug: { color: '#f50057', bg: 'rgba(255, 23, 68, 0.08)' },
-        example: { color: '#651fff', bg: 'rgba(101, 31, 255, 0.08)' },
+        example: { color: '#aa60ff', bg: 'rgba(170, 96, 255, 0.08)' },
         quote: { color: '#9e9e9e', bg: 'rgba(159, 159, 159, 0.08)' },
     },
 };

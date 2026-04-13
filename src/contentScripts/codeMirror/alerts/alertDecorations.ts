@@ -6,6 +6,8 @@ import { ALERT_ICONS } from './alertIcons';
 import { GITHUB_ALERT_TYPES, type GitHubAlertType, parseGitHubAlertTitleLine } from './alertParsing';
 import { getSyntaxTree } from '../shared/syntaxTreeUtils';
 
+const BLOCKQUOTE_LINE_PATTERN = /^\s*>/;
+
 /** Base structural styles (no colors) */
 const alertsBaseTheme = EditorView.baseTheme({
     '.cm-line.cm-gh-alert': {
@@ -58,14 +60,30 @@ function computeDecorations(view: EditorView): DecorationSet {
     const seenBlockquotes = new Set<string>();
     const tree = getSyntaxTree(view.state, view.viewport.to);
 
+    const findContiguousBlockquoteEndLineNo = (startLineNo: number, initialEndLineNo: number) => {
+        let endLineNo = initialEndLineNo;
+
+        while (endLineNo < doc.lines) {
+            const nextLine = doc.line(endLineNo + 1);
+            if (!BLOCKQUOTE_LINE_PATTERN.test(nextLine.text)) {
+                break;
+            }
+            endLineNo += 1;
+        }
+
+        return Math.max(startLineNo, endLineNo);
+    };
+
     const decorateBlockquote = (blockquoteFrom: number, blockquoteTo: number) => {
         const endPos = Math.max(blockquoteFrom, blockquoteTo - 1);
         const startLineNo = doc.lineAt(blockquoteFrom).number;
-        const endLineNo = doc.lineAt(endPos).number;
+        const syntaxTreeEndLineNo = doc.lineAt(endPos).number;
 
         const titleLine = doc.line(startLineNo);
         const title = parseGitHubAlertTitleLine(titleLine.text);
         if (!title) return;
+
+        const endLineNo = findContiguousBlockquoteEndLineNo(startLineNo, syntaxTreeEndLineNo);
 
         // Check if any selection range overlaps with the title line
         const isLineSelected = view.state.selection.ranges.some(

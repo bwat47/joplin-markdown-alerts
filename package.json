@@ -52,6 +52,6 @@
     },
     "dependencies": {
         "markdown-it": "^14.1.1",
-        "markdown-it-github-alerts": "^0.3.2"
+        "markdown-it-github-alerts": "^1.0.1"
     }
 }

@@ -1,8 +1,8 @@
 {
     "compilerOptions": {
         "outDir": "./dist/",
-        "module": "commonjs",
-        "target": "es2015",
+        "module": "ESNext",
+        "target": "es2020",
         "jsx": "react",
         "allowJs": true,
         "esModuleInterop": true,

@@ -14,6 +14,12 @@ describe('clearMarkdownFormattingSelectionText', () => {
         expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
     });
 
+    test('leaves incomplete standard markdown delimiters to the parser instead of regex fallbacks', () => {
+        const input = '**Bold and _italic';
+
+        expect(clearMarkdownFormattingSelectionText(input)).toBe(input);
+    });
+
     test('does not rewrite literal text that matches the old printable placeholder format', () => {
         const input = '@@MDCLR0@@ [Link](https://example.com)';
         const expected = '@@MDCLR0@@ https://example.com';

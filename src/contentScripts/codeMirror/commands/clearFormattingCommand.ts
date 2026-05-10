@@ -543,19 +543,13 @@ function stripPairedHtmlFormattingTags(text: string): string {
 
 function stripMarkdownInlineFormatting(text: string): string {
     // Lezer handles complete reference-style links/images and footnotes first. These regexes remain as fallbacks for
-    // partial selections like "See [label][id]" without its definition, or malformed-but-obvious bracket syntax.
+    // partial selections like "See [label][id]" without its definition, malformed-but-obvious bracket syntax, and
+    // plugin-only inline formats that the parser does not recognize.
     return replaceReferenceStyleImages(text)
         .replace(REFERENCE_LINK_REGEX, '$1')
         .replace(FOOTNOTE_REFERENCE_REGEX, '$1')
-        .replace(/\*\*(?=\S)([^\n]*?\S)\*\*/g, '$1')
-        .replace(/(?<!\w)__(?=\S)([^\n]*?\S)__(?!\w)/g, '$1')
-        .replace(/~~(?=\S)([^\n]*?\S)~~/g, '$1')
         .replace(/==(?=\S)([^\n]*?\S)==/g, '$1')
-        .replace(/\+\+(?=\S)([^\n]*?\S)\+\+/g, '$1')
-        .replace(/(?<!\w)\^(?=\S)([^\n]*?\S)\^(?!\w)/g, '$1')
-        .replace(/(?<!~)(?<!\w)~(?=\S)([^\n]*?\S)~(?!\w)(?!~)/g, '$1')
-        .replace(/(?<!\*)\*(?=\S)([^\n*]*?\S)\*(?!\*)/g, '$1')
-        .replace(/(?<!\w)_(?=\S)([^\n_]*?\S)_(?!\w)/g, '$1');
+        .replace(/\+\+(?=\S)([^\n]*?\S)\+\+/g, '$1');
 }
 
 function createExplicitSelection(range: SelectionRange, updatedTextLength: number): ExplicitCursorSelection {

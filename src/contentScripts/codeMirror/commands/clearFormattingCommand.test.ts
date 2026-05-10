@@ -138,9 +138,9 @@ describe('clearMarkdownFormattingSelectionText', () => {
         expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
     });
 
-    test('preserves thematic break lines instead of partially stripping them', () => {
+    test('removes thematic break lines', () => {
         const input = ['***', '* * *', '---', '- - -', '___', '_ _ _', '> ---', '> * * *'].join('\n');
-        const expected = ['***', '* * *', '---', '- - -', '___', '_ _ _', '---', '* * *'].join('\n');
+        const expected = ['', '', '', '', '', '', '', ''].join('\n');
 
         expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
     });

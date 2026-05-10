@@ -31,7 +31,6 @@ const BLOCKQUOTE_PREFIX_REGEX = /^\s*(?:>\s*)+/;
 const HEADING_PREFIX_REGEX = /^\s{0,3}#{1,6}[ \t]+/;
 const LIST_MARKER_REGEX = /^\s*(?:[-+*]|\d+[.)])\s+/;
 const TASK_LIST_MARKER_REGEX = /^\[(?: |x|X)\]\s+/;
-const THEMATIC_BREAK_LINE_REGEX = /^\s{0,3}(?:(?:\*(?:[ \t]*\*){2,})|(?:-(?:[ \t]*-){2,})|(?:_(?:[ \t]*_){2,}))\s*$/;
 const PLAIN_ALERT_TITLE_LINE_REGEX = new RegExp(`^\\s*\\[!(${GITHUB_ALERT_TYPES.join('|')})\\](?:[ \\t]+(.*))?$`, 'i');
 const REFERENCE_STYLE_IMAGE_REGEX = /!\[([^\]]*)\]\[([^\]]+)\]/g;
 const REFERENCE_LINK_REGEX = /\[([^\]]+)\]\[[^\]]+\]/g;
@@ -44,7 +43,7 @@ const STRUCTURAL_MARK_EDIT_PRIORITY = 20;
 const INLINE_MARK_EDIT_PRIORITY = 10;
 const INLINE_MARK_NODE_NAMES = new Set(['EmphasisMark', 'StrikethroughMark', 'SuperscriptMark', 'SubscriptMark']);
 const STRUCTURAL_MARK_NODE_NAMES = new Set(['QuoteMark', 'HeaderMark', 'ListMark', 'TaskMarker']);
-const SEMANTIC_NODE_NAMES = new Set(['FencedCode', 'InlineCode', 'LinkReference', 'Link', 'Image']);
+const SEMANTIC_NODE_NAMES = new Set(['FencedCode', 'InlineCode', 'LinkReference', 'Link', 'Image', 'HorizontalRule']);
 
 function escapeRegex(text: string): string {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -272,6 +271,15 @@ function createLinkReferenceEdit(text: string, node: SyntaxNode, store: Placehol
 }
 
 function createSemanticNodeEdit(text: string, node: SyntaxNode, store: PlaceholderStore): FormattingEdit | null {
+    if (node.name === 'HorizontalRule') {
+        return {
+            from: node.from,
+            to: node.to,
+            insert: '',
+            priority: SEMANTIC_EDIT_PRIORITY,
+        };
+    }
+
     if (node.name === 'FencedCode') {
         return {
             from: node.from,
@@ -477,10 +485,6 @@ function replaceReferenceStyleImages(text: string): string {
     });
 }
 
-function isThematicBreakLine(line: string): boolean {
-    return THEMATIC_BREAK_LINE_REGEX.test(line);
-}
-
 function clearStructuralLineFormatting(line: string, store: PlaceholderStore): string {
     // Lezer removes complete structural markers first. This line pass keeps selected fragments and parser-missed
     // alert/reference/footnote lines compatible with the previous command behavior.
@@ -506,9 +510,6 @@ function clearStructuralLineFormatting(line: string, store: PlaceholderStore): s
     }
 
     let updatedLine = line.replace(BLOCKQUOTE_PREFIX_REGEX, '').replace(HEADING_PREFIX_REGEX, '');
-    if (isThematicBreakLine(updatedLine)) {
-        return updatedLine;
-    }
     let strippedListSyntax = false;
 
     while (true) {
@@ -579,7 +580,6 @@ export function clearMarkdownFormattingSelectionText(text: string): string {
     updatedText = updatedText
         .split('\n')
         .map((line) => clearStructuralLineFormatting(line, store))
-        .map((line) => (isThematicBreakLine(line) ? store.create(line) : line))
         .join('\n');
 
     for (let pass = 0; pass < MAX_CLEARING_PASSES; pass += 1) {

@@ -1,5 +1,7 @@
 import type { SelectionRange } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
+import type { SyntaxNode, SyntaxNodeRef } from '@lezer/common';
+import { GFM, parser, Subscript, Superscript } from '@lezer/markdown';
 
 import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine } from '../alerts/alertParsing';
 import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
@@ -10,6 +12,10 @@ type TextChange = {
     insert: string;
 };
 
+type FormattingEdit = TextChange & {
+    priority: number;
+};
+
 type PlaceholderStore = {
     create: (value: string) => string;
     restore: (text: string) => string;
@@ -18,8 +24,6 @@ type PlaceholderStore = {
 const PLACEHOLDER_SENTINEL = '\u0000';
 const PLACEHOLDER_LABEL = 'MDCLR';
 const JOPLIN_RESOURCE_ID_REGEX = /^:\/[0-9a-f]{32}$/i;
-const FENCED_CODE_BLOCK_REGEX = /(^|\n)([ \t]*)(```|~~~)[^\n]*\n([\s\S]*?)\n\2\3[ \t]*(?=\n|$)/g;
-const INLINE_CODE_REGEX = /`([^`\n]+)`/g;
 const HTML_IMAGE_REGEX = /<img\b[^>]*\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>/gi;
 const REFERENCE_LINK_DEFINITION_REGEX = /^\s*\[(?!\^)[^\]]+\]:\s*(.+?)\s*$/;
 const FOOTNOTE_DEFINITION_REGEX = /^\s*\[\^([^\]]+)\]:?\s*(.*)$/;
@@ -34,6 +38,13 @@ const REFERENCE_LINK_REGEX = /\[([^\]]+)\]\[[^\]]+\]/g;
 const FOOTNOTE_REFERENCE_REGEX = /\[\^([^\]]+)\]/g;
 const HTML_FORMATTING_TAGS = ['sup', 'sub', 'u', 's', 'strong', 'b', 'em', 'i', 'mark', 'del', 'strike', 'ins', 'span'];
 const MAX_CLEARING_PASSES = 10;
+const MARKDOWN_PARSER = parser.configure([GFM, Superscript, Subscript]);
+const SEMANTIC_EDIT_PRIORITY = 100;
+const STRUCTURAL_MARK_EDIT_PRIORITY = 20;
+const INLINE_MARK_EDIT_PRIORITY = 10;
+const INLINE_MARK_NODE_NAMES = new Set(['EmphasisMark', 'StrikethroughMark', 'SuperscriptMark', 'SubscriptMark']);
+const STRUCTURAL_MARK_NODE_NAMES = new Set(['QuoteMark', 'HeaderMark', 'ListMark', 'TaskMarker']);
+const SEMANTIC_NODE_NAMES = new Set(['FencedCode', 'InlineCode', 'LinkReference', 'Link', 'Image']);
 
 function escapeRegex(text: string): string {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -72,44 +83,310 @@ function isResourceLinkTarget(target: string): boolean {
     return JOPLIN_RESOURCE_ID_REGEX.test(target.trim());
 }
 
-function findClosingParenthesis(text: string, openParenIndex: number): number {
-    let depth = 0;
-    let quoteChar: '"' | "'" | null = null;
+function getNodeText(text: string, node: SyntaxNode | SyntaxNodeRef): string {
+    return text.slice(node.from, node.to);
+}
 
-    for (let index = openParenIndex; index < text.length; index += 1) {
-        const char = text[index];
-
-        if (char === '\\') {
-            index += 1;
-            continue;
-        }
-
-        if (quoteChar) {
-            if (char === quoteChar) {
-                quoteChar = null;
-            }
-            continue;
-        }
-
-        if (char === '"' || char === "'") {
-            quoteChar = char;
-            continue;
-        }
-
-        if (char === '(') {
-            depth += 1;
-            continue;
-        }
-
-        if (char === ')') {
-            depth -= 1;
-            if (depth === 0) {
-                return index;
-            }
-        }
+function findChildNode(node: SyntaxNode, name: string): SyntaxNode | null {
+    const cursor = node.cursor();
+    if (!cursor.firstChild()) {
+        return null;
     }
 
-    return -1;
+    do {
+        if (cursor.name === name) {
+            return cursor.node;
+        }
+    } while (cursor.nextSibling());
+
+    return null;
+}
+
+function findChildNodes(node: SyntaxNode, name: string): SyntaxNode[] {
+    const nodes: SyntaxNode[] = [];
+    const cursor = node.cursor();
+    if (!cursor.firstChild()) {
+        return nodes;
+    }
+
+    do {
+        if (cursor.name === name) {
+            nodes.push(cursor.node);
+        }
+    } while (cursor.nextSibling());
+
+    return nodes;
+}
+
+function expandRangeRightOverInlineWhitespace(text: string, from: number, to: number): { from: number; to: number } {
+    let expandedTo = to;
+    while (expandedTo < text.length && text[expandedTo] !== '\n' && /[ \t]/.test(text[expandedTo])) {
+        expandedTo += 1;
+    }
+
+    return { from, to: expandedTo };
+}
+
+function expandLinePrefixRange(text: string, markerFrom: number, markerTo: number): { from: number; to: number } {
+    const lineStart = text.lastIndexOf('\n', markerFrom - 1) + 1;
+    return expandRangeRightOverInlineWhitespace(text, lineStart, markerTo);
+}
+
+function parseBracketLabel(labelSource: string): string | null {
+    if (!labelSource.startsWith('[') || !labelSource.endsWith(']')) {
+        return null;
+    }
+
+    return labelSource.slice(1, -1);
+}
+
+function parseReferenceStyleLinkLabel(source: string): string | null {
+    if (!source.startsWith('[')) {
+        return null;
+    }
+
+    const labelEnd = source.indexOf(']');
+    if (labelEnd === -1) {
+        return null;
+    }
+
+    return source.slice(1, labelEnd);
+}
+
+function parseReferenceStyleImageReplacement(source: string): string | null {
+    if (!source.startsWith('![')) {
+        return null;
+    }
+
+    const altEnd = source.indexOf(']');
+    if (altEnd === -1 || source[altEnd + 1] !== '[' || !source.endsWith(']')) {
+        return null;
+    }
+
+    const altText = source.slice(2, altEnd).trim();
+    const target = source.slice(altEnd + 2, -1).trim();
+    return [altText, target].filter(Boolean).join(' ');
+}
+
+function isPlainAlertMarkerSource(source: string): boolean {
+    return PLAIN_ALERT_TITLE_LINE_REGEX.test(source);
+}
+
+function isDefinitionLabelLink(text: string, node: SyntaxNode): boolean {
+    return text[node.to] === ':';
+}
+
+function getCodeNodeContent(text: string, node: SyntaxNode): string {
+    const codeTextNode = findChildNode(node, 'CodeText');
+    if (codeTextNode) {
+        return getNodeText(text, codeTextNode);
+    }
+
+    const codeMarks = findChildNodes(node, 'CodeMark');
+    if (codeMarks.length >= 2) {
+        const firstCodeMark = codeMarks[0];
+        const lastCodeMark = codeMarks[codeMarks.length - 1];
+        return text.slice(firstCodeMark.to, lastCodeMark.from);
+    }
+
+    return getNodeText(text, node);
+}
+
+function getDirectUrlDestination(text: string, node: SyntaxNode): string | null {
+    const urlNode = findChildNode(node, 'URL');
+    if (!urlNode) {
+        return null;
+    }
+
+    return getNodeText(text, urlNode).trim();
+}
+
+function createLinkOrImageEdit(text: string, node: SyntaxNode, store: PlaceholderStore): FormattingEdit | null {
+    const source = getNodeText(text, node);
+    if (isPlainAlertMarkerSource(source)) {
+        return null;
+    }
+
+    const directDestination = getDirectUrlDestination(text, node);
+    if (directDestination) {
+        return {
+            from: node.from,
+            to: node.to,
+            insert: store.create(isResourceLinkTarget(directDestination) ? source : directDestination),
+            priority: SEMANTIC_EDIT_PRIORITY,
+        };
+    }
+
+    if (node.name === 'Link' && isDefinitionLabelLink(text, node)) {
+        return null;
+    }
+
+    if (node.name === 'Image') {
+        const imageReplacement = parseReferenceStyleImageReplacement(source);
+        if (imageReplacement === null) {
+            return null;
+        }
+
+        return {
+            from: node.from,
+            to: node.to,
+            insert: imageReplacement,
+            priority: SEMANTIC_EDIT_PRIORITY,
+        };
+    }
+
+    const label = parseReferenceStyleLinkLabel(source);
+    if (label === null) {
+        return null;
+    }
+
+    return {
+        from: node.from,
+        to: node.to,
+        insert: label.startsWith('^') ? label.slice(1) : label,
+        priority: SEMANTIC_EDIT_PRIORITY,
+    };
+}
+
+function createLinkReferenceEdit(text: string, node: SyntaxNode, store: PlaceholderStore): FormattingEdit | null {
+    const labelNode = findChildNode(node, 'LinkLabel');
+    const destination = getDirectUrlDestination(text, node);
+    const label = labelNode ? parseBracketLabel(getNodeText(text, labelNode)) : null;
+
+    if (label?.startsWith('^')) {
+        return {
+            from: node.from,
+            to: node.to,
+            insert: destination && destination.length > 0 ? destination : label.slice(1),
+            priority: SEMANTIC_EDIT_PRIORITY,
+        };
+    }
+
+    if (!destination || isResourceLinkTarget(destination)) {
+        return null;
+    }
+
+    return {
+        from: node.from,
+        to: node.to,
+        insert: store.create(destination),
+        priority: SEMANTIC_EDIT_PRIORITY,
+    };
+}
+
+function createSemanticNodeEdit(text: string, node: SyntaxNode, store: PlaceholderStore): FormattingEdit | null {
+    if (node.name === 'FencedCode' || node.name === 'InlineCode') {
+        return {
+            from: node.from,
+            to: node.to,
+            insert: store.create(getCodeNodeContent(text, node)),
+            priority: SEMANTIC_EDIT_PRIORITY,
+        };
+    }
+
+    if (node.name === 'LinkReference') {
+        return createLinkReferenceEdit(text, node, store);
+    }
+
+    if (node.name === 'Link' || node.name === 'Image') {
+        return createLinkOrImageEdit(text, node, store);
+    }
+
+    return null;
+}
+
+function createMarkNodeEdit(text: string, node: SyntaxNodeRef): FormattingEdit | null {
+    if (INLINE_MARK_NODE_NAMES.has(node.name)) {
+        return {
+            from: node.from,
+            to: node.to,
+            insert: '',
+            priority: INLINE_MARK_EDIT_PRIORITY,
+        };
+    }
+
+    if (!STRUCTURAL_MARK_NODE_NAMES.has(node.name)) {
+        return null;
+    }
+
+    const range =
+        node.name === 'QuoteMark' || node.name === 'ListMark'
+            ? expandLinePrefixRange(text, node.from, node.to)
+            : expandRangeRightOverInlineWhitespace(text, node.from, node.to);
+
+    return {
+        ...range,
+        insert: '',
+        priority: STRUCTURAL_MARK_EDIT_PRIORITY,
+    };
+}
+
+function rangesOverlap(first: TextChange, second: TextChange): boolean {
+    return first.from < second.to && second.from < first.to;
+}
+
+function selectNonOverlappingEdits(edits: FormattingEdit[]): TextChange[] {
+    const selected: FormattingEdit[] = [];
+    const sortedEdits = [...edits].sort((a, b) => {
+        if (b.priority !== a.priority) {
+            return b.priority - a.priority;
+        }
+
+        const lengthDifference = b.to - b.from - (a.to - a.from);
+        if (lengthDifference !== 0) {
+            return lengthDifference;
+        }
+
+        return a.from - b.from;
+    });
+
+    for (const edit of sortedEdits) {
+        if (edit.from === edit.to && edit.insert.length === 0) {
+            continue;
+        }
+
+        if (selected.some((selectedEdit) => rangesOverlap(edit, selectedEdit))) {
+            continue;
+        }
+
+        selected.push(edit);
+    }
+
+    return selected.sort((a, b) => b.from - a.from);
+}
+
+function applyTextEdits(text: string, edits: TextChange[]): string {
+    let updatedText = text;
+
+    for (const edit of edits) {
+        updatedText = `${updatedText.slice(0, edit.from)}${edit.insert}${updatedText.slice(edit.to)}`;
+    }
+
+    return updatedText;
+}
+
+function applyLezerFormattingEdits(text: string, store: PlaceholderStore): string {
+    const tree = MARKDOWN_PARSER.parse(text);
+    const edits: FormattingEdit[] = [];
+
+    tree.iterate({
+        enter: (node: SyntaxNodeRef) => {
+            if (SEMANTIC_NODE_NAMES.has(node.name)) {
+                const edit = createSemanticNodeEdit(text, node.node, store);
+                if (edit) {
+                    edits.push(edit);
+                }
+                return false;
+            }
+
+            const markEdit = createMarkNodeEdit(text, node);
+            if (markEdit) {
+                edits.push(markEdit);
+            }
+        },
+    });
+
+    return applyTextEdits(text, selectNonOverlappingEdits(edits));
 }
 
 function extractLinkDestination(rawDestination: string): string | null {
@@ -154,63 +431,6 @@ function extractLinkDestination(rawDestination: string): string | null {
     return trimmed;
 }
 
-function replaceFencedCodeBlocks(text: string, store: PlaceholderStore): string {
-    return text.replace(
-        FENCED_CODE_BLOCK_REGEX,
-        (_match, leadingBreak: string, _indent: string, _fence: string, content: string) =>
-            `${leadingBreak}${store.create(content)}`
-    );
-}
-
-function replaceInlineCode(text: string, store: PlaceholderStore): string {
-    return text.replace(INLINE_CODE_REGEX, (_match, content: string) => store.create(content));
-}
-
-function replaceMarkdownLinksAndImages(text: string, store: PlaceholderStore): string {
-    let result = '';
-    let index = 0;
-
-    while (index < text.length) {
-        const startsImage = text[index] === '!' && text[index + 1] === '[';
-        const startsLink = text[index] === '[';
-
-        if (!startsImage && !startsLink) {
-            result += text[index];
-            index += 1;
-            continue;
-        }
-
-        const labelStart = startsImage ? index + 1 : index;
-        const labelEnd = text.indexOf(']', labelStart + 1);
-        if (labelEnd === -1 || text[labelEnd + 1] !== '(') {
-            result += text[index];
-            index += 1;
-            continue;
-        }
-
-        const closingParenIndex = findClosingParenthesis(text, labelEnd + 1);
-        if (closingParenIndex === -1) {
-            result += text[index];
-            index += 1;
-            continue;
-        }
-
-        const fullMatch = text.slice(index, closingParenIndex + 1);
-        const destination = extractLinkDestination(text.slice(labelEnd + 2, closingParenIndex));
-
-        if (!destination) {
-            result += text[index];
-            index += 1;
-            continue;
-        }
-
-        result += isResourceLinkTarget(destination) ? store.create(fullMatch) : store.create(destination);
-        index = closingParenIndex + 1;
-    }
-
-    return result;
-}
-
 function replaceHtmlImages(text: string, store: PlaceholderStore): string {
     return text.replace(
         HTML_IMAGE_REGEX,
@@ -244,11 +464,7 @@ function replaceReferenceStyleImages(text: string): string {
         const trimmedAltText = altText.trim();
         const trimmedTarget = target.trim();
 
-        if (isResourceLinkTarget(trimmedTarget)) {
-            return trimmedAltText.length > 0 ? `${trimmedAltText} ${trimmedTarget}` : trimmedTarget;
-        }
-
-        return trimmedAltText.length > 0 ? `${trimmedAltText} ${trimmedTarget}` : trimmedTarget;
+        return [trimmedAltText, trimmedTarget].filter(Boolean).join(' ');
     });
 }
 
@@ -316,6 +532,8 @@ function stripPairedHtmlFormattingTags(text: string): string {
 }
 
 function stripMarkdownInlineFormatting(text: string): string {
+    // Lezer handles valid reference-style links/images and footnotes first. These regexes remain as a fallback for
+    // selected fragments or malformed-but-obvious syntax that the parser leaves as plain text.
     return replaceReferenceStyleImages(text)
         .replace(REFERENCE_LINK_REGEX, '$1')
         .replace(FOOTNOTE_REFERENCE_REGEX, '$1')
@@ -350,9 +568,7 @@ function createExplicitSelection(range: SelectionRange, updatedTextLength: numbe
 
 export function clearMarkdownFormattingSelectionText(text: string): string {
     const store = createPlaceholderStore(text);
-    let updatedText = replaceFencedCodeBlocks(text, store);
-    updatedText = replaceInlineCode(updatedText, store);
-    updatedText = replaceMarkdownLinksAndImages(updatedText, store);
+    let updatedText = applyLezerFormattingEdits(text, store);
     updatedText = replaceHtmlImages(updatedText, store);
     updatedText = updatedText
         .split('\n')

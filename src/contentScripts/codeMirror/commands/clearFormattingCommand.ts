@@ -132,7 +132,7 @@ function expandLinePrefixRange(text: string, markerFrom: number, markerTo: numbe
     return expandRangeRightOverInlineWhitespace(text, lineStart, markerTo);
 }
 
-function parseBracketLabel(labelSource: string): string | null {
+function parseCompleteBracketLabel(labelSource: string): string | null {
     if (!labelSource.startsWith('[') || !labelSource.endsWith(']')) {
         return null;
     }
@@ -140,7 +140,7 @@ function parseBracketLabel(labelSource: string): string | null {
     return labelSource.slice(1, -1);
 }
 
-function parseReferenceStyleLinkLabel(source: string): string | null {
+function parseLeadingReferenceLinkLabel(source: string): string | null {
     if (!source.startsWith('[')) {
         return null;
     }
@@ -176,12 +176,12 @@ function isDefinitionLabelLink(text: string, node: SyntaxNode): boolean {
     return text[node.to] === ':';
 }
 
-function getCodeNodeContent(text: string, node: SyntaxNode): string {
+function getFencedCodeContent(text: string, node: SyntaxNode): string {
     const codeTextNode = findChildNode(node, 'CodeText');
-    if (codeTextNode) {
-        return getNodeText(text, codeTextNode);
-    }
+    return codeTextNode ? getNodeText(text, codeTextNode) : getNodeText(text, node);
+}
 
+function getInlineCodeContent(text: string, node: SyntaxNode): string {
     const codeMarks = findChildNodes(node, 'CodeMark');
     if (codeMarks.length >= 2) {
         const firstCodeMark = codeMarks[0];
@@ -235,7 +235,7 @@ function createLinkOrImageEdit(text: string, node: SyntaxNode, store: Placeholde
         };
     }
 
-    const label = parseReferenceStyleLinkLabel(source);
+    const label = parseLeadingReferenceLinkLabel(source);
     if (label === null) {
         return null;
     }
@@ -251,7 +251,7 @@ function createLinkOrImageEdit(text: string, node: SyntaxNode, store: Placeholde
 function createLinkReferenceEdit(text: string, node: SyntaxNode, store: PlaceholderStore): FormattingEdit | null {
     const labelNode = findChildNode(node, 'LinkLabel');
     const destination = getDirectUrlDestination(text, node);
-    const label = labelNode ? parseBracketLabel(getNodeText(text, labelNode)) : null;
+    const label = labelNode ? parseCompleteBracketLabel(getNodeText(text, labelNode)) : null;
 
     if (label?.startsWith('^')) {
         return {
@@ -275,11 +275,20 @@ function createLinkReferenceEdit(text: string, node: SyntaxNode, store: Placehol
 }
 
 function createSemanticNodeEdit(text: string, node: SyntaxNode, store: PlaceholderStore): FormattingEdit | null {
-    if (node.name === 'FencedCode' || node.name === 'InlineCode') {
+    if (node.name === 'FencedCode') {
         return {
             from: node.from,
             to: node.to,
-            insert: store.create(getCodeNodeContent(text, node)),
+            insert: store.create(getFencedCodeContent(text, node)),
+            priority: SEMANTIC_EDIT_PRIORITY,
+        };
+    }
+
+    if (node.name === 'InlineCode') {
+        return {
+            from: node.from,
+            to: node.to,
+            insert: store.create(getInlineCodeContent(text, node)),
             priority: SEMANTIC_EDIT_PRIORITY,
         };
     }
@@ -358,6 +367,7 @@ function selectNonOverlappingEdits(edits: FormattingEdit[]): TextChange[] {
 function applyTextEdits(text: string, edits: TextChange[]): string {
     let updatedText = text;
 
+    // Edits are pre-sorted right-to-left so each range still refers to offsets in the original text.
     for (const edit of edits) {
         updatedText = `${updatedText.slice(0, edit.from)}${edit.insert}${updatedText.slice(edit.to)}`;
     }
@@ -532,8 +542,8 @@ function stripPairedHtmlFormattingTags(text: string): string {
 }
 
 function stripMarkdownInlineFormatting(text: string): string {
-    // Lezer handles valid reference-style links/images and footnotes first. These regexes remain as a fallback for
-    // selected fragments or malformed-but-obvious syntax that the parser leaves as plain text.
+    // Lezer handles complete reference-style links/images and footnotes first. These regexes remain as fallbacks for
+    // partial selections like "See [label][id]" without its definition, or malformed-but-obvious bracket syntax.
     return replaceReferenceStyleImages(text)
         .replace(REFERENCE_LINK_REGEX, '$1')
         .replace(FOOTNOTE_REFERENCE_REGEX, '$1')

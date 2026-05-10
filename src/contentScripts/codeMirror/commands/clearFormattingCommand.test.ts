@@ -80,6 +80,16 @@ describe('clearMarkdownFormattingSelectionText', () => {
         expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
     });
 
+    test('clears markdown syntax from footnote definition bodies', () => {
+        const input = [
+            '[^1]: [link](https://example.com/footnote)',
+            '[^2]: ![alt](https://example.com/image.png)',
+        ].join('\n');
+        const expected = ['https://example.com/footnote', 'https://example.com/image.png'].join('\n');
+
+        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
+    });
+
     test('preserves table structure while clearing inline cell formatting', () => {
         const input = ['| **Name** | [Site](https://example.com/a_(b)) |', '| --- | --- |', '| `**Literal**` | ~~Done~~ |'].join(
             '\n'

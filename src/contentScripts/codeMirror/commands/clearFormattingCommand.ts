@@ -256,12 +256,7 @@ function createLinkReferenceEdit(text: string, node: SyntaxNode, store: Placehol
     const label = labelNode ? parseCompleteBracketLabel(getNodeText(text, labelNode)) : null;
 
     if (label?.startsWith('^')) {
-        return {
-            from: node.from,
-            to: node.to,
-            insert: destination && destination.length > 0 ? destination : label.slice(1),
-            priority: SEMANTIC_EDIT_PRIORITY,
-        };
+        return null;
     }
 
     if (!destination || isResourceLinkTarget(destination)) {
@@ -501,7 +496,8 @@ function clearStructuralLineFormatting(line: string, store: PlaceholderStore): s
 
     const footnoteDefinitionMatch = FOOTNOTE_DEFINITION_REGEX.exec(line);
     if (footnoteDefinitionMatch) {
-        return footnoteDefinitionMatch[2].length > 0 ? footnoteDefinitionMatch[2] : footnoteDefinitionMatch[1];
+        const body = footnoteDefinitionMatch[2];
+        return body.length > 0 ? applyLezerFormattingEdits(body, store) : footnoteDefinitionMatch[1];
     }
 
     const clearedAlertTitleLine = clearAlertTitleLine(line);

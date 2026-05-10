@@ -267,6 +267,9 @@ export function mapOffsetAfterUnwrapping(
     segments: WrappedSegment[],
     format: InlineFormatDefinition
 ): number {
+    // This mirrors delimiter-only deletions inside a single expanded replacement.
+    // The shared ChangeSet mapping only sees that replacement's outer range, so it
+    // cannot preserve offsets inside the unwrapped content without this local mapping.
     let removedLength = 0;
 
     for (const segment of segments) {

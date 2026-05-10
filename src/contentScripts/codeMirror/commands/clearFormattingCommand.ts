@@ -25,6 +25,7 @@ const PLACEHOLDER_SENTINEL = '\u0000';
 const PLACEHOLDER_LABEL = 'MDCLR';
 const JOPLIN_RESOURCE_ID_REGEX = /^:\/[0-9a-f]{32}$/i;
 const HTML_IMAGE_REGEX = /<img\b[^>]*\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>/gi;
+const URL_SCHEME_REGEX = /^[a-z][a-z0-9+.-]*:/i;
 const REFERENCE_LINK_DEFINITION_REGEX = /^\s*\[(?!\^)[^\]]+\]:\s*(.+?)\s*$/;
 const FOOTNOTE_DEFINITION_REGEX = /^\s*\[\^([^\]]+)\]:?\s*(.*)$/;
 const BLOCKQUOTE_PREFIX_REGEX = /^\s*(?:>\s*)+/;
@@ -80,6 +81,10 @@ function createPlaceholderStore(sourceText: string): PlaceholderStore {
 
 function isResourceLinkTarget(target: string): boolean {
     return JOPLIN_RESOURCE_ID_REGEX.test(target.trim());
+}
+
+function isUrlLikeText(text: string): boolean {
+    return URL_SCHEME_REGEX.test(text.trim());
 }
 
 function getNodeText(text: string, node: SyntaxNode | SyntaxNodeRef): string {
@@ -234,15 +239,6 @@ function createReferenceStyleLinkOrImageEdit(text: string, node: SyntaxNode): Fo
         return footnoteReferenceEdit;
     }
 
-    if (node.name === 'Image') {
-        return {
-            from: node.from,
-            to: node.to,
-            insert: label,
-            priority: SEMANTIC_EDIT_PRIORITY,
-        };
-    }
-
     return {
         from: node.from,
         to: node.to,
@@ -261,10 +257,17 @@ function createLinkReferenceEdit(text: string, node: SyntaxNode, store: Placehol
     const label = labelNode ? parseCompleteBracketLabel(getNodeText(text, labelNode)) : null;
 
     if (label?.startsWith('^')) {
+        const replacement =
+            destination && destination.length > 0
+                ? isUrlLikeText(destination)
+                    ? store.create(destination)
+                    : applyLezerFormattingEdits(destination, store)
+                : label.slice(1);
+
         return {
             from: node.from,
             to: node.to,
-            insert: destination && destination.length > 0 ? applyLezerFormattingEdits(destination, store) : label.slice(1),
+            insert: replacement,
             priority: SEMANTIC_EDIT_PRIORITY,
         };
     }

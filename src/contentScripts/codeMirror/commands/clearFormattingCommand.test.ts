@@ -90,6 +90,13 @@ describe('clearMarkdownFormattingSelectionText', () => {
         expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
     });
 
+    test('preserves markdown-like text in footnote definition URLs', () => {
+        const input = '[^1]: https://example.com/++foo++';
+        const expected = 'https://example.com/++foo++';
+
+        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
+    });
+
     test('preserves table structure while clearing inline cell formatting', () => {
         const input = ['| **Name** | [Site](https://example.com/a_(b)) |', '| --- | --- |', '| `**Literal**` | ~~Done~~ |'].join(
             '\n'

@@ -45,7 +45,7 @@ describe('clearMarkdownFormattingSelectionText', () => {
         const input = [
             '[Joplin Cloud](https://joplinapp.org/plans/)',
             '![External](https://example.com/image.png)',
-            '![Alt][https://examples.com/image.png]',
+            '![Alt][external-image]',
             `![Resource](${RESOURCE_ID})`,
             '<img src="https://example.com/external.png" alt="External">',
             `<img src="${RESOURCE_ID}" alt="Resource">`,
@@ -53,7 +53,7 @@ describe('clearMarkdownFormattingSelectionText', () => {
         const expected = [
             'https://joplinapp.org/plans/',
             'https://example.com/image.png',
-            'Alt https://examples.com/image.png',
+            'Alt',
             `![Resource](${RESOURCE_ID})`,
             'https://example.com/external.png',
             `<img src="${RESOURCE_ID}" alt="Resource">`,
@@ -75,7 +75,7 @@ describe('clearMarkdownFormattingSelectionText', () => {
             '[^1]: Footnote1',
             '[UpPeR]: https://example.com/reference',
         ].join('\n');
-        const expected = ['Link to Case Test and ref 1', 'Footnote1', 'https://example.com/reference'].join('\n');
+        const expected = ['Link to Case Test and ref', 'Footnote1', 'https://example.com/reference'].join('\n');
 
         expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
     });

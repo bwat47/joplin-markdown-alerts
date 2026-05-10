@@ -34,7 +34,7 @@ const TASK_LIST_MARKER_REGEX = /^\[(?: |x|X)\]\s+/;
 const PLAIN_ALERT_TITLE_LINE_REGEX = new RegExp(`^\\s*\\[!(${GITHUB_ALERT_TYPES.join('|')})\\](?:[ \\t]+(.*))?$`, 'i');
 const REFERENCE_STYLE_IMAGE_REGEX = /!\[([^\]]*)\]\[([^\]]+)\]/g;
 const REFERENCE_LINK_REGEX = /\[([^\]]+)\]\[[^\]]+\]/g;
-const FOOTNOTE_REFERENCE_REGEX = /\[\^([^\]]+)\]/g;
+const FOOTNOTE_REFERENCE_REGEX = /[ \t]?\[\^[^\]]+\]/g;
 const HTML_FORMATTING_TAGS = ['sup', 'sub', 'u', 's', 'strong', 'b', 'em', 'i', 'mark', 'del', 'strike', 'ins', 'span'];
 const MAX_CLEARING_PASSES = 10;
 const MARKDOWN_PARSER = parser.configure([GFM, Superscript, Subscript]);
@@ -163,8 +163,7 @@ function parseReferenceStyleImageReplacement(source: string): string | null {
     }
 
     const altText = source.slice(2, altEnd).trim();
-    const target = source.slice(altEnd + 2, -1).trim();
-    return [altText, target].filter(Boolean).join(' ');
+    return altText;
 }
 
 function isPlainAlertMarkerSource(source: string): boolean {
@@ -241,10 +240,14 @@ function createLinkOrImageEdit(text: string, node: SyntaxNode, store: Placeholde
         return null;
     }
 
+    const isFootnoteReference = label.startsWith('^');
+    const editFrom =
+        isFootnoteReference && node.from > 0 && /[ \t]/.test(text[node.from - 1]) ? node.from - 1 : node.from;
+
     return {
-        from: node.from,
+        from: editFrom,
         to: node.to,
-        insert: label.startsWith('^') ? label.slice(1) : label,
+        insert: isFootnoteReference ? '' : label,
         priority: SEMANTIC_EDIT_PRIORITY,
     };
 }
@@ -477,12 +480,7 @@ function clearAlertTitleLine(line: string): string | null {
 function replaceReferenceStyleImages(text: string): string {
     // Complete reference-style images are handled from Lezer Image nodes first; this catches partial selections or
     // malformed-but-obvious fragments that remain as text.
-    return text.replace(REFERENCE_STYLE_IMAGE_REGEX, (_match, altText: string, target: string) => {
-        const trimmedAltText = altText.trim();
-        const trimmedTarget = target.trim();
-
-        return [trimmedAltText, trimmedTarget].filter(Boolean).join(' ');
-    });
+    return text.replace(REFERENCE_STYLE_IMAGE_REGEX, (_match, altText: string) => altText.trim());
 }
 
 function clearStructuralLineFormatting(line: string, store: PlaceholderStore): string {
@@ -550,7 +548,7 @@ function stripMarkdownInlineFormatting(text: string): string {
     // plugin-only inline formats that the parser does not recognize.
     return replaceReferenceStyleImages(text)
         .replace(REFERENCE_LINK_REGEX, '$1')
-        .replace(FOOTNOTE_REFERENCE_REGEX, '$1')
+        .replace(FOOTNOTE_REFERENCE_REGEX, '')
         .replace(/==(?=\S)([^\n]*?\S)==/g, '$1')
         .replace(/\+\+(?=\S)([^\n]*?\S)\+\+/g, '$1');
 }

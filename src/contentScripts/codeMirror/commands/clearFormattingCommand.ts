@@ -139,44 +139,13 @@ function parseCompleteBracketLabel(labelSource: string): string | null {
     return labelSource.slice(1, -1);
 }
 
-function parseLeadingReferenceLinkLabel(source: string): string | null {
-    if (!source.startsWith('[')) {
-        return null;
-    }
-
-    const labelEnd = source.indexOf(']');
-    if (labelEnd === -1) {
-        return null;
-    }
-
-    return source.slice(1, labelEnd);
-}
-
-function parseReferenceStyleImageReplacement(source: string): string | null {
-    if (!source.startsWith('![')) {
-        return null;
-    }
-
-    const altEnd = source.indexOf(']');
-    if (altEnd === -1 || source[altEnd + 1] !== '[' || !source.endsWith(']')) {
-        return null;
-    }
-
-    const altText = source.slice(2, altEnd).trim();
-    return altText;
-}
-
-function isPlainAlertMarkerSource(source: string): boolean {
-    return PLAIN_ALERT_TITLE_LINE_REGEX.test(source);
-}
-
-function isDefinitionLabelLink(text: string, node: SyntaxNode): boolean {
-    return text[node.to] === ':';
-}
-
 function getFencedCodeContent(text: string, node: SyntaxNode): string {
     const codeTextNode = findChildNode(node, 'CodeText');
-    return codeTextNode ? getNodeText(text, codeTextNode) : getNodeText(text, node);
+    if (!codeTextNode) {
+        return '';
+    }
+
+    return getNodeText(text, codeTextNode);
 }
 
 function getInlineCodeContent(text: string, node: SyntaxNode): string {
@@ -199,57 +168,91 @@ function getDirectUrlDestination(text: string, node: SyntaxNode): string | null 
     return getNodeText(text, urlNode).trim();
 }
 
-function createLinkOrImageEdit(text: string, node: SyntaxNode, store: PlaceholderStore): FormattingEdit | null {
+function getReferenceLabelText(text: string, node: SyntaxNode): string | null {
+    const linkMarks = findChildNodes(node, 'LinkMark');
+    if (linkMarks.length < 2) {
+        return null;
+    }
+
+    return text.slice(linkMarks[0].to, linkMarks[1].from).trim();
+}
+
+function createFootnoteReferenceEdit(text: string, node: SyntaxNode, label: string): FormattingEdit | null {
+    if (!label.startsWith('^')) {
+        return null;
+    }
+
+    const editFrom = node.from > 0 && /[ \t]/.test(text[node.from - 1]) ? node.from - 1 : node.from;
+    return {
+        from: editFrom,
+        to: node.to,
+        insert: '',
+        priority: SEMANTIC_EDIT_PRIORITY,
+    };
+}
+
+function createDirectLinkOrImageEdit(text: string, node: SyntaxNode, store: PlaceholderStore): FormattingEdit | null {
     const source = getNodeText(text, node);
-    if (isPlainAlertMarkerSource(source)) {
+    if (PLAIN_ALERT_TITLE_LINE_REGEX.test(source)) {
         return null;
     }
 
     const directDestination = getDirectUrlDestination(text, node);
-    if (directDestination) {
-        return {
-            from: node.from,
-            to: node.to,
-            insert: store.create(isResourceLinkTarget(directDestination) ? source : directDestination),
-            priority: SEMANTIC_EDIT_PRIORITY,
-        };
-    }
-
-    if (node.name === 'Link' && isDefinitionLabelLink(text, node)) {
+    if (!directDestination) {
         return null;
     }
 
-    if (node.name === 'Image') {
-        const imageReplacement = parseReferenceStyleImageReplacement(source);
-        if (imageReplacement === null) {
-            return null;
-        }
-
-        return {
-            from: node.from,
-            to: node.to,
-            insert: imageReplacement,
-            priority: SEMANTIC_EDIT_PRIORITY,
-        };
+    if (node.name === 'Link' && text[node.to] === ':') {
+        return null;
     }
 
-    // Lezer represents reference-style inline links (`[label][ref]`) as Link nodes with LinkLabel children, not as
-    // LinkReference nodes. LinkReference is used for definition lines (`[ref]: destination`).
-    const label = parseLeadingReferenceLinkLabel(source);
+    return {
+        from: node.from,
+        to: node.to,
+        insert: store.create(isResourceLinkTarget(directDestination) ? source : directDestination),
+        priority: SEMANTIC_EDIT_PRIORITY,
+    };
+}
+
+function createReferenceStyleLinkOrImageEdit(text: string, node: SyntaxNode): FormattingEdit | null {
+    if (node.name === 'Link' && text[node.to] === ':') {
+        return null;
+    }
+
+    const source = getNodeText(text, node);
+    if (PLAIN_ALERT_TITLE_LINE_REGEX.test(source)) {
+        return null;
+    }
+
+    const label = getReferenceLabelText(text, node);
     if (label === null) {
         return null;
     }
 
-    const isFootnoteReference = label.startsWith('^');
-    const editFrom =
-        isFootnoteReference && node.from > 0 && /[ \t]/.test(text[node.from - 1]) ? node.from - 1 : node.from;
+    const footnoteReferenceEdit = createFootnoteReferenceEdit(text, node, label);
+    if (footnoteReferenceEdit) {
+        return footnoteReferenceEdit;
+    }
+
+    if (node.name === 'Image') {
+        return {
+            from: node.from,
+            to: node.to,
+            insert: label,
+            priority: SEMANTIC_EDIT_PRIORITY,
+        };
+    }
 
     return {
-        from: editFrom,
+        from: node.from,
         to: node.to,
-        insert: isFootnoteReference ? '' : label,
+        insert: label,
         priority: SEMANTIC_EDIT_PRIORITY,
     };
+}
+
+function createLinkOrImageEdit(text: string, node: SyntaxNode, store: PlaceholderStore): FormattingEdit | null {
+    return createDirectLinkOrImageEdit(text, node, store) ?? createReferenceStyleLinkOrImageEdit(text, node);
 }
 
 function createLinkReferenceEdit(text: string, node: SyntaxNode, store: PlaceholderStore): FormattingEdit | null {
@@ -258,7 +261,12 @@ function createLinkReferenceEdit(text: string, node: SyntaxNode, store: Placehol
     const label = labelNode ? parseCompleteBracketLabel(getNodeText(text, labelNode)) : null;
 
     if (label?.startsWith('^')) {
-        return null;
+        return {
+            from: node.from,
+            to: node.to,
+            insert: destination && destination.length > 0 ? applyLezerFormattingEdits(destination, store) : label.slice(1),
+            priority: SEMANTIC_EDIT_PRIORITY,
+        };
     }
 
     if (!destination || isResourceLinkTarget(destination)) {
@@ -498,8 +506,7 @@ function clearStructuralLineFormatting(line: string, store: PlaceholderStore): s
 
     const footnoteDefinitionMatch = FOOTNOTE_DEFINITION_REGEX.exec(line);
     if (footnoteDefinitionMatch) {
-        const body = footnoteDefinitionMatch[2];
-        return body.length > 0 ? applyLezerFormattingEdits(body, store) : footnoteDefinitionMatch[1];
+        return footnoteDefinitionMatch[2].length > 0 ? footnoteDefinitionMatch[2] : footnoteDefinitionMatch[1];
     }
 
     const clearedAlertTitleLine = clearAlertTitleLine(line);

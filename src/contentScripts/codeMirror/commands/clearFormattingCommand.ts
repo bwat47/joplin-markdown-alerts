@@ -235,6 +235,8 @@ function createLinkOrImageEdit(text: string, node: SyntaxNode, store: Placeholde
         };
     }
 
+    // Lezer represents reference-style inline links (`[label][ref]`) as Link nodes with LinkLabel children, not as
+    // LinkReference nodes. LinkReference is used for definition lines (`[ref]: destination`).
     const label = parseLeadingReferenceLinkLabel(source);
     if (label === null) {
         return null;
@@ -470,6 +472,8 @@ function clearAlertTitleLine(line: string): string | null {
 }
 
 function replaceReferenceStyleImages(text: string): string {
+    // Complete reference-style images are handled from Lezer Image nodes first; this catches partial selections or
+    // malformed-but-obvious fragments that remain as text.
     return text.replace(REFERENCE_STYLE_IMAGE_REGEX, (_match, altText: string, target: string) => {
         const trimmedAltText = altText.trim();
         const trimmedTarget = target.trim();
@@ -483,6 +487,8 @@ function isThematicBreakLine(line: string): boolean {
 }
 
 function clearStructuralLineFormatting(line: string, store: PlaceholderStore): string {
+    // Lezer removes complete structural markers first. This line pass keeps selected fragments and parser-missed
+    // alert/reference/footnote lines compatible with the previous command behavior.
     const referenceDefinitionMatch = REFERENCE_LINK_DEFINITION_REGEX.exec(line);
     if (referenceDefinitionMatch) {
         const destination = extractLinkDestination(referenceDefinitionMatch[1]);

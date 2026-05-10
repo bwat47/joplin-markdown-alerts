@@ -14,6 +14,12 @@ describe('clearMarkdownFormattingSelectionText', () => {
         expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
     });
 
+    test('leaves incomplete standard markdown delimiters to the parser instead of regex fallbacks', () => {
+        const input = '**Bold and _italic';
+
+        expect(clearMarkdownFormattingSelectionText(input)).toBe(input);
+    });
+
     test('does not rewrite literal text that matches the old printable placeholder format', () => {
         const input = '@@MDCLR0@@ [Link](https://example.com)';
         const expected = '@@MDCLR0@@ https://example.com';
@@ -39,7 +45,7 @@ describe('clearMarkdownFormattingSelectionText', () => {
         const input = [
             '[Joplin Cloud](https://joplinapp.org/plans/)',
             '![External](https://example.com/image.png)',
-            '![Alt][https://examples.com/image.png]',
+            '![Alt][external-image]',
             `![Resource](${RESOURCE_ID})`,
             '<img src="https://example.com/external.png" alt="External">',
             `<img src="${RESOURCE_ID}" alt="Resource">`,
@@ -47,11 +53,18 @@ describe('clearMarkdownFormattingSelectionText', () => {
         const expected = [
             'https://joplinapp.org/plans/',
             'https://example.com/image.png',
-            'Alt https://examples.com/image.png',
+            'Alt',
             `![Resource](${RESOURCE_ID})`,
             'https://example.com/external.png',
             `<img src="${RESOURCE_ID}" alt="Resource">`,
         ].join('\n');
+
+        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
+    });
+
+    test('uses parser destinations for nested formatted links with titles and parentheses', () => {
+        const input = '**[Label](https://example.com/a_(b) "title")**';
+        const expected = 'https://example.com/a_(b)';
 
         expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
     });
@@ -62,7 +75,35 @@ describe('clearMarkdownFormattingSelectionText', () => {
             '[^1]: Footnote1',
             '[UpPeR]: https://example.com/reference',
         ].join('\n');
-        const expected = ['Link to Case Test and ref 1', 'Footnote1', 'https://example.com/reference'].join('\n');
+        const expected = ['Link to Case Test and ref', 'Footnote1', 'https://example.com/reference'].join('\n');
+
+        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
+    });
+
+    test('clears markdown syntax from footnote definition bodies', () => {
+        const input = [
+            '[^1]: [link](https://example.com/footnote)',
+            '[^2]: ![alt](https://example.com/image.png)',
+        ].join('\n');
+        const expected = ['https://example.com/footnote', 'https://example.com/image.png'].join('\n');
+
+        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
+    });
+
+    test('preserves markdown-like text in footnote definition URLs', () => {
+        const input = '[^1]: https://example.com/++foo++';
+        const expected = 'https://example.com/++foo++';
+
+        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
+    });
+
+    test('preserves table structure while clearing inline cell formatting', () => {
+        const input = ['| **Name** | [Site](https://example.com/a_(b)) |', '| --- | --- |', '| `**Literal**` | ~~Done~~ |'].join(
+            '\n'
+        );
+        const expected = ['| Name | https://example.com/a_(b) |', '| --- | --- |', '| **Literal** | Done |'].join(
+            '\n'
+        );
 
         expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
     });
@@ -70,6 +111,15 @@ describe('clearMarkdownFormattingSelectionText', () => {
     test('removes code markers while preserving literal markdown inside code content', () => {
         const input = ['`**bold**`', '```ts', '**literal**', '[link](https://example.com)', '```'].join('\n');
         const expected = ['**bold**', '**literal**', '[link](https://example.com)'].join('\n');
+
+        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
+    });
+
+    test('preserves literal markdown inside inline and fenced code after other cleanup passes', () => {
+        const input = ['`[link](https://example.com) and ~~strike~~`', '~~~', '++under++ and ==mark==', '~~~'].join(
+            '\n'
+        );
+        const expected = ['[link](https://example.com) and ~~strike~~', '++under++ and ==mark=='].join('\n');
 
         expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
     });
@@ -95,9 +145,9 @@ describe('clearMarkdownFormattingSelectionText', () => {
         expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
     });
 
-    test('preserves thematic break lines instead of partially stripping them', () => {
+    test('removes thematic break lines', () => {
         const input = ['***', '* * *', '---', '- - -', '___', '_ _ _', '> ---', '> * * *'].join('\n');
-        const expected = ['***', '* * *', '---', '- - -', '___', '_ _ _', '---', '* * *'].join('\n');
+        const expected = ['', '', '', '', '', '', '', ''].join('\n');
 
         expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
     });
@@ -140,6 +190,24 @@ describe('createClearFormattingCommand', () => {
                     harness.view.state.doc.sliceString(range.from, range.to)
                 )
             ).toEqual(['Bold', 'https://example.com']);
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('preserves reversed selection direction after replacing selected text', () => {
+        const harness = createEditorHarness('**Bold**', { rawInput: true });
+
+        try {
+            harness.view.dispatch({
+                selection: EditorSelection.create([EditorSelection.range(8, 0)]),
+            });
+
+            const command = createClearFormattingCommand(harness.view);
+
+            expect(command()).toBe(true);
+            expect(harness.getText()).toBe('Bold');
+            expect(harness.getSelection()).toEqual({ anchor: 4, head: 0 });
         } finally {
             harness.destroy();
         }

@@ -53,21 +53,21 @@ GitHub alert syntax:
 ### Commands
 
 - `markdownAlerts.insertNoteAlert`: Global command (accessible via menu/shortcut)
--   - Executes `markdownAlerts.insertAlertOrToggle` in the editor (registered by the CM content script) to insert a new alert, toggle alert types on existing alerts, or convert a blockquote to an alert.
--   - When text is selected, it operates on the selection: non-quotes become an alert; quoted selections toggle alert type or get a new marker line.
+    - Executes `markdownAlerts.insertAlertOrToggle` in the editor (registered by the CM content script) to insert a new alert, toggle alert types on existing alerts, or convert a blockquote to an alert.
+    - When text is selected, it operates on the selection: non-quotes become an alert; quoted selections toggle alert type or get a new marker line.
 - `markdownAlerts.insertNoteQuote`: Global command (toolbar + shortcut)
--   - Executes `markdownAlerts.insertQuoteOrToggle` in the editor to quote selected text or remove quote markers when all selected lines are quoted.
+    - Executes `markdownAlerts.insertQuoteOrToggle` in the editor to quote selected text or remove quote markers when all selected lines are quoted.
 - `markdownAlerts.clearMarkdownFormatting`: Global command (menu/command palette)
--   - Executes `markdownAlerts.clearFormatting` in the editor to remove supported markdown formatting from the current non-empty selection ranges.
--   - Uses a regex-first transformer with targeted structural handling for GitHub alert title lines, headings, blockquotes, ordered/unordered/task lists, links/images, reference links, footnotes, HTML formatting tags, and inline/fenced code placeholders.
--   - Preserves Joplin resource markdown links and embeds (`:/<32 hex>`) while extracting external link/image destinations as raw URLs.
--   - Exposes an optional toolbar button controlled by plugin settings; no default shortcut is assigned.
+    - Executes `markdownAlerts.clearFormatting` in the editor to remove supported markdown formatting from the current non-empty selection ranges.
+    - Uses a regex-first transformer with targeted structural handling for GitHub alert title lines, headings, blockquotes, ordered/unordered/task lists, links/images, reference links, footnotes, HTML formatting tags, and inline/fenced code placeholders.
+    - Preserves Joplin resource markdown links and embeds (`:/<32 hex>`) while extracting external link/image destinations as raw URLs.
+    - Exposes an optional toolbar button controlled by plugin settings; no default shortcut is assigned.
 - `markdownAlerts.insertHighlight` / `markdownAlerts.insertStrikethrough` / `markdownAlerts.insertUnderline` / `markdownAlerts.insertSuperscript` / `markdownAlerts.insertSubscript`
-  -   - Execute matching inline-format editor commands registered by the CodeMirror content script.
-  -   - Superscript and subscript resolve to either HTML-tag or markdown-delimiter editor commands based on plugin settings.
-  -   - Empty selection inserts paired delimiters and places the cursor between them.
-  -   - Selected text toggles the target inline delimiter; multiline full-line selections are handled line by line.
-  -   - List-aware multiline formatting preserves blockquote prefixes, list markers, and task checkboxes while formatting only item content, and skips code blocks and markdown tables.
+    - Execute matching inline-format editor commands registered by the CodeMirror content script.
+    - Superscript and subscript resolve to either HTML-tag or markdown-delimiter editor commands based on plugin settings.
+        - Empty selection inserts paired delimiters and places the cursor between them.
+        - Selected text toggles the target inline delimiter; multiline full-line selections are handled line by line.
+        - List-aware multiline formatting preserves blockquote prefixes, list markers, and task checkboxes while formatting only item content, and skips code blocks and markdown tables.
 
 ### Settings
 

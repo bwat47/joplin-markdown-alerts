@@ -1,13 +1,15 @@
 /** @jest-environment jsdom */
-import { autocompletion, completionStatus, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
+import {
+    autocompletion,
+    completionStatus,
+    type CompletionContext,
+    type CompletionResult,
+} from '@codemirror/autocomplete';
 import { Transaction } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 
 import { createEditorHarness } from '../shared/testUtils';
-import {
-    createAlertAutocompleteBackspaceActivationExtension,
-    createAlertCompletionSource,
-} from './alertAutocomplete';
+import { createAlertAutocompleteBackspaceActivationExtension, createAlertCompletionSource } from './alertAutocomplete';
 import { GITHUB_ALERT_TYPES } from './alertParsing';
 
 function makeContext(view: EditorView, pos: number): CompletionContext {

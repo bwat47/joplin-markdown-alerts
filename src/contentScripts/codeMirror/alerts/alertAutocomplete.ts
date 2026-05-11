@@ -104,10 +104,7 @@ const autocompleteBaseTheme = EditorView.baseTheme({
 export function createAlertAutocompleteTheme(isDark: boolean) {
     const colors = isDark ? ALERT_COLORS.dark : ALERT_COLORS.light;
     const iconColorRules = Object.fromEntries(
-        GITHUB_ALERT_TYPES.map((type) => [
-            `.cm-completionIcon-${type}`,
-            { backgroundColor: colors[type].color },
-        ])
+        GITHUB_ALERT_TYPES.map((type) => [`.cm-completionIcon-${type}`, { backgroundColor: colors[type].color }])
     );
     return [autocompleteBaseTheme, EditorView.theme(iconColorRules)];
 }

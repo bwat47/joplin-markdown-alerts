@@ -98,12 +98,12 @@ describe('clearMarkdownFormattingSelectionText', () => {
     });
 
     test('preserves table structure while clearing inline cell formatting', () => {
-        const input = ['| **Name** | [Site](https://example.com/a_(b)) |', '| --- | --- |', '| `**Literal**` | ~~Done~~ |'].join(
-            '\n'
-        );
-        const expected = ['| Name | https://example.com/a_(b) |', '| --- | --- |', '| **Literal** | Done |'].join(
-            '\n'
-        );
+        const input = [
+            '| **Name** | [Site](https://example.com/a_(b)) |',
+            '| --- | --- |',
+            '| `**Literal**` | ~~Done~~ |',
+        ].join('\n');
+        const expected = ['| Name | https://example.com/a_(b) |', '| --- | --- |', '| **Literal** | Done |'].join('\n');
 
         expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
     });

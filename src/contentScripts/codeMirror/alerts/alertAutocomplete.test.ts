@@ -1,9 +1,13 @@
 /** @jest-environment jsdom */
-import type { CompletionContext, CompletionResult } from '@codemirror/autocomplete';
+import { autocompletion, completionStatus, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
+import { Transaction } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 
 import { createEditorHarness } from '../shared/testUtils';
-import { createAlertCompletionSource } from './alertAutocomplete';
+import {
+    createAlertAutocompleteBackspaceActivationExtension,
+    createAlertCompletionSource,
+} from './alertAutocomplete';
 import { GITHUB_ALERT_TYPES } from './alertParsing';
 
 function makeContext(view: EditorView, pos: number): CompletionContext {
@@ -221,5 +225,59 @@ describe('createAlertCompletionSource — apply', () => {
     test('works on a line that is not the first line of the document', () => {
         const { text } = applyCompletion('first line\n>!|', 3); // index 3 = warning
         expect(text).toBe('first line\n> [!WARNING] ');
+    });
+});
+
+describe('createAlertAutocompleteBackspaceActivationExtension', () => {
+    async function waitForScheduledCompletionStart() {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
+    test('restarts completion when backspacing to the shorthand trigger', async () => {
+        const source = createAlertCompletionSource();
+        const harness = createEditorHarness('>!z|', {
+            extensions: [
+                autocompletion({ override: [source], activateOnTyping: false }),
+                createAlertAutocompleteBackspaceActivationExtension(),
+            ],
+        });
+
+        try {
+            harness.view.dispatch({
+                changes: { from: 2, to: 3 },
+                selection: { anchor: 2 },
+                annotations: Transaction.userEvent.of('delete.backward'),
+            });
+
+            await waitForScheduledCompletionStart();
+
+            expect(completionStatus(harness.view.state)).not.toBeNull();
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('restarts completion when backspacing to the full syntax trigger before a closing bracket', async () => {
+        const source = createAlertCompletionSource();
+        const harness = createEditorHarness('> [!z|]', {
+            extensions: [
+                autocompletion({ override: [source], activateOnTyping: false }),
+                createAlertAutocompleteBackspaceActivationExtension(),
+            ],
+        });
+
+        try {
+            harness.view.dispatch({
+                changes: { from: 4, to: 5 },
+                selection: { anchor: 4 },
+                annotations: Transaction.userEvent.of('delete.backward'),
+            });
+
+            await waitForScheduledCompletionStart();
+
+            expect(completionStatus(harness.view.state)).not.toBeNull();
+        } finally {
+            harness.destroy();
+        }
     });
 });

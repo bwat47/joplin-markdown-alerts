@@ -1,5 +1,5 @@
 import { markdown } from '@codemirror/lang-markdown';
-import { EditorState } from '@codemirror/state';
+import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { GFM } from '@lezer/markdown';
 
@@ -18,6 +18,7 @@ type EditorHarness = {
 
 type CreateEditorHarnessOptions = {
     rawInput?: boolean;
+    extensions?: Extension[];
 };
 
 const SELECTION_START = '[[';
@@ -61,7 +62,11 @@ export function createEditorHarness(input: string, options?: CreateEditorHarness
     const state = EditorState.create({
         doc,
         selection,
-        extensions: [markdown({ extensions: [GFM] }), EditorState.allowMultipleSelections.of(true)],
+        extensions: [
+            markdown({ extensions: [GFM] }),
+            EditorState.allowMultipleSelections.of(true),
+            ...(options?.extensions ?? []),
+        ],
     });
     const parent = document.createElement('div');
     const view = new EditorView({ state, parent });

@@ -62,7 +62,13 @@ Example:
 
 ![The full list of rendered alerts in light mode.](./images/screenshot4.png)
 
-## 2. Markdown Editor Commands For Block Structures
+## 2. Codemirror auto-complete for markdown alerts
+
+Typing `>!` or `> [!` will trigger an auto-completion dropdown to finish the alert syntax from the supported alert types.
+
+Backspacing text within existing alert syntax will also trigger the auto-completion dropdown, making it easy to change the type of an existing alert.
+
+## 3. Markdown Editor Commands For Block Structures
 
 The plugin adds toolbar buttons and Edit menu commands for:
 
@@ -105,7 +111,7 @@ Behavior:
 - Converts external markdown links and image embeds to their raw URLs
 - Preserves Joplin resource links and embeds that target `:/<32 hex>`
 
-## 3. Inline Formatting Commands
+## 4. Inline Formatting Commands
 
 Joplin supports various inline Markdown extensions, but the Markdown editor does not provide built-in commands for all of them. This plugin adds commands, toolbar buttons, and Edit menu entries for:
 
@@ -168,9 +174,17 @@ Highlight becomes:
 
 ## Settings
 
-The plugin includes settings to enable or disable each editor toolbar button independently.
+### Auto-completion
 
-It also includes separate syntax settings for the superscript and subscript commands. Both default to inline HTML because Joplin renders that syntax in both the editor and the viewer.
+Enable/Disable alert type autocomplete in the markdown editor (default enabled).
+
+### Syntax
+
+Separate syntax settings for the superscript and subscript commands. Both default to inline HTML because Joplin (v3.6 and newer) renders that syntax in both the editor and the viewer.
+
+### Toolbar buttons
+
+The plugin includes settings to enable or disable each editor toolbar button independently.
 
 Available toolbar visibility settings:
 

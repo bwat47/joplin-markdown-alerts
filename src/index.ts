@@ -8,7 +8,7 @@ import {
     registerInsertNoteAlertCommand,
     registerInsertNoteQuoteCommand,
 } from './joplinCommandRegistration';
-import { registerPluginSettings } from './settings';
+import { isAlertAutocompleteEnabled, registerPluginSettings } from './settings';
 
 joplin.plugins.register({
     onStart: async function () {
@@ -31,5 +31,12 @@ joplin.plugins.register({
             'markdownAlerts.codeMirror',
             './contentScripts/codeMirror/contentScript.js'
         );
+
+        await joplin.contentScripts.onMessage('markdownAlerts.codeMirror', async (message: unknown) => {
+            if ((message as { type?: string })?.type === 'getAutocompleteSetting') {
+                return await isAlertAutocompleteEnabled();
+            }
+            return null;
+        });
     },
 });

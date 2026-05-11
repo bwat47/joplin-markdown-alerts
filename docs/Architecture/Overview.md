@@ -32,6 +32,7 @@ GitHub alert syntax:
 - Implements "clean titles": Replaces `[!TYPE]` marker with an inline widget containing the alert icon and either the alert type name (e.g., "Note", "Tip", "Important", "Warning", "Caution") or a custom title if provided.
 - Theme detection via `EditorView.darkTheme` facet at content script initialization
 - Applies appropriate color theme based on detected theme (passed into the decorations extension)
+- Provides alert autocomplete triggers: typing `>!` or `> [!` at the start of a line shows a dropdown of all alert types; selecting one inserts `> [!TYPE] ` with the cursor after the trailing space
 
 **Files:**
 
@@ -44,6 +45,7 @@ GitHub alert syntax:
 - `src/contentScripts/codeMirror/commands/insertInlineFormatCommand.ts` - Shared editor command logic for inline formatting (selection-aware, multiline list-aware)
 - `src/contentScripts/codeMirror/commands/insertQuoteCommand.ts` - Editor command logic for quoting/toggling selected text
 - `src/contentScripts/codeMirror/commands/clearFormattingCommand.ts` - Editor command logic for removing supported markdown formatting from selections
+- `src/contentScripts/codeMirror/alerts/alertAutocomplete.ts` - CM6 completion source for alert-type dropdown triggers plus its icon theme
 - `src/contentScripts/codeMirror/shared/syntaxTreeUtils.ts` - Shared syntax-tree probing helpers used by CodeMirror commands and decorations
 - `src/contentScripts/codeMirror/shared/commandSelectionUtils.ts` - Shared selection-preserving dispatch helper for CodeMirror commands
 - `src/inlineFormatCommands.ts` - Shared inline-format command metadata plus syntax-specific editor command definitions for configurable inline formats
@@ -76,6 +78,7 @@ GitHub alert syntax:
 - Toolbar visibility settings are read at plugin startup, so changes currently require a plugin restart
 - Superscript and subscript each expose a public syntax setting (`html` or `markdown`), defaulting to `html`
 - Syntax settings are read when the global command executes, so they apply immediately without a plugin restart
+- The `enableAlertAutocomplete` boolean setting (default `true`) controls alert autocomplete for `>!` and `> [!`; it is fetched once via `context.postMessage` when the CodeMirror content script initialises, so changes take effect when the note is reopened
 
 ## Design Principles
 

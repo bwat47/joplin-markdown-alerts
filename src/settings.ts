@@ -15,6 +15,7 @@ export const SHOW_QUOTE_TOOLBAR_BUTTON_SETTING = 'showQuoteToolbarButton';
 export const SHOW_CLEAR_FORMATTING_TOOLBAR_BUTTON_SETTING = 'showClearFormattingToolbarButton';
 export const SUPERSCRIPT_SYNTAX_SETTING = 'superscriptSyntax';
 export const SUBSCRIPT_SYNTAX_SETTING = 'subscriptSyntax';
+export const ENABLE_ALERT_AUTOCOMPLETE_SETTING = 'enableAlertAutocomplete';
 
 const SUPERSCRIPT_SYNTAX_OPTIONS: Record<InlineFormatSyntaxMode, string> = {
     html: 'Inline HTML (<sup>text</sup>)',
@@ -55,6 +56,15 @@ export async function registerPluginSettings(): Promise<void> {
             section: SETTINGS_SECTION,
             label: 'Subscript syntax',
             description: 'Controls whether the subscript command uses inline HTML or markdown extension syntax.',
+        },
+        [ENABLE_ALERT_AUTOCOMPLETE_SETTING]: {
+            value: true,
+            type: SettingItemType.Bool,
+            public: true,
+            section: SETTINGS_SECTION,
+            label: 'Enable alert type autocomplete in editor',
+            description:
+                'When typing >! or > [! at the start of a line, show a dropdown of alert types. Requires reopening the note to take effect.',
         },
         [SHOW_ALERT_TOOLBAR_BUTTON_SETTING]: {
             value: true,
@@ -98,6 +108,10 @@ export async function registerPluginSettings(): Promise<void> {
 
 export async function isToolbarButtonEnabled(settingKey: string): Promise<boolean> {
     return Boolean(await joplin.settings.value(settingKey));
+}
+
+export async function isAlertAutocompleteEnabled(): Promise<boolean> {
+    return Boolean(await joplin.settings.value(ENABLE_ALERT_AUTOCOMPLETE_SETTING));
 }
 
 async function getInlineFormatSyntaxSettingValue(settingKey: string): Promise<InlineFormatSyntaxMode> {

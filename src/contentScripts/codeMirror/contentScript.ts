@@ -1,7 +1,7 @@
 import { EditorView } from '@codemirror/view';
 import type { CodeMirrorControl, ContentScriptContext } from 'api/types';
 
-import { alertAutocompleteTheme, createAlertCompletionSource } from './alerts/alertAutocomplete';
+import { createAlertAutocompleteTheme, createAlertCompletionSource } from './alerts/alertAutocomplete';
 import { createAlertDecorationExtensions } from './alerts/alertDecorations';
 import { createClearFormattingCommand } from './commands/clearFormattingCommand';
 import { createInsertAlertCommand } from './commands/insertAlertCommand';
@@ -54,7 +54,7 @@ export default function (context: ContentScriptContext) {
                 editorControl.addExtension(
                     editorControl.joplinExtensions.completionSource(createAlertCompletionSource())
                 );
-                editorControl.addExtension(alertAutocompleteTheme);
+                editorControl.addExtension(createAlertAutocompleteTheme(isDarkTheme));
             }
         },
     };

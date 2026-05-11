@@ -38,25 +38,7 @@ const iconRules = Object.fromEntries(
     ])
 );
 
-const lightIconColorRules = Object.fromEntries(
-    GITHUB_ALERT_TYPES.map((type) => [
-        `&light .cm-completionIcon-${type}`,
-        {
-            backgroundColor: ALERT_COLORS.light[type].color,
-        },
-    ])
-);
-
-const darkIconColorRules = Object.fromEntries(
-    GITHUB_ALERT_TYPES.map((type) => [
-        `&dark .cm-completionIcon-${type}`,
-        {
-            backgroundColor: ALERT_COLORS.dark[type].color,
-        },
-    ])
-);
-
-export const alertAutocompleteTheme = EditorView.baseTheme({
+const autocompleteBaseTheme = EditorView.baseTheme({
     '.cm-tooltip.cm-tooltip-autocomplete': {
         border: '1px solid rgba(127, 127, 127, 0.3)',
         borderRadius: '4px',
@@ -75,9 +57,18 @@ export const alertAutocompleteTheme = EditorView.baseTheme({
         flexShrink: '0',
     },
     ...iconRules,
-    ...lightIconColorRules,
-    ...darkIconColorRules,
 });
+
+export function createAlertAutocompleteTheme(isDark: boolean) {
+    const colors = isDark ? ALERT_COLORS.dark : ALERT_COLORS.light;
+    const iconColorRules = Object.fromEntries(
+        GITHUB_ALERT_TYPES.map((type) => [
+            `.cm-completionIcon-${type}`,
+            { backgroundColor: colors[type].color },
+        ])
+    );
+    return [autocompleteBaseTheme, EditorView.theme(iconColorRules)];
+}
 
 export function createAlertCompletionSource(): CompletionSource {
     return (context: CompletionContext): CompletionResult | null => {

@@ -31,9 +31,6 @@ export async function registerPluginSettings(): Promise<void> {
     await joplin.settings.registerSection(SETTINGS_SECTION, {
         label: 'Markdown Alerts and Formatting Commands',
         iconName: 'fas fa-sliders-h',
-        description:
-            'Toolbar button visibility settings and superscript/subscript syntax settings. ' +
-            'Toolbar visibility changes require a plugin restart; syntax changes apply to commands immediately.',
     });
 
     await joplin.settings.registerSettings({

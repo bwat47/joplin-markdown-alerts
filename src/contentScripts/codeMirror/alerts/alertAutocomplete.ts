@@ -14,6 +14,7 @@ import { GITHUB_ALERT_TYPES, type GitHubAlertType } from './alertParsing';
 
 /** Matches alert autocomplete triggers, e.g. ">!no" or "> [!no". */
 const AUTOCOMPLETE_TRIGGER_PATTERN = /^(\s*)(>!|> \[!)([a-zA-Z]*)$/;
+const ALERT_TYPE_SORT_TEXT_WIDTH = String(GITHUB_ALERT_TYPES.length).length;
 
 type AlertAutocompleteTriggerMatch = {
     triggerFrom: number;
@@ -104,11 +105,12 @@ export function createAlertCompletionSource(): CompletionSource {
         return {
             from: match.typeFrom,
             to: context.pos,
-            options: GITHUB_ALERT_TYPES.map((type) => {
+            options: GITHUB_ALERT_TYPES.map((type, index) => {
                 const label = type.charAt(0).toUpperCase() + type.slice(1);
                 const insertText = buildAlertInsertText(type);
                 return {
                     label,
+                    sortText: String(index).padStart(ALERT_TYPE_SORT_TEXT_WIDTH, '0'),
                     type,
                     apply: (view, _completion, _applyFrom, applyTo) => {
                         const replaceTo =

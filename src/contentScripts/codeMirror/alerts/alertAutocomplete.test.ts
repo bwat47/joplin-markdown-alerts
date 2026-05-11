@@ -99,6 +99,12 @@ describe('createAlertCompletionSource — result shape', () => {
         });
     });
 
+    test('each option sort text follows the alert toggle order', () => {
+        const result = getCompletions('>!|')!;
+        const sortText = result.options.map((o) => o.sortText);
+        expect(sortText).toEqual(GITHUB_ALERT_TYPES.map((_type, index) => String(index).padStart(2, '0')));
+    });
+
     test('from is positioned right after ">!" (past any leading whitespace)', () => {
         // Input:  "   >!|"  (3 spaces, then >!, cursor at end)
         // Expected from: 3 + 2 = 5 (after the leading spaces and ">!")

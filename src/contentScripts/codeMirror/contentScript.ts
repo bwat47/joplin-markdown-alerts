@@ -3,7 +3,6 @@ import type { CodeMirrorControl, ContentScriptContext } from 'api/types';
 
 import {
     createAlertAutocompleteBackspaceActivationExtension,
-    createAlertAutocompleteTheme,
     createAlertCompletionSource,
 } from './alerts/alertAutocomplete';
 import { createAlertDecorationExtensions } from './alerts/alertDecorations';
@@ -59,8 +58,31 @@ export default function (context: ContentScriptContext) {
                     editorControl.joplinExtensions.completionSource(createAlertCompletionSource())
                 );
                 editorControl.addExtension(createAlertAutocompleteBackspaceActivationExtension());
-                editorControl.addExtension(createAlertAutocompleteTheme(isDarkTheme));
             }
+        },
+
+        assets: function () {
+            let rootElement = document.documentElement;
+            try {
+                const topWindow = window.top;
+                if (topWindow?.document?.documentElement) {
+                    rootElement = topWindow.document.documentElement;
+                }
+            } catch {
+                rootElement = document.documentElement;
+            }
+
+            const appearance = (() => {
+                try {
+                    return getComputedStyle(rootElement).getPropertyValue('--joplin-appearance').trim();
+                } catch {
+                    return '';
+                }
+            })();
+
+            const themeAsset =
+                appearance === 'dark' ? 'alertAutocomplete-dark.css' : 'alertAutocomplete-light.css';
+            return [{ name: themeAsset }];
         },
     };
 }

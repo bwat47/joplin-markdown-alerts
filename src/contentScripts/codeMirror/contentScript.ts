@@ -1,6 +1,7 @@
 import { EditorView } from '@codemirror/view';
-import type { CodeMirrorControl } from 'api/types';
+import type { CodeMirrorControl, ContentScriptContext } from 'api/types';
 
+import { alertAutocompleteTheme, createAlertCompletionSource } from './alerts/alertAutocomplete';
 import { createAlertDecorationExtensions } from './alerts/alertDecorations';
 import { createClearFormattingCommand } from './commands/clearFormattingCommand';
 import { createInsertAlertCommand } from './commands/insertAlertCommand';
@@ -18,9 +19,9 @@ const INSERT_QUOTE_COMMAND = 'markdownAlerts.insertQuoteOrToggle';
  *
  * Registers the alert decorations extension and the editor commands for alerts and blockquotes.
  */
-export default function () {
+export default function (context: ContentScriptContext) {
     return {
-        plugin: function (editorControl: CodeMirrorControl) {
+        plugin: async function (editorControl: CodeMirrorControl) {
             if (!editorControl?.cm6) {
                 logger.warn('CodeMirror 6 not available; skipping markdown alert extensions.');
                 return;
@@ -40,6 +41,20 @@ export default function () {
                     format.editorCommandName,
                     createInsertInlineFormatCommand(editorControl.cm6, format)
                 );
+            }
+
+            let autocompleteEnabled = true;
+            try {
+                autocompleteEnabled = await context.postMessage({ type: 'getAutocompleteSetting' });
+            } catch (err) {
+                logger.warn('Failed to fetch autocomplete setting; defaulting to enabled.', err);
+            }
+
+            if (autocompleteEnabled !== false) {
+                editorControl.addExtension(
+                    editorControl.joplinExtensions.completionSource(createAlertCompletionSource())
+                );
+                editorControl.addExtension(alertAutocompleteTheme);
             }
         },
     };

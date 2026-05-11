@@ -1,6 +1,7 @@
 import type { CompletionContext, CompletionResult, CompletionSource } from '@codemirror/autocomplete';
 import { EditorView } from '@codemirror/view';
 
+import { ALERT_COLORS } from './alertColors';
 import { ALERT_ICONS } from './alertIcons';
 import { GITHUB_ALERT_TYPES, type GitHubAlertType } from './alertParsing';
 
@@ -11,18 +12,46 @@ function buildAlertInsertText(type: GitHubAlertType): string {
     return `> [!${type.toUpperCase()}] `;
 }
 
+function createStandaloneSvg(svg: string): string {
+    if (svg.includes('xmlns=')) return svg;
+
+    return svg.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
+}
+
 function createIconDataUri(svg: string): string {
-    return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+    return `url("data:image/svg+xml,${encodeURIComponent(createStandaloneSvg(svg))}")`;
 }
 
 const iconRules = Object.fromEntries(
     GITHUB_ALERT_TYPES.map((type) => [
         `.cm-completionIcon-${type}`,
         {
-            backgroundImage: createIconDataUri(ALERT_ICONS[type]),
-            backgroundSize: 'contain',
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'center',
+            maskImage: createIconDataUri(ALERT_ICONS[type]),
+            maskSize: 'contain',
+            maskRepeat: 'no-repeat',
+            maskPosition: 'center',
+            WebkitMaskImage: createIconDataUri(ALERT_ICONS[type]),
+            WebkitMaskSize: 'contain',
+            WebkitMaskRepeat: 'no-repeat',
+            WebkitMaskPosition: 'center',
+        },
+    ])
+);
+
+const lightIconColorRules = Object.fromEntries(
+    GITHUB_ALERT_TYPES.map((type) => [
+        `&light .cm-completionIcon-${type}`,
+        {
+            backgroundColor: ALERT_COLORS.light[type].color,
+        },
+    ])
+);
+
+const darkIconColorRules = Object.fromEntries(
+    GITHUB_ALERT_TYPES.map((type) => [
+        `&dark .cm-completionIcon-${type}`,
+        {
+            backgroundColor: ALERT_COLORS.dark[type].color,
         },
     ])
 );
@@ -40,9 +69,14 @@ export const alertAutocompleteTheme = EditorView.baseTheme({
         verticalAlign: 'middle',
         marginRight: '6px',
         marginLeft: '2px',
+        paddingRight: '0',
+        boxSizing: 'border-box',
+        opacity: '1',
         flexShrink: '0',
     },
     ...iconRules,
+    ...lightIconColorRules,
+    ...darkIconColorRules,
 });
 
 export function createAlertCompletionSource(): CompletionSource {

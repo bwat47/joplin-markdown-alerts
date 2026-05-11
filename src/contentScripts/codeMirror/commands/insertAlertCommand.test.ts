@@ -10,6 +10,7 @@ import type { EditorView } from '@codemirror/view';
 
 import { createInsertAlertCommand, toggleAlertSelectionText } from './insertAlertCommand';
 import { createAlertCompletionSource } from '../alerts/alertAutocomplete';
+import { createMarkdownAlertEditorSettingsExtension } from '../pluginSettings';
 import { createEditorHarness } from '../shared/testUtils';
 
 function makeCompletionContext(view: EditorView, pos: number): CompletionContext {
@@ -111,10 +112,16 @@ describe('createInsertAlertCommand', () => {
     });
 
     test('keeps default blank-line insertion when autocomplete is explicitly disabled', () => {
-        const harness = createEditorHarness('|\n');
+        const harness = createEditorHarness('|\n', {
+            extensions: [
+                createMarkdownAlertEditorSettingsExtension({
+                    enableAlertAutocomplete: false,
+                }),
+            ],
+        });
 
         try {
-            const command = createInsertAlertCommand(harness.view, { autocompleteOnEmptyLine: false });
+            const command = createInsertAlertCommand(harness.view);
             command();
 
             expect(harness.getText()).toBe(`> [!NOTE] \n`);
@@ -127,11 +134,16 @@ describe('createInsertAlertCommand', () => {
     test('starts alert type autocomplete for a single cursor on a blank line when enabled', async () => {
         const source = createAlertCompletionSource();
         const harness = createEditorHarness('|\n', {
-            extensions: [autocompletion({ override: [source], activateOnTyping: false })],
+            extensions: [
+                createMarkdownAlertEditorSettingsExtension({
+                    enableAlertAutocomplete: true,
+                }),
+                autocompletion({ override: [source], activateOnTyping: false }),
+            ],
         });
 
         try {
-            const command = createInsertAlertCommand(harness.view, { autocompleteOnEmptyLine: true });
+            const command = createInsertAlertCommand(harness.view);
             command();
 
             await waitForScheduledCompletionStart();
@@ -272,6 +284,9 @@ describe('createInsertAlertCommand', () => {
     test('keeps default blank-line insertion for multiple cursors when autocomplete is enabled', () => {
         const harness = createEditorHarness(['', '', ''].join('\n'), {
             extensions: [
+                createMarkdownAlertEditorSettingsExtension({
+                    enableAlertAutocomplete: true,
+                }),
                 autocompletion({
                     override: [createAlertCompletionSource()],
                     activateOnTyping: false,
@@ -290,7 +305,7 @@ describe('createInsertAlertCommand', () => {
                 ]),
             });
 
-            const command = createInsertAlertCommand(harness.view, { autocompleteOnEmptyLine: true });
+            const command = createInsertAlertCommand(harness.view);
             command();
 
             expect(harness.getText()).toBe(['> [!NOTE] ', '', '> [!NOTE] '].join('\n'));

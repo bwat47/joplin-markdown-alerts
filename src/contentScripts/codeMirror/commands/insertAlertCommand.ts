@@ -4,6 +4,7 @@ import type { EditorState } from '@codemirror/state';
 import type { SyntaxNode } from '@lezer/common';
 
 import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine } from '../alerts/alertParsing';
+import { getMarkdownAlertEditorSettings } from '../pluginSettings';
 import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 import {
     collectParagraphRanges,
@@ -25,10 +26,6 @@ type TextChange = {
     from: number;
     to: number;
     insert: string;
-};
-
-type InsertAlertCommandOptions = {
-    autocompleteOnEmptyLine?: boolean;
 };
 
 function overlapsRange(change: TextChange, range: ParagraphRange): boolean {
@@ -211,7 +208,7 @@ export function toggleAlertSelectionText(text: string): string {
  * - Cursor inside a regular blockquote: insert an alert title line above the blockquote, respecting its nesting prefix.
  * - Otherwise: toggle alert formatting for the surrounding paragraph or current line via `toggleAlertSelectionText`.
  */
-export function createInsertAlertCommand(view: EditorView, options: InsertAlertCommandOptions = {}): () => boolean {
+export function createInsertAlertCommand(view: EditorView): () => boolean {
     return () => {
         const state = view.state;
         const ranges = state.selection.ranges;
@@ -297,7 +294,11 @@ export function createInsertAlertCommand(view: EditorView, options: InsertAlertC
             return true;
         }
 
-        if (options.autocompleteOnEmptyLine === true && ranges.length === 1 && ranges[0].empty) {
+        if (
+            getMarkdownAlertEditorSettings(state).enableAlertAutocomplete &&
+            ranges.length === 1 &&
+            ranges[0].empty
+        ) {
             const cursorLine = state.doc.lineAt(ranges[0].head);
             if (cursorLine.text.trim() === '') {
                 view.dispatch({

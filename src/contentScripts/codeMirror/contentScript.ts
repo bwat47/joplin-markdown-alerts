@@ -10,6 +10,10 @@ import { createClearFormattingCommand } from './commands/clearFormattingCommand'
 import { createInsertAlertCommand } from './commands/insertAlertCommand';
 import { createInsertInlineFormatCommand } from './commands/insertInlineFormatCommand';
 import { createInsertQuoteCommand } from './commands/insertQuoteCommand';
+import {
+    applyMarkdownAlertEditorSettings,
+    createMarkdownAlertEditorSettingsExtension,
+} from './pluginSettings';
 import { INLINE_FORMAT_DEFINITIONS } from '../../inlineFormatCommands';
 import { logger } from '../../logger';
 
@@ -34,8 +38,12 @@ export default function (context: ContentScriptContext) {
             const editor = editorControl.editor as EditorView;
             const isDarkTheme = editor?.state?.facet(EditorView.darkTheme) ?? false;
 
+            editorControl.addExtension(createMarkdownAlertEditorSettingsExtension());
             editorControl.addExtension(createAlertDecorationExtensions(isDarkTheme));
+            editorControl.addExtension(editorControl.joplinExtensions.completionSource(createAlertCompletionSource()));
+            editorControl.addExtension(createAlertAutocompleteBackspaceActivationExtension());
 
+            editorControl.registerCommand(INSERT_ALERT_COMMAND, createInsertAlertCommand(editorControl.cm6));
             editorControl.registerCommand(CLEAR_FORMATTING_COMMAND, createClearFormattingCommand(editorControl.cm6));
             editorControl.registerCommand(INSERT_QUOTE_COMMAND, createInsertQuoteCommand(editorControl.cm6));
             for (const format of INLINE_FORMAT_DEFINITIONS) {
@@ -52,19 +60,9 @@ export default function (context: ContentScriptContext) {
                 logger.warn('Failed to fetch autocomplete setting; defaulting to enabled.', err);
             }
 
-            editorControl.registerCommand(
-                INSERT_ALERT_COMMAND,
-                createInsertAlertCommand(editorControl.cm6, {
-                    autocompleteOnEmptyLine: autocompleteEnabled !== false,
-                })
-            );
-
-            if (autocompleteEnabled !== false) {
-                editorControl.addExtension(
-                    editorControl.joplinExtensions.completionSource(createAlertCompletionSource())
-                );
-                editorControl.addExtension(createAlertAutocompleteBackspaceActivationExtension());
-            }
+            applyMarkdownAlertEditorSettings(editorControl.cm6, {
+                enableAlertAutocomplete: autocompleteEnabled !== false,
+            });
         },
 
         assets: function () {

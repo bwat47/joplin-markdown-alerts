@@ -11,6 +11,7 @@ import { EditorView } from '@codemirror/view';
 import { createEditorHarness } from '../shared/testUtils';
 import { createAlertAutocompleteBackspaceActivationExtension, createAlertCompletionSource } from './alertAutocomplete';
 import { GITHUB_ALERT_TYPES } from './alertParsing';
+import { createMarkdownAlertEditorSettingsExtension } from '../pluginSettings';
 
 function makeContext(view: EditorView, pos: number): CompletionContext {
     return {
@@ -21,8 +22,18 @@ function makeContext(view: EditorView, pos: number): CompletionContext {
     } as unknown as CompletionContext;
 }
 
+function createAutocompleteEnabledHarness(input: string) {
+    return createEditorHarness(input, {
+        extensions: [
+            createMarkdownAlertEditorSettingsExtension({
+                enableAlertAutocomplete: true,
+            }),
+        ],
+    });
+}
+
 function getCompletions(input: string): CompletionResult | null {
-    const harness = createEditorHarness(input);
+    const harness = createAutocompleteEnabledHarness(input);
     try {
         const source = createAlertCompletionSource();
         return source(makeContext(harness.view, harness.getCursor())) as CompletionResult | null;
@@ -79,6 +90,23 @@ describe('createAlertCompletionSource — trigger conditions', () => {
     test('returns results for mixed-case partial prefix', () => {
         expect(getCompletions('>!NoTe|')).not.toBeNull();
     });
+
+    test('returns null when alert autocomplete is disabled', () => {
+        const harness = createEditorHarness('>!|', {
+            extensions: [
+                createMarkdownAlertEditorSettingsExtension({
+                    enableAlertAutocomplete: false,
+                }),
+            ],
+        });
+
+        try {
+            const source = createAlertCompletionSource();
+            expect(source(makeContext(harness.view, harness.getCursor()))).toBeNull();
+        } finally {
+            harness.destroy();
+        }
+    });
 });
 
 describe('createAlertCompletionSource — result shape', () => {
@@ -110,7 +138,7 @@ describe('createAlertCompletionSource — result shape', () => {
     test('from is positioned right after ">!" (past any leading whitespace)', () => {
         // Input:  "   >!|"  (3 spaces, then >!, cursor at end)
         // Expected from: 3 + 2 = 5 (after the leading spaces and ">!")
-        const harness = createEditorHarness('   >!|');
+        const harness = createAutocompleteEnabledHarness('   >!|');
         try {
             const source = createAlertCompletionSource();
             const result = source(makeContext(harness.view, harness.getCursor())) as CompletionResult;
@@ -121,7 +149,7 @@ describe('createAlertCompletionSource — result shape', () => {
     });
 
     test('from is 2 (after ">!") with no leading whitespace', () => {
-        const harness = createEditorHarness('>!|');
+        const harness = createAutocompleteEnabledHarness('>!|');
         try {
             const source = createAlertCompletionSource();
             const result = source(makeContext(harness.view, harness.getCursor())) as CompletionResult;
@@ -132,7 +160,7 @@ describe('createAlertCompletionSource — result shape', () => {
     });
 
     test('from is positioned right after "> [!" for full alert syntax prefix', () => {
-        const harness = createEditorHarness('> [!|');
+        const harness = createAutocompleteEnabledHarness('> [!|');
         try {
             const source = createAlertCompletionSource();
             const result = source(makeContext(harness.view, harness.getCursor())) as CompletionResult;
@@ -143,7 +171,7 @@ describe('createAlertCompletionSource — result shape', () => {
     });
 
     test('to stays at the cursor when an auto-paired closing bracket follows', () => {
-        const harness = createEditorHarness('> [!|]');
+        const harness = createAutocompleteEnabledHarness('> [!|]');
         try {
             const source = createAlertCompletionSource();
             const result = source(makeContext(harness.view, harness.getCursor())) as CompletionResult;
@@ -171,7 +199,7 @@ describe('createAlertCompletionSource — result shape', () => {
 
 describe('createAlertCompletionSource — apply', () => {
     function applyCompletion(input: string, typeIndex: number): { text: string; cursor: number } {
-        const harness = createEditorHarness(input);
+        const harness = createAutocompleteEnabledHarness(input);
         try {
             const source = createAlertCompletionSource();
             const cursorPos = harness.getCursor();
@@ -265,6 +293,9 @@ describe('createAlertAutocompleteBackspaceActivationExtension', () => {
         const source = createAlertCompletionSource();
         const harness = createEditorHarness('>!z|', {
             extensions: [
+                createMarkdownAlertEditorSettingsExtension({
+                    enableAlertAutocomplete: true,
+                }),
                 autocompletion({ override: [source], activateOnTyping: false }),
                 createAlertAutocompleteBackspaceActivationExtension(),
             ],
@@ -289,6 +320,9 @@ describe('createAlertAutocompleteBackspaceActivationExtension', () => {
         const source = createAlertCompletionSource();
         const harness = createEditorHarness('> [!z|]', {
             extensions: [
+                createMarkdownAlertEditorSettingsExtension({
+                    enableAlertAutocomplete: true,
+                }),
                 autocompletion({ override: [source], activateOnTyping: false }),
                 createAlertAutocompleteBackspaceActivationExtension(),
             ],

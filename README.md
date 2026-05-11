@@ -64,7 +64,7 @@ Example:
 
 ## 2. Codemirror auto-complete for markdown alerts
 
-Typing `>!` or `> [!` will trigger an auto-completion dropdown to finish the alert syntax from the supported alert types.
+Typing `>!`, `> [!`, or invoking the insert alert command at the beginning of an empty line will trigger an auto-completion dropdown to finish the alert syntax from the supported alert types.
 
 Backspacing text within existing alert syntax will also trigger the auto-completion dropdown, making it easy to change the type of an existing alert.
 
@@ -83,6 +83,7 @@ Default shortcut: `Ctrl + Shift + A`
 Behavior:
 
 - On an empty line, insert `> [!NOTE] ` and place the cursor after the marker
+    - Or, if auto-completion is enabled, insert `> [!]`, place the cursor after the `!` and trigger auto-completion dropdown.
 - If the cursor is inside an existing alert, cycle the alert type
 - If the cursor is inside a regular blockquote, convert it into an alert
 - With no selection, convert the current paragraph or line into an alert

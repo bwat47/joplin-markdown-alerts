@@ -27,12 +27,14 @@ function buildAlertInsertText(type: GitHubAlertType): string {
 
 function getAlertCompletionReplaceTo(state: EditorState, applyTo: number): number {
     let replaceTo = applyTo;
+    const line = state.doc.lineAt(replaceTo);
+    const suffix = line.text.slice(replaceTo - line.from);
+    const remainingMarkerMatch = /^[a-zA-Z]*\]/.exec(suffix);
 
-    if (state.sliceDoc(replaceTo, replaceTo + 1) === ']') {
-        replaceTo += 1;
+    if (remainingMarkerMatch) {
+        replaceTo += remainingMarkerMatch[0].length;
     }
 
-    const line = state.doc.lineAt(replaceTo);
     const separatorEnd = line.text.slice(replaceTo - line.from).search(/[^\t ]/);
     if (separatorEnd > 0) {
         replaceTo += separatorEnd;

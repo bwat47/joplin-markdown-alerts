@@ -220,6 +220,16 @@ describe('createAlertCompletionSource — apply', () => {
         expect(text).toBe('> [!TIP] Title');
     });
 
+    test('replaces the remaining marker suffix when completing from the middle of an alert type', () => {
+        const { text } = applyCompletion('> [!|OTE]', 1);
+        expect(text).toBe('> [!TIP] ');
+    });
+
+    test('does not consume following text that is not part of a closed marker', () => {
+        const { text } = applyCompletion('> [!|Title', 1);
+        expect(text).toBe('> [!TIP] Title');
+    });
+
     test('cursor is placed immediately after the trailing space', () => {
         const { text, cursor } = applyCompletion('>!|', 0);
         expect(cursor).toBe(text.length); // end of "> [!NOTE] "

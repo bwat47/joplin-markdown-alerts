@@ -6,10 +6,8 @@ import {
     type CompletionSource,
 } from '@codemirror/autocomplete';
 import type { EditorState } from '@codemirror/state';
-import { EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
+import { ViewPlugin, type ViewUpdate } from '@codemirror/view';
 
-import { ALERT_COLORS } from './alertColors';
-import { ALERT_ICONS } from './alertIcons';
 import { GITHUB_ALERT_TYPES, type GitHubAlertType } from './alertParsing';
 
 /** Matches alert autocomplete triggers, e.g. ">!no" or "> [!no". */
@@ -57,58 +55,6 @@ function matchAlertAutocompleteTrigger(state: EditorState, pos: number): AlertAu
 
 function isDeleteUpdate(update: ViewUpdate): boolean {
     return update.transactions.some((transaction) => transaction.isUserEvent('delete'));
-}
-
-function createStandaloneSvg(svg: string): string {
-    if (svg.includes('xmlns=')) return svg;
-
-    return svg.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
-}
-
-function createIconDataUri(svg: string): string {
-    return `url("data:image/svg+xml,${encodeURIComponent(createStandaloneSvg(svg))}")`;
-}
-
-const iconRules = Object.fromEntries(
-    GITHUB_ALERT_TYPES.map((type) => [
-        `.cm-completionIcon-${type}`,
-        {
-            maskImage: createIconDataUri(ALERT_ICONS[type]),
-            maskSize: 'contain',
-            maskRepeat: 'no-repeat',
-            maskPosition: 'center',
-            WebkitMaskImage: createIconDataUri(ALERT_ICONS[type]),
-            WebkitMaskSize: 'contain',
-            WebkitMaskRepeat: 'no-repeat',
-            WebkitMaskPosition: 'center',
-        },
-    ])
-);
-
-const autocompleteBaseTheme = EditorView.baseTheme({
-    // Higher specificity (4 classes) than CodeMirror's "& .cm-completionIcon" (2 classes),
-    // which sets opacity:0.6, width:.8em, paddingRight:.6em, boxSizing:content-box.
-    '& .cm-tooltip.cm-tooltip-autocomplete .cm-completionIcon': {
-        width: '16px',
-        height: '16px',
-        display: 'inline-block',
-        verticalAlign: 'middle',
-        marginRight: '6px',
-        marginLeft: '2px',
-        paddingRight: '0',
-        boxSizing: 'border-box',
-        opacity: '1',
-        flexShrink: '0',
-    },
-    ...iconRules,
-});
-
-export function createAlertAutocompleteTheme(isDark: boolean) {
-    const colors = isDark ? ALERT_COLORS.dark : ALERT_COLORS.light;
-    const iconColorRules = Object.fromEntries(
-        GITHUB_ALERT_TYPES.map((type) => [`.cm-completionIcon-${type}`, { backgroundColor: colors[type].color }])
-    );
-    return [autocompleteBaseTheme, EditorView.theme(iconColorRules)];
 }
 
 export function createAlertCompletionSource(): CompletionSource {

@@ -36,7 +36,6 @@ export default function (context: ContentScriptContext) {
 
             editorControl.addExtension(createAlertDecorationExtensions(isDarkTheme));
 
-            editorControl.registerCommand(INSERT_ALERT_COMMAND, createInsertAlertCommand(editorControl.cm6));
             editorControl.registerCommand(CLEAR_FORMATTING_COMMAND, createClearFormattingCommand(editorControl.cm6));
             editorControl.registerCommand(INSERT_QUOTE_COMMAND, createInsertQuoteCommand(editorControl.cm6));
             for (const format of INLINE_FORMAT_DEFINITIONS) {
@@ -52,6 +51,13 @@ export default function (context: ContentScriptContext) {
             } catch (err) {
                 logger.warn('Failed to fetch autocomplete setting; defaulting to enabled.', err);
             }
+
+            editorControl.registerCommand(
+                INSERT_ALERT_COMMAND,
+                createInsertAlertCommand(editorControl.cm6, {
+                    autocompleteOnEmptyLine: autocompleteEnabled !== false,
+                })
+            );
 
             if (autocompleteEnabled !== false) {
                 editorControl.addExtension(

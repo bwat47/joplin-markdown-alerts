@@ -1,8 +1,25 @@
 /** @jest-environment jsdom */
+import {
+    autocompletion,
+    completionStatus,
+    type CompletionContext,
+    type CompletionResult,
+} from '@codemirror/autocomplete';
 import { EditorSelection } from '@codemirror/state';
+import type { EditorView } from '@codemirror/view';
 
 import { createInsertAlertCommand, toggleAlertSelectionText } from './insertAlertCommand';
+import { createAlertCompletionSource } from '../alerts/alertAutocomplete';
 import { createEditorHarness } from '../shared/testUtils';
+
+function makeCompletionContext(view: EditorView, pos: number): CompletionContext {
+    return {
+        state: view.state,
+        pos,
+        explicit: false,
+        matchBefore: () => null,
+    } as unknown as CompletionContext;
+}
 
 describe('toggleAlertSelectionText', () => {
     test('adds an alert line and quotes when selection is not a blockquote', () => {
@@ -42,6 +59,10 @@ describe('toggleAlertSelectionText', () => {
 });
 
 describe('createInsertAlertCommand', () => {
+    async function waitForScheduledCompletionStart() {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
     function runCommand(input: string): string {
         const harness = createEditorHarness(input);
         try {
@@ -87,6 +108,53 @@ describe('createInsertAlertCommand', () => {
 
         expect(result.text).toBe(expectedText);
         expect(result.cursor).toBe(expectedCursor);
+    });
+
+    test('keeps default blank-line insertion when autocomplete is explicitly disabled', () => {
+        const harness = createEditorHarness('|\n');
+
+        try {
+            const command = createInsertAlertCommand(harness.view, { autocompleteOnEmptyLine: false });
+            command();
+
+            expect(harness.getText()).toBe(`> [!NOTE] \n`);
+            expect(harness.getCursor()).toBe(10);
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('starts alert type autocomplete for a single cursor on a blank line when enabled', async () => {
+        const source = createAlertCompletionSource();
+        const harness = createEditorHarness('|\n', {
+            extensions: [autocompletion({ override: [source], activateOnTyping: false })],
+        });
+
+        try {
+            const command = createInsertAlertCommand(harness.view, { autocompleteOnEmptyLine: true });
+            command();
+
+            await waitForScheduledCompletionStart();
+
+            expect(harness.getText()).toBe('> [!]\n');
+            expect(harness.getCursor()).toBe(4);
+            expect(completionStatus(harness.view.state)).not.toBeNull();
+
+            const result = source(makeCompletionContext(harness.view, harness.getCursor())) as CompletionResult;
+            const option = result.options[1];
+            const applyFn = option.apply as (
+                view: EditorView,
+                completion: (typeof result.options)[0],
+                from: number,
+                to: number
+            ) => void;
+            applyFn(harness.view, option, result.from, result.to ?? harness.getCursor());
+
+            expect(harness.getText()).toBe('> [!TIP] \n');
+            expect(harness.getCursor()).toBe(9);
+        } finally {
+            harness.destroy();
+        }
     });
 
     test('converts a partially selected paragraph into an alert block', () => {
@@ -196,6 +264,38 @@ describe('createInsertAlertCommand', () => {
 
             expect(harness.getText()).toBe(['> [!NOTE] ', '', '> [!NOTE] '].join('\n'));
             expect(harness.view.state.selection.ranges.map((range) => range.head)).toEqual([10, 22]);
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('keeps default blank-line insertion for multiple cursors when autocomplete is enabled', () => {
+        const harness = createEditorHarness(['', '', ''].join('\n'), {
+            extensions: [
+                autocompletion({
+                    override: [createAlertCompletionSource()],
+                    activateOnTyping: false,
+                }),
+            ],
+        });
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line3 = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.cursor(line1.from),
+                    EditorSelection.cursor(line3.from),
+                ]),
+            });
+
+            const command = createInsertAlertCommand(harness.view, { autocompleteOnEmptyLine: true });
+            command();
+
+            expect(harness.getText()).toBe(['> [!NOTE] ', '', '> [!NOTE] '].join('\n'));
+            expect(harness.view.state.selection.ranges.map((range) => range.head)).toEqual([10, 22]);
+            expect(completionStatus(harness.view.state)).toBeNull();
         } finally {
             harness.destroy();
         }

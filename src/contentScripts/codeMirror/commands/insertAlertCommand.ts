@@ -1,3 +1,4 @@
+import { startCompletion } from '@codemirror/autocomplete';
 import type { EditorView } from '@codemirror/view';
 import type { EditorState } from '@codemirror/state';
 import type { SyntaxNode } from '@lezer/common';
@@ -15,12 +16,19 @@ import {
 
 const BLOCKQUOTE_PREFIX_PATTERN = /^(\s*(?:>\s*)+)/;
 const DEFAULT_ALERT_TYPE = 'NOTE';
+const DEFAULT_ALERT_INSERT_TEXT = `> [!${DEFAULT_ALERT_TYPE}] `;
+const AUTOCOMPLETE_ALERT_INSERT_TEXT = '> [!]';
+const AUTOCOMPLETE_ALERT_CURSOR_OFFSET = AUTOCOMPLETE_ALERT_INSERT_TEXT.indexOf(']');
 const BLOCKQUOTE_LINE_PREFIX = /^>\s?/;
 
 type TextChange = {
     from: number;
     to: number;
     insert: string;
+};
+
+type InsertAlertCommandOptions = {
+    autocompleteOnEmptyLine?: boolean;
 };
 
 function overlapsRange(change: TextChange, range: ParagraphRange): boolean {
@@ -63,20 +71,18 @@ function createAlertCursorChange(
 ): { key: string; change: TextChange; explicitSelection?: ExplicitCursorSelection } {
     const cursorLine = state.doc.lineAt(cursorPos);
     if (cursorLine.text.trim() === '') {
-        const insertionText = `> [!${DEFAULT_ALERT_TYPE}] `;
-
         return {
             key: `line:${cursorLine.from}:${cursorLine.to}`,
             change: {
                 from: cursorLine.from,
                 to: cursorLine.to,
-                insert: insertionText,
+                insert: DEFAULT_ALERT_INSERT_TEXT,
             },
             explicitSelection: {
                 anchorBasePos: cursorLine.from,
-                anchorOffset: insertionText.length,
+                anchorOffset: DEFAULT_ALERT_INSERT_TEXT.length,
                 headBasePos: cursorLine.from,
-                headOffset: insertionText.length,
+                headOffset: DEFAULT_ALERT_INSERT_TEXT.length,
             },
         };
     }
@@ -199,12 +205,13 @@ export function toggleAlertSelectionText(text: string): string {
 /**
  * Creates a command that inserts or cycles a GitHub alert.
  * - Selections: expand each selection to paragraph boundaries, dedupe ranges, and apply `toggleAlertSelectionText` to each.
- * - Cursor on empty line: insert `> [!NOTE] ` and place the cursor after the marker.
+ * - Single cursor on empty line: when enabled, insert `> [!]` and start alert type completion.
+ * - Other empty-line cursor paths: insert `> [!NOTE] ` and place the cursor after the marker.
  * - Cursor on an alert title line: cycle the alert marker on that line.
  * - Cursor inside a regular blockquote: insert an alert title line above the blockquote, respecting its nesting prefix.
  * - Otherwise: toggle alert formatting for the surrounding paragraph or current line via `toggleAlertSelectionText`.
  */
-export function createInsertAlertCommand(view: EditorView): () => boolean {
+export function createInsertAlertCommand(view: EditorView, options: InsertAlertCommandOptions = {}): () => boolean {
     return () => {
         const state = view.state;
         const ranges = state.selection.ranges;
@@ -288,6 +295,23 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
             dispatchChangesWithSelections(view, Array.from(changeMap.values()), explicitSelectionsByIndex);
             view.focus();
             return true;
+        }
+
+        if (options.autocompleteOnEmptyLine === true && ranges.length === 1 && ranges[0].empty) {
+            const cursorLine = state.doc.lineAt(ranges[0].head);
+            if (cursorLine.text.trim() === '') {
+                view.dispatch({
+                    changes: {
+                        from: cursorLine.from,
+                        to: cursorLine.to,
+                        insert: AUTOCOMPLETE_ALERT_INSERT_TEXT,
+                    },
+                    selection: { anchor: cursorLine.from + AUTOCOMPLETE_ALERT_CURSOR_OFFSET },
+                });
+                view.focus();
+                startCompletion(view);
+                return true;
+            }
         }
 
         const changeMap = new Map<string, TextChange>();

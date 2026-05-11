@@ -44,7 +44,9 @@ const autocompleteBaseTheme = EditorView.baseTheme({
         borderRadius: '4px',
         boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
     },
-    '.cm-completionIcon': {
+    // Higher specificity (4 classes) than CodeMirror's "& .cm-completionIcon" (2 classes),
+    // which sets opacity:0.6, width:.8em, paddingRight:.6em, boxSizing:content-box.
+    '& .cm-tooltip.cm-tooltip-autocomplete .cm-completionIcon': {
         width: '16px',
         height: '16px',
         display: 'inline-block',

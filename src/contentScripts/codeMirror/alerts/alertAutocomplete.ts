@@ -5,8 +5,8 @@ import { ALERT_COLORS } from './alertColors';
 import { ALERT_ICONS } from './alertIcons';
 import { GITHUB_ALERT_TYPES, type GitHubAlertType } from './alertParsing';
 
-/** Matches lines where >! starts an alert trigger, e.g. ">!", "  >!no" */
-const AUTOCOMPLETE_TRIGGER_PATTERN = /^(\s*)(>!)([a-zA-Z]*)$/;
+/** Matches alert autocomplete triggers, e.g. ">!no" or "> [!no". */
+const AUTOCOMPLETE_TRIGGER_PATTERN = /^(\s*)(>!|> \[!)([a-zA-Z]*)$/;
 
 function buildAlertInsertText(type: GitHubAlertType): string {
     return `> [!${type.toUpperCase()}] `;
@@ -75,10 +75,10 @@ export function createAlertCompletionSource(): CompletionSource {
 
         if (!match) return null;
 
-        // triggerFrom: position of the '>' character (start of '>!')
+        // triggerFrom: position of the '>' character (start of the trigger)
         const triggerFrom = line.from + match[1].length;
-        // typeFrom: position right after '>!', where the user types the partial type name
-        const typeFrom = triggerFrom + 2;
+        // typeFrom: position right after the trigger, where the user types the partial type name
+        const typeFrom = triggerFrom + match[2].length;
 
         return {
             from: typeFrom,
@@ -90,8 +90,10 @@ export function createAlertCompletionSource(): CompletionSource {
                     label,
                     type,
                     apply: (view, _completion, _applyFrom, applyTo) => {
+                        const replaceTo =
+                            view.state.sliceDoc(applyTo, applyTo + 1) === ']' ? applyTo + 1 : applyTo;
                         view.dispatch({
-                            changes: { from: triggerFrom, to: applyTo, insert: insertText },
+                            changes: { from: triggerFrom, to: replaceTo, insert: insertText },
                             selection: { anchor: triggerFrom + insertText.length },
                         });
                     },

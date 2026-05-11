@@ -58,6 +58,18 @@ describe('createAlertCompletionSource — trigger conditions', () => {
         expect(getCompletions('>!no|')).not.toBeNull();
     });
 
+    test('returns results for full alert syntax prefix', () => {
+        expect(getCompletions('> [!|')).not.toBeNull();
+    });
+
+    test('returns results for full alert syntax prefix with partial type prefix', () => {
+        expect(getCompletions('> [!no|')).not.toBeNull();
+    });
+
+    test('returns results for full alert syntax prefix before an existing closing bracket', () => {
+        expect(getCompletions('> [!n|]')).not.toBeNull();
+    });
+
     test('returns results for mixed-case partial prefix', () => {
         expect(getCompletions('>!NoTe|')).not.toBeNull();
     });
@@ -107,6 +119,28 @@ describe('createAlertCompletionSource — result shape', () => {
         }
     });
 
+    test('from is positioned right after "> [!" for full alert syntax prefix', () => {
+        const harness = createEditorHarness('> [!|');
+        try {
+            const source = createAlertCompletionSource();
+            const result = source(makeContext(harness.view, harness.getCursor())) as CompletionResult;
+            expect(result.from).toBe(4);
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('to stays at the cursor when an auto-paired closing bracket follows', () => {
+        const harness = createEditorHarness('> [!|]');
+        try {
+            const source = createAlertCompletionSource();
+            const result = source(makeContext(harness.view, harness.getCursor())) as CompletionResult;
+            expect(result.to).toBe(4);
+        } finally {
+            harness.destroy();
+        }
+    });
+
     test('validFor accepts a partial type continuation', () => {
         const result = getCompletions('>!|')!;
         const validFor = result.validFor as RegExp;
@@ -137,7 +171,7 @@ describe('createAlertCompletionSource — apply', () => {
                 from: number,
                 to: number
             ) => void;
-            applyFn(harness.view, option, result.from, cursorPos);
+            applyFn(harness.view, option, result.from, result.to ?? cursorPos);
             return { text: harness.getText(), cursor: harness.getCursor() };
         } finally {
             harness.destroy();
@@ -151,6 +185,16 @@ describe('createAlertCompletionSource — apply', () => {
 
     test('replaces >!partial with the full alert syntax', () => {
         const { text } = applyCompletion('>!no|', 0);
+        expect(text).toBe('> [!NOTE] ');
+    });
+
+    test('completes full alert syntax prefix without duplicating the marker', () => {
+        const { text } = applyCompletion('> [!no|', 0);
+        expect(text).toBe('> [!NOTE] ');
+    });
+
+    test('replaces auto-paired closing bracket when completing full alert syntax prefix', () => {
+        const { text } = applyCompletion('> [!|]', 0);
         expect(text).toBe('> [!NOTE] ');
     });
 

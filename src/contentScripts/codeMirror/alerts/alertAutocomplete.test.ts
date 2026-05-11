@@ -208,6 +208,16 @@ describe('createAlertCompletionSource — apply', () => {
         expect(text).toBe('> [!NOTE] ');
     });
 
+    test('preserves an existing custom title without adding a double space', () => {
+        const { text } = applyCompletion('> [!no|] Title', 1); // index 1 = tip
+        expect(text).toBe('> [!TIP] Title');
+    });
+
+    test('normalizes existing custom title separator whitespace to one space', () => {
+        const { text } = applyCompletion('> [!no|]   Title', 1);
+        expect(text).toBe('> [!TIP] Title');
+    });
+
     test('cursor is placed immediately after the trailing space', () => {
         const { text, cursor } = applyCompletion('>!|', 0);
         expect(cursor).toBe(text.length); // end of "> [!NOTE] "

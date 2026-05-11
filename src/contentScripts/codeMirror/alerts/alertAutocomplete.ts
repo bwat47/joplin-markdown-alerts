@@ -25,6 +25,22 @@ function buildAlertInsertText(type: GitHubAlertType): string {
     return `> [!${type.toUpperCase()}] `;
 }
 
+function getAlertCompletionReplaceTo(state: EditorState, applyTo: number): number {
+    let replaceTo = applyTo;
+
+    if (state.sliceDoc(replaceTo, replaceTo + 1) === ']') {
+        replaceTo += 1;
+    }
+
+    const line = state.doc.lineAt(replaceTo);
+    const separatorEnd = line.text.slice(replaceTo - line.from).search(/[^\t ]/);
+    if (separatorEnd > 0) {
+        replaceTo += separatorEnd;
+    }
+
+    return replaceTo;
+}
+
 function matchAlertAutocompleteTrigger(state: EditorState, pos: number): AlertAutocompleteTriggerMatch | null {
     const line = state.doc.lineAt(pos);
     const linePrefix = line.text.slice(0, pos - line.from);
@@ -113,8 +129,7 @@ export function createAlertCompletionSource(): CompletionSource {
                     sortText: String(index).padStart(ALERT_TYPE_SORT_TEXT_WIDTH, '0'),
                     type,
                     apply: (view, _completion, _applyFrom, applyTo) => {
-                        const replaceTo =
-                            view.state.sliceDoc(applyTo, applyTo + 1) === ']' ? applyTo + 1 : applyTo;
+                        const replaceTo = getAlertCompletionReplaceTo(view.state, applyTo);
                         view.dispatch({
                             changes: { from: match.triggerFrom, to: replaceTo, insert: insertText },
                             selection: { anchor: match.triggerFrom + insertText.length },

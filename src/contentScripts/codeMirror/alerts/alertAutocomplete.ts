@@ -9,6 +9,7 @@ import type { EditorState } from '@codemirror/state';
 import { ViewPlugin, type ViewUpdate } from '@codemirror/view';
 
 import { GITHUB_ALERT_TYPES, type GitHubAlertType } from './alertParsing';
+import { getMarkdownAlertEditorSettings } from '../pluginSettings';
 
 /** Matches alert autocomplete triggers, e.g. ">!no" or "> [!no". */
 const AUTOCOMPLETE_TRIGGER_PATTERN = /^(\s*)(>!|> \[!)([a-zA-Z]*)$/;
@@ -59,6 +60,8 @@ function isDeleteUpdate(update: ViewUpdate): boolean {
 
 export function createAlertCompletionSource(): CompletionSource {
     return (context: CompletionContext): CompletionResult | null => {
+        if (!getMarkdownAlertEditorSettings(context.state).enableAlertAutocomplete) return null;
+
         const match = matchAlertAutocompleteTrigger(context.state, context.pos);
 
         if (!match) return null;
@@ -92,6 +95,7 @@ export function createAlertAutocompleteBackspaceActivationExtension() {
         class {
             update(update: ViewUpdate) {
                 if (!update.docChanged || !isDeleteUpdate(update) || completionStatus(update.state)) return;
+                if (!getMarkdownAlertEditorSettings(update.state).enableAlertAutocomplete) return;
 
                 const selection = update.state.selection.main;
                 if (!selection.empty || !matchAlertAutocompleteTrigger(update.state, selection.head)) return;
@@ -100,6 +104,7 @@ export function createAlertAutocompleteBackspaceActivationExtension() {
                     const currentSelection = update.view.state.selection.main;
                     if (
                         completionStatus(update.view.state) ||
+                        !getMarkdownAlertEditorSettings(update.view.state).enableAlertAutocomplete ||
                         !currentSelection.empty ||
                         !matchAlertAutocompleteTrigger(update.view.state, currentSelection.head)
                     ) {

@@ -22,31 +22,14 @@ export function getMarkdownAlertEditorSettings(state: EditorState): MarkdownAler
     return state.facet(markdownAlertEditorSettingsFacet);
 }
 
-export function normalizeMarkdownAlertEditorSettings(value: unknown): MarkdownAlertEditorSettings {
-    if (typeof value === 'boolean') {
-        return { enableAlertAutocomplete: value };
-    }
-
-    if (value && typeof value === 'object') {
-        const enableAlertAutocomplete = (value as { enableAlertAutocomplete?: unknown }).enableAlertAutocomplete;
-        if (typeof enableAlertAutocomplete === 'boolean') {
-            return { enableAlertAutocomplete };
-        }
-    }
-
-    return DEFAULT_MARKDOWN_ALERT_EDITOR_SETTINGS;
-}
-
 export function createMarkdownAlertEditorSettingsExtension(
     settings: MarkdownAlertEditorSettings = DEFAULT_MARKDOWN_ALERT_EDITOR_SETTINGS
 ): Extension {
     return markdownAlertEditorSettingsCompartment.of(markdownAlertEditorSettingsFacet.of(settings));
 }
 
-export function applyMarkdownAlertEditorSettings(view: EditorView, settings: unknown): void {
+export function applyMarkdownAlertEditorSettings(view: EditorView, settings: MarkdownAlertEditorSettings): void {
     view.dispatch({
-        effects: markdownAlertEditorSettingsCompartment.reconfigure(
-            markdownAlertEditorSettingsFacet.of(normalizeMarkdownAlertEditorSettings(settings))
-        ),
+        effects: markdownAlertEditorSettingsCompartment.reconfigure(markdownAlertEditorSettingsFacet.of(settings)),
     });
 }

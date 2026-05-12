@@ -9,10 +9,7 @@ export const DEFAULT_MARKDOWN_ALERT_EDITOR_SETTINGS: MarkdownAlertEditorSettings
     enableAlertAutocomplete: false,
 };
 
-const markdownAlertEditorSettingsFacet = Facet.define<
-    MarkdownAlertEditorSettings,
-    MarkdownAlertEditorSettings
->({
+const markdownAlertEditorSettingsFacet = Facet.define<MarkdownAlertEditorSettings, MarkdownAlertEditorSettings>({
     combine: (values) => values[0] ?? DEFAULT_MARKDOWN_ALERT_EDITOR_SETTINGS,
 });
 

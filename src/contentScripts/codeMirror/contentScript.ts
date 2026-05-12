@@ -10,10 +10,7 @@ import { createClearFormattingCommand } from './commands/clearFormattingCommand'
 import { createInsertAlertCommand } from './commands/insertAlertCommand';
 import { createInsertInlineFormatCommand } from './commands/insertInlineFormatCommand';
 import { createInsertQuoteCommand } from './commands/insertQuoteCommand';
-import {
-    applyMarkdownAlertEditorSettings,
-    createMarkdownAlertEditorSettingsExtension,
-} from './pluginSettings';
+import { applyMarkdownAlertEditorSettings, createMarkdownAlertEditorSettingsExtension } from './pluginSettings';
 import { INLINE_FORMAT_DEFINITIONS } from '../../inlineFormatCommands';
 import { logger } from '../../logger';
 
@@ -84,8 +81,7 @@ export default function (context: ContentScriptContext) {
                 }
             })();
 
-            const themeAsset =
-                appearance === 'dark' ? 'alertAutocomplete-dark.css' : 'alertAutocomplete-light.css';
+            const themeAsset = appearance === 'dark' ? 'alertAutocomplete-dark.css' : 'alertAutocomplete-light.css';
             return [{ name: themeAsset }];
         },
     };

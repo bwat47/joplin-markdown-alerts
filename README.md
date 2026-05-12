@@ -5,8 +5,6 @@ A Joplin plugin that adds the following functionality to the Markdown editor:
 - renders GitHub-style alerts in the Markdown viewer and Markdown editor
 - adds Markdown editor commands for alerts, blockquotes, and inline formatting (for markdown syntax that joplin's builtin formatting commands don't cover)
 
-![test9](https://github.com/user-attachments/assets/66383dd7-438f-4277-ad7b-32df269d1376)
-
 > [!NOTE]
 > This plugin was created entirely with AI tools.
 
@@ -60,13 +58,19 @@ Example:
 > This alert uses a custom title
 ```
 
-![The full list of rendered alerts in light mode.](./images/screenshot4.png)
+![alert examples in markdown editor](./images/screenshot1.png)
+
+---
+
+![alert examples in markdown viewer](./images/screenshot2.png)
 
 ## 2. Codemirror auto-complete for markdown alerts
 
 Typing `>!`, `> [!`, or invoking the insert alert command at the beginning of an empty line will trigger an auto-completion dropdown to finish the alert syntax from the supported alert types.
 
 Backspacing text within existing alert syntax will also trigger the auto-completion dropdown, making it easy to change the type of an existing alert.
+
+<img width="1904" height="1354" alt="auto_complete" src="https://github.com/user-attachments/assets/2d922f69-44bb-472c-abbc-166b2fe408a1" />
 
 ## 3. Markdown Editor Commands For Block Structures
 
@@ -111,6 +115,8 @@ Behavior:
 - Strips headings, blockquotes, ordered/unordered/nested lists, and task list markers back to plain text
 - Converts external markdown links and image embeds to their raw URLs
 - Preserves Joplin resource links and embeds that target `:/<32 hex>`
+
+![block formatting commands example](./images/block_commands.gif)
 
 ## 4. Inline Formatting Commands
 
@@ -172,6 +178,8 @@ Highlight becomes:
 ```markdown
 ## ==Heading==
 ```
+
+![inline formatting commands example](./images/inline_commands.gif)
 
 ## Settings
 

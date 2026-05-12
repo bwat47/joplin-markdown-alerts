@@ -3,7 +3,8 @@
 A Joplin plugin that adds the following functionality to the Markdown editor:
 
 - renders GitHub-style alerts in the Markdown viewer and Markdown editor
-- adds Markdown editor commands for alerts, blockquotes, and inline formatting (for markdown syntax that joplin's builtin formatting commands don't cover)
+- adds Markdown editor commands for alerts, blockquotes, and inline formatting (strikethrough/highlight/insert/superscript/subscript)
+- provides auto-complete dropdown for github alert syntax
 
 > [!NOTE]
 > This plugin was created entirely with AI tools.

@@ -19,6 +19,7 @@ const BLOCKQUOTE_PREFIX_PATTERN = /^(\s*(?:>\s*)+)/;
 const DEFAULT_ALERT_TYPE = 'NOTE';
 const DEFAULT_ALERT_INSERT_TEXT = `> [!${DEFAULT_ALERT_TYPE}] `;
 const AUTOCOMPLETE_ALERT_INSERT_TEXT = '> [!]';
+// Cursor sits before ']' so the trigger pattern matches "> [!" while getAlertCompletionReplaceTo extends the replacement range to consume the ']'.
 const AUTOCOMPLETE_ALERT_CURSOR_OFFSET = AUTOCOMPLETE_ALERT_INSERT_TEXT.indexOf(']');
 const BLOCKQUOTE_LINE_PREFIX = /^>\s?/;
 
@@ -294,11 +295,7 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
             return true;
         }
 
-        if (
-            getMarkdownAlertEditorSettings(state).enableAlertAutocomplete &&
-            ranges.length === 1 &&
-            ranges[0].empty
-        ) {
+        if (getMarkdownAlertEditorSettings(state).enableAlertAutocomplete && ranges.length === 1 && ranges[0].empty) {
             const cursorLine = state.doc.lineAt(ranges[0].head);
             if (cursorLine.text.trim() === '') {
                 view.dispatch({

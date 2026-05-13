@@ -1,5 +1,6 @@
 /** @jest-environment jsdom */
 import { type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
+import { EditorSelection } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 
 import { createEditorHarness } from '../shared/testUtils';
@@ -275,5 +276,75 @@ describe('createAlertCompletionSource — apply', () => {
     test('works on a line that is not the first line of the document', () => {
         const { text } = applyCompletion('first line\n>!|', 3); // index 3 = warning
         expect(text).toBe('first line\n> [!WARNING] ');
+    });
+
+    test('applies the selected completion to every matching cursor', () => {
+        const harness = createAutocompleteEnabledHarness(['> [!w]', '> [!w]'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line2 = harness.view.state.doc.line(2);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.cursor(line1.from + '> [!w'.length),
+                    EditorSelection.cursor(line2.from + '> [!w'.length),
+                ]),
+            });
+
+            const source = createAlertCompletionSource();
+            const cursorPos = harness.view.state.selection.main.head;
+            const result = source(makeContext(harness.view, cursorPos)) as CompletionResult;
+            const option = result.options[3]; // warning
+            const applyFn = option.apply as (
+                view: EditorView,
+                completion: (typeof result.options)[0],
+                from: number,
+                to: number
+            ) => void;
+
+            applyFn(harness.view, option, result.from, result.to ?? cursorPos);
+
+            expect(harness.getText()).toBe(['> [!WARNING] ', '> [!WARNING] '].join('\n'));
+            expect(harness.view.state.selection.ranges.map((range) => range.head)).toEqual([13, 27]);
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('leaves non-alert cursors unchanged when applying across matching cursors', () => {
+        const harness = createAutocompleteEnabledHarness(['> [!w]', 'plain', '> [!w]'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line2 = harness.view.state.doc.line(2);
+            const line3 = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.cursor(line1.from + '> [!w'.length),
+                    EditorSelection.cursor(line2.from + 'pl'.length),
+                    EditorSelection.cursor(line3.from + '> [!w'.length),
+                ]),
+            });
+
+            const source = createAlertCompletionSource();
+            const cursorPos = harness.view.state.selection.main.head;
+            const result = source(makeContext(harness.view, cursorPos)) as CompletionResult;
+            const option = result.options[1]; // tip
+            const applyFn = option.apply as (
+                view: EditorView,
+                completion: (typeof result.options)[0],
+                from: number,
+                to: number
+            ) => void;
+
+            applyFn(harness.view, option, result.from, result.to ?? cursorPos);
+
+            expect(harness.getText()).toBe(['> [!TIP] ', 'plain', '> [!TIP] '].join('\n'));
+            expect(harness.view.state.selection.ranges.map((range) => range.head)).toEqual([9, 12, 25]);
+        } finally {
+            harness.destroy();
+        }
     });
 });

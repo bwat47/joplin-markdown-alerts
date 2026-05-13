@@ -1,5 +1,5 @@
 import { type CompletionContext, type CompletionResult, type CompletionSource } from '@codemirror/autocomplete';
-import type { EditorState } from '@codemirror/state';
+import { ChangeSet, EditorSelection, type EditorState } from '@codemirror/state';
 
 import { GITHUB_ALERT_TYPES, type GitHubAlertType } from './alertParsing';
 import { getMarkdownAlertEditorSettings } from '../pluginSettings';
@@ -11,6 +11,18 @@ const ALERT_TYPE_SORT_TEXT_WIDTH = String(GITHUB_ALERT_TYPES.length).length;
 type AlertAutocompleteTriggerMatch = {
     triggerFrom: number;
     typeFrom: number;
+};
+
+type TextChange = {
+    from: number;
+    to: number;
+    insert: string;
+};
+
+type MatchingAlertSelection = {
+    selectionIndex: number;
+    match: AlertAutocompleteTriggerMatch;
+    change: TextChange;
 };
 
 function buildAlertInsertText(type: GitHubAlertType): string {
@@ -47,6 +59,10 @@ function matchAlertAutocompleteTrigger(state: EditorState, pos: number): AlertAu
     return { triggerFrom, typeFrom };
 }
 
+function sortChanges(changes: TextChange[]): TextChange[] {
+    return [...changes].sort((a, b) => (a.from === b.from ? a.to - b.to : a.from - b.from));
+}
+
 export function createAlertCompletionSource(): CompletionSource {
     return (context: CompletionContext): CompletionResult | null => {
         if (!getMarkdownAlertEditorSettings(context.state).enableAlertAutocomplete) return null;
@@ -66,10 +82,56 @@ export function createAlertCompletionSource(): CompletionSource {
                     sortText: String(index).padStart(ALERT_TYPE_SORT_TEXT_WIDTH, '0'),
                     type,
                     apply: (view, _completion, _applyFrom, applyTo) => {
-                        const replaceTo = getAlertCompletionReplaceTo(view.state, applyTo);
+                        const state = view.state;
+                        const matchingSelections = state.selection.ranges
+                            .map<MatchingAlertSelection | null>((range, selectionIndex) => {
+                                if (!range.empty) return null;
+
+                                const rangeMatch = matchAlertAutocompleteTrigger(state, range.head);
+                                if (!rangeMatch) return null;
+
+                                const replaceTo = getAlertCompletionReplaceTo(
+                                    state,
+                                    range.head === context.pos ? applyTo : range.head
+                                );
+                                return {
+                                    selectionIndex,
+                                    match: rangeMatch,
+                                    change: { from: rangeMatch.triggerFrom, to: replaceTo, insert: insertText },
+                                };
+                            })
+                            .filter((selection): selection is MatchingAlertSelection => selection !== null);
+
+                        if (matchingSelections.length === 0) {
+                            const replaceTo = getAlertCompletionReplaceTo(state, applyTo);
+                            view.dispatch({
+                                changes: { from: match.triggerFrom, to: replaceTo, insert: insertText },
+                                selection: { anchor: match.triggerFrom + insertText.length },
+                            });
+                            return;
+                        }
+
+                        const sortedChanges = sortChanges(matchingSelections.map(({ change }) => change));
+                        const changeSet = ChangeSet.of(sortedChanges, state.doc.length);
+                        const selectionAnchorsByIndex = new Map(
+                            matchingSelections.map(({ selectionIndex, match }) => [
+                                selectionIndex,
+                                changeSet.mapPos(match.triggerFrom, -1) + insertText.length,
+                            ])
+                        );
+                        const selectionRanges = state.selection.ranges.map((range, selectionIndex) => {
+                            const anchor = selectionAnchorsByIndex.get(selectionIndex);
+
+                            if (anchor !== undefined) {
+                                return EditorSelection.cursor(anchor);
+                            }
+
+                            return EditorSelection.range(changeSet.mapPos(range.anchor, 1), changeSet.mapPos(range.head, 1));
+                        });
+
                         view.dispatch({
-                            changes: { from: match.triggerFrom, to: replaceTo, insert: insertText },
-                            selection: { anchor: match.triggerFrom + insertText.length },
+                            changes: sortedChanges,
+                            selection: EditorSelection.create(selectionRanges, state.selection.mainIndex),
                         });
                     },
                 };

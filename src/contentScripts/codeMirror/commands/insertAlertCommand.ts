@@ -16,6 +16,8 @@ import {
 const BLOCKQUOTE_PREFIX_PATTERN = /^(\s*(?:>\s*)+)/;
 const DEFAULT_ALERT_TYPE = 'NOTE';
 const DEFAULT_ALERT_INSERT_TEXT = `> [!${DEFAULT_ALERT_TYPE}] `;
+const DEFAULT_ALERT_TYPE_SELECTION_FROM = DEFAULT_ALERT_INSERT_TEXT.indexOf(DEFAULT_ALERT_TYPE);
+const DEFAULT_ALERT_TYPE_SELECTION_TO = DEFAULT_ALERT_TYPE_SELECTION_FROM + DEFAULT_ALERT_TYPE.length;
 const BLOCKQUOTE_LINE_PREFIX = /^>\s?/;
 
 type TextChange = {
@@ -73,9 +75,9 @@ function createAlertCursorChange(
             },
             explicitSelection: {
                 anchorBasePos: cursorLine.from,
-                anchorOffset: DEFAULT_ALERT_INSERT_TEXT.length,
+                anchorOffset: DEFAULT_ALERT_TYPE_SELECTION_FROM,
                 headBasePos: cursorLine.from,
-                headOffset: DEFAULT_ALERT_INSERT_TEXT.length,
+                headOffset: DEFAULT_ALERT_TYPE_SELECTION_TO,
             },
         };
     }
@@ -198,7 +200,7 @@ export function toggleAlertSelectionText(text: string): string {
 /**
  * Creates a command that inserts or cycles a GitHub alert.
  * - Selections: expand each selection to paragraph boundaries, dedupe ranges, and apply `toggleAlertSelectionText` to each.
- * - Cursor on empty line: insert `> [!NOTE] ` and place the cursor after the marker.
+ * - Cursor on empty line: insert `> [!NOTE] ` and select `NOTE`.
  * - Cursor on an alert title line: cycle the alert marker on that line.
  * - Cursor inside a regular blockquote: insert an alert title line above the blockquote, respecting its nesting prefix.
  * - Otherwise: toggle alert formatting for the surrounding paragraph or current line via `toggleAlertSelectionText`.

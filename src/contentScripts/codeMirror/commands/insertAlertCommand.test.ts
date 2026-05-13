@@ -53,12 +53,12 @@ describe('createInsertAlertCommand', () => {
         }
     }
 
-    function runCommandWithCursor(input: string): { text: string; cursor: number } {
+    function runCommandWithSelection(input: string): { text: string; selection: { anchor: number; head: number } } {
         const harness = createEditorHarness(input);
         try {
             const command = createInsertAlertCommand(harness.view);
             command();
-            return { text: harness.getText(), cursor: harness.getCursor() };
+            return { text: harness.getText(), selection: harness.getSelection() };
         } finally {
             harness.destroy();
         }
@@ -78,15 +78,14 @@ describe('createInsertAlertCommand', () => {
         expect(runCommand(input)).toBe(expected);
     });
 
-    test('places cursor after alert marker on blank line', () => {
+    test('selects alert type after inserting alert marker on blank line', () => {
         const input = '|\n';
         const expectedText = `> [!NOTE] \n`;
-        const expectedCursor = expectedText.indexOf('\n');
 
-        const result = runCommandWithCursor(input);
+        const result = runCommandWithSelection(input);
 
         expect(result.text).toBe(expectedText);
-        expect(result.cursor).toBe(expectedCursor);
+        expect(result.selection).toEqual({ anchor: 4, head: 8 });
     });
 
     test('converts a partially selected paragraph into an alert block', () => {
@@ -139,7 +138,12 @@ describe('createInsertAlertCommand', () => {
             command();
 
             expect(harness.getText()).toBe(['> [!NOTE] ', '', '> [!NOTE]', '> Selected line'].join('\n'));
-            expect(harness.view.state.selection.ranges.map((range) => range.head)).toEqual([10, 37]);
+            expect(
+                harness.view.state.selection.ranges.map((range) => ({ anchor: range.anchor, head: range.head }))
+            ).toEqual([
+                { anchor: 4, head: 8 },
+                { anchor: 12, head: 37 },
+            ]);
         } finally {
             harness.destroy();
         }
@@ -177,7 +181,7 @@ describe('createInsertAlertCommand', () => {
         }
     });
 
-    test('places each cursor after inserted alert marker on blank lines', () => {
+    test('selects each alert type after inserting alert markers on blank lines', () => {
         const harness = createEditorHarness(['', '', ''].join('\n'));
 
         try {
@@ -195,7 +199,12 @@ describe('createInsertAlertCommand', () => {
             command();
 
             expect(harness.getText()).toBe(['> [!NOTE] ', '', '> [!NOTE] '].join('\n'));
-            expect(harness.view.state.selection.ranges.map((range) => range.head)).toEqual([10, 22]);
+            expect(
+                harness.view.state.selection.ranges.map((range) => ({ anchor: range.anchor, head: range.head }))
+            ).toEqual([
+                { anchor: 4, head: 8 },
+                { anchor: 16, head: 20 },
+            ]);
         } finally {
             harness.destroy();
         }

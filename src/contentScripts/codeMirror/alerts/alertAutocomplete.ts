@@ -1,12 +1,5 @@
-import {
-    completionStatus,
-    startCompletion,
-    type CompletionContext,
-    type CompletionResult,
-    type CompletionSource,
-} from '@codemirror/autocomplete';
+import { type CompletionContext, type CompletionResult, type CompletionSource } from '@codemirror/autocomplete';
 import type { EditorState } from '@codemirror/state';
-import { ViewPlugin, type ViewUpdate } from '@codemirror/view';
 
 import { GITHUB_ALERT_TYPES, type GitHubAlertType } from './alertParsing';
 import { getMarkdownAlertEditorSettings } from '../pluginSettings';
@@ -54,10 +47,6 @@ function matchAlertAutocompleteTrigger(state: EditorState, pos: number): AlertAu
     return { triggerFrom, typeFrom };
 }
 
-function isDeleteUpdate(update: ViewUpdate): boolean {
-    return update.transactions.some((transaction) => transaction.isUserEvent('delete'));
-}
-
 export function createAlertCompletionSource(): CompletionSource {
     return (context: CompletionContext): CompletionResult | null => {
         if (!getMarkdownAlertEditorSettings(context.state).enableAlertAutocomplete) return null;
@@ -88,32 +77,4 @@ export function createAlertCompletionSource(): CompletionSource {
             validFor: /^[a-zA-Z]*$/,
         };
     };
-}
-
-export function createAlertAutocompleteBackspaceActivationExtension() {
-    return ViewPlugin.fromClass(
-        class {
-            update(update: ViewUpdate) {
-                if (!update.docChanged || !isDeleteUpdate(update) || completionStatus(update.state)) return;
-                if (!getMarkdownAlertEditorSettings(update.state).enableAlertAutocomplete) return;
-
-                const selection = update.state.selection.main;
-                if (!selection.empty || !matchAlertAutocompleteTrigger(update.state, selection.head)) return;
-
-                setTimeout(() => {
-                    const currentSelection = update.view.state.selection.main;
-                    if (
-                        completionStatus(update.view.state) ||
-                        !getMarkdownAlertEditorSettings(update.view.state).enableAlertAutocomplete ||
-                        !currentSelection.empty ||
-                        !matchAlertAutocompleteTrigger(update.view.state, currentSelection.head)
-                    ) {
-                        return;
-                    }
-
-                    startCompletion(update.view);
-                }, 0);
-            }
-        }
-    );
 }

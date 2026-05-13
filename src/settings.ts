@@ -61,7 +61,7 @@ export async function registerPluginSettings(): Promise<void> {
             section: SETTINGS_SECTION,
             label: 'Enable alert type autocomplete in editor',
             description:
-                'When typing >!, > [!, or invoking insert alert command at the start of an empty line, show a dropdown of alert types. Requires reopening the note to take effect.',
+                'When typing >! or > [! at the start of a line, show a dropdown of alert types. Requires reopening the note to take effect.',
         },
         [SHOW_ALERT_TOOLBAR_BUTTON_SETTING]: {
             value: true,

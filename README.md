@@ -71,7 +71,7 @@ Typing `>!`, `> [!`, or invoking the insert alert command at the beginning of an
 
 Backspacing text within existing alert syntax will also trigger the auto-completion dropdown, making it easy to change the type of an existing alert.
 
-<img width="1904" height="1354" alt="auto_complete" src="https://github.com/user-attachments/assets/2d922f69-44bb-472c-abbc-166b2fe408a1" />
+![auto_complete](https://github.com/user-attachments/assets/2d922f69-44bb-472c-abbc-166b2fe408a1)
 
 ## 3. Markdown Editor Commands For Block Structures
 

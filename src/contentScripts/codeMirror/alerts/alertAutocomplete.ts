@@ -102,15 +102,6 @@ export function createAlertCompletionSource(): CompletionSource {
                             })
                             .filter((selection): selection is MatchingAlertSelection => selection !== null);
 
-                        if (matchingSelections.length === 0) {
-                            const replaceTo = getAlertCompletionReplaceTo(state, applyTo);
-                            view.dispatch({
-                                changes: { from: match.triggerFrom, to: replaceTo, insert: insertText },
-                                selection: { anchor: match.triggerFrom + insertText.length },
-                            });
-                            return;
-                        }
-
                         const sortedChanges = sortChanges(matchingSelections.map(({ change }) => change));
                         const changeSet = ChangeSet.of(sortedChanges, state.doc.length);
                         const selectionAnchorsByIndex = new Map(

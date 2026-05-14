@@ -21,25 +21,7 @@ The plugin supports GitHub-style alert syntax:
 
 Supported alert types:
 
-- `NOTE`
-- `TIP`
-- `IMPORTANT`
-- `WARNING`
-- `CAUTION`
-- `ABSTRACT`
-- `INFO`
-- `TODO`
-- `SUCCESS`
-- `QUESTION`
-- `FAILURE`
-- `DANGER`
-- `BUG`
-- `EXAMPLE`
-- `QUOTE`
-
-Example:
-
-```markdown
+```
 > [!NOTE]
 > Useful information that users should know, even when skimming content.
 
@@ -55,9 +37,38 @@ Example:
 > [!CAUTION]
 > Advises about risks or negative outcomes of certain actions.
 
-> [!QUESTION] What if you could use a custom title?
-> This alert uses a custom title
+> [!ABSTRACT]
+> A summary or overview of the content that follows.
+
+> [!INFO]
+> Additional context or background information on a topic.
+
+> [!TODO]
+> A task or action item that still needs to be completed.
+
+> [!SUCCESS]
+> Confirms that an action or process completed successfully.
+
+> [!QUESTION]
+> A question or point requiring clarification or further thought.
+
+> [!FAILURE]
+> Indicates something that did not work or a known limitation.
+
+> [!DANGER]
+> Critical warning about something that could cause serious harm.
+
+> [!BUG]
+> Documents a known issue, defect, or unexpected behavior.
+
+> [!EXAMPLE]
+> Illustrates a concept with a concrete example or sample.
+
+> [!QUOTE]
+> A notable quotation or reference from an external source.
 ```
+
+Examples:
 
 ![alert examples in markdown editor](./images/screenshot1.png)
 

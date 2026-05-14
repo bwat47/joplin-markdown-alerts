@@ -1,7 +1,11 @@
 /** @jest-environment jsdom */
+import { acceptCompletion, autocompletion, completionStatus, startCompletion } from '@codemirror/autocomplete';
 import { EditorSelection } from '@codemirror/state';
+import type { EditorView } from '@codemirror/view';
 
+import { createAlertCompletionSource } from '../alerts/alertAutocomplete';
 import { createInsertAlertCommand, toggleAlertSelectionText } from './insertAlertCommand';
+import { createMarkdownAlertEditorSettingsExtension } from '../pluginSettings';
 import { createEditorHarness } from '../shared/testUtils';
 
 describe('toggleAlertSelectionText', () => {
@@ -42,6 +46,15 @@ describe('toggleAlertSelectionText', () => {
 });
 
 describe('createInsertAlertCommand', () => {
+    async function waitForCompletionStart(view: EditorView) {
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            if (completionStatus(view.state) === 'active') {
+                return;
+            }
+        }
+    }
+
     function runCommand(input: string): string {
         const harness = createEditorHarness(input);
         try {
@@ -86,6 +99,43 @@ describe('createInsertAlertCommand', () => {
 
         expect(result.text).toBe(expectedText);
         expect(result.selection).toEqual({ anchor: 4, head: 8 });
+    });
+
+    test('accepts autocomplete after replacing the selected default alert type without duplicating trailing space', async () => {
+        const harness = createEditorHarness('|\n', {
+            extensions: [
+                createMarkdownAlertEditorSettingsExtension({
+                    enableAlertAutocomplete: true,
+                }),
+                autocompletion({
+                    override: [createAlertCompletionSource()],
+                    activateOnTyping: false,
+                    interactionDelay: 0,
+                }),
+            ],
+        });
+
+        try {
+            const command = createInsertAlertCommand(harness.view);
+            command();
+
+            const selection = harness.view.state.selection.main;
+            harness.view.dispatch({
+                changes: { from: selection.from, to: selection.to, insert: 'w' },
+                selection: { anchor: selection.from + 1 },
+            });
+
+            startCompletion(harness.view);
+            await waitForCompletionStart(harness.view);
+            expect(completionStatus(harness.view.state)).toBe('active');
+
+            expect(acceptCompletion(harness.view)).toBe(true);
+
+            expect(harness.getText()).toBe(`> [!WARNING] \n`);
+            expect(harness.getCursor()).toBe('> [!WARNING] '.length);
+        } finally {
+            harness.destroy();
+        }
     });
 
     test('converts a partially selected paragraph into an alert block', () => {

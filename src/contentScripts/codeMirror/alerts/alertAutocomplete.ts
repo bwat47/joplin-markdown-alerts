@@ -39,8 +39,11 @@ function getAlertCompletionReplaceTo(state: EditorState, applyTo: number): numbe
         replaceTo += remainingMarkerMatch[0].length;
     }
 
-    const separatorEnd = line.text.slice(replaceTo - line.from).search(/[^\t ]/);
-    if (separatorEnd > 0) {
+    const separatorSuffix = line.text.slice(replaceTo - line.from);
+    const separatorEnd = separatorSuffix.search(/[^\t ]/);
+    if (separatorEnd === -1) {
+        replaceTo += separatorSuffix.length;
+    } else if (separatorEnd > 0) {
         replaceTo += separatorEnd;
     }
 

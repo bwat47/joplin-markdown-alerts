@@ -250,4 +250,38 @@ describe('createInsertQuoteCommand', () => {
             harness.destroy();
         }
     });
+
+    test('preserves partial selection when unquoting an expanded paragraph', () => {
+        const harness = createEditorHarness(
+            ['> ABCACC', '> abc 123', '> [[sadads sad]] das abad s dsadsa dsa'].join('\n')
+        );
+
+        try {
+            const command = createInsertQuoteCommand(harness.view);
+            command();
+
+            expect(harness.getText()).toBe(['ABCACC', 'abc 123', 'sadads sad das abad s dsadsa dsa'].join('\n'));
+
+            const selection = harness.getSelection();
+            expect(harness.view.state.doc.sliceString(selection.anchor, selection.head)).toBe('sadads sad');
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('preserves partial selection when quoting an expanded paragraph', () => {
+        const harness = createEditorHarness(['ABCACC', 'abc 123', '[[sadads sad]] das abad s dsadsa dsa'].join('\n'));
+
+        try {
+            const command = createInsertQuoteCommand(harness.view);
+            command();
+
+            expect(harness.getText()).toBe(['> ABCACC', '> abc 123', '> sadads sad das abad s dsadsa dsa'].join('\n'));
+
+            const selection = harness.getSelection();
+            expect(harness.view.state.doc.sliceString(selection.anchor, selection.head)).toBe('sadads sad');
+        } finally {
+            harness.destroy();
+        }
+    });
 });

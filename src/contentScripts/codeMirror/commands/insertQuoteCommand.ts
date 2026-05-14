@@ -1,4 +1,4 @@
-import type { EditorState } from '@codemirror/state';
+import type { EditorState, SelectionRange } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 import {
@@ -15,6 +15,11 @@ const BLOCKQUOTE_PREFIX_REGEX = /^>\s?/;
 type LineRange = {
     from: number;
     to: number;
+};
+
+type MappedQuotePosition = {
+    basePos: number;
+    offset: number;
 };
 
 export function toggleBlockquoteText(text: string): string {
@@ -44,6 +49,92 @@ function removeBlockquotePrefix(text: string): string {
 
 function isBlockquoteText(text: string): boolean {
     return text.split('\n').every((line) => BLOCKQUOTE_PREFIX_REGEX.test(line));
+}
+
+function getTransformedLineLength(lineText: string, removeQuotePrefix: boolean): number {
+    if (!removeQuotePrefix) {
+        return lineText.length + BLOCKQUOTE_PREFIX.length;
+    }
+
+    const prefixMatch = BLOCKQUOTE_PREFIX_REGEX.exec(lineText);
+    return prefixMatch ? lineText.length - prefixMatch[0].length : lineText.length;
+}
+
+function getMappedLineOffset(lineText: string, lineOffset: number, removeQuotePrefix: boolean): number {
+    if (!removeQuotePrefix) {
+        return lineOffset + BLOCKQUOTE_PREFIX.length;
+    }
+
+    const prefixMatch = BLOCKQUOTE_PREFIX_REGEX.exec(lineText);
+    if (!prefixMatch) {
+        return lineOffset;
+    }
+
+    return Math.max(0, lineOffset - prefixMatch[0].length);
+}
+
+function mapPositionThroughQuoteTransform(
+    state: EditorState,
+    target: QuoteTarget,
+    position: number,
+    removeQuotePrefix: boolean
+): MappedQuotePosition | null {
+    if (position < target.range.from || position > target.range.to) {
+        return null;
+    }
+
+    const targetText = target.text;
+    const targetLine = state.doc.lineAt(position);
+    const lineOffset = position - targetLine.from;
+    const lines = targetText.split('\n');
+    const startLineNo = state.doc.lineAt(target.range.from).number;
+    const targetLineIndex = targetLine.number - startLineNo;
+
+    if (targetLineIndex < 0 || targetLineIndex >= lines.length) {
+        return null;
+    }
+
+    let transformedOffset = 0;
+    for (let index = 0; index < targetLineIndex; index += 1) {
+        transformedOffset += getTransformedLineLength(lines[index], removeQuotePrefix) + 1;
+    }
+
+    transformedOffset += getMappedLineOffset(lines[targetLineIndex], lineOffset, removeQuotePrefix);
+
+    return {
+        basePos: target.range.from,
+        offset: transformedOffset,
+    };
+}
+
+function findTargetContainingPosition(targets: QuoteTarget[], position: number): QuoteTarget | null {
+    return targets.find((target) => position >= target.range.from && position <= target.range.to) ?? null;
+}
+
+function createExplicitQuoteSelection(
+    state: EditorState,
+    targets: QuoteTarget[],
+    range: SelectionRange,
+    removeQuotePrefix: boolean
+): ExplicitCursorSelection | null {
+    const anchorTarget = findTargetContainingPosition(targets, range.anchor);
+    const headTarget = findTargetContainingPosition(targets, range.head);
+    if (!anchorTarget || !headTarget) {
+        return null;
+    }
+
+    const mappedAnchor = mapPositionThroughQuoteTransform(state, anchorTarget, range.anchor, removeQuotePrefix);
+    const mappedHead = mapPositionThroughQuoteTransform(state, headTarget, range.head, removeQuotePrefix);
+    if (!mappedAnchor || !mappedHead) {
+        return null;
+    }
+
+    return {
+        anchorBasePos: mappedAnchor.basePos,
+        anchorOffset: mappedAnchor.offset,
+        headBasePos: mappedHead.basePos,
+        headOffset: mappedHead.offset,
+    };
 }
 
 function collectNonParagraphLineRanges(
@@ -231,6 +322,16 @@ export function createInsertQuoteCommand(view: EditorView): () => boolean {
         }
 
         const allQuoted = rangeTexts.every((entry) => isBlockquoteText(entry.text));
+        ranges.forEach((range, index) => {
+            if (range.empty || explicitSelectionsByIndex.has(index)) {
+                return;
+            }
+
+            const explicitSelection = createExplicitQuoteSelection(state, rangeTexts, range, allQuoted);
+            if (explicitSelection) {
+                explicitSelectionsByIndex.set(index, explicitSelection);
+            }
+        });
 
         const changes = rangeTexts
             .map(({ range, text }) => {

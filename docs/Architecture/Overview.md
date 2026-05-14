@@ -31,7 +31,7 @@ GitHub alert syntax:
 - Detects alert blocks via CM6 syntax tree: finds blockquotes, validates first line matches `> [!TYPE]`
 - Implements "clean titles": Replaces `[!TYPE]` marker with an inline widget containing the alert icon and either the alert type name (e.g., "Note", "Tip", "Important", "Warning", "Caution") or a custom title if provided.
 - Theme detection via `EditorView.darkTheme` facet at content script initialization
-- Applies appropriate color theme based on detected theme (passed into the decorations extension)
+- Applies appropriate color theme based on detected theme (passed into editor-local decoration and autocomplete theme extensions)
 - Provides alert autocomplete triggers: typing `>!` or `> [!` at the start of a line shows a dropdown of all alert types; selecting one inserts `> [!TYPE] ` with the cursor after the trailing space
 - Stores editor-local plugin settings in a CM6 facet, reconfigured after the content script fetches settings from the main plugin. The default facet disables autocomplete until settings are loaded.
 
@@ -39,6 +39,7 @@ GitHub alert syntax:
 
 - `src/contentScripts/codeMirror/contentScript.ts` - Content script entry point; registers extensions and editor commands.
 - `src/contentScripts/codeMirror/alerts/alertDecorations.ts` - CM6 decorations extension (base styles + themed colors + view plugin)
+- `src/contentScripts/codeMirror/alerts/alertAutocompleteTheme.ts` - CM6 autocomplete dropdown theme, including alert type icon masks and light/dark colors
 - `src/contentScripts/codeMirror/alerts/alertParsing.ts` - Parses `> [!TYPE]` title lines and defines alert type constants
 - `src/contentScripts/codeMirror/alerts/alertIcons.ts` - Octicon SVG icons used in the inline title widget
 - `src/contentScripts/codeMirror/alerts/alertColors.ts` - Light/dark theme color tokens used by the CM6 decorations
@@ -46,7 +47,7 @@ GitHub alert syntax:
 - `src/contentScripts/codeMirror/commands/insertInlineFormatCommand.ts` - Shared editor command logic for inline formatting (selection-aware, multiline list-aware)
 - `src/contentScripts/codeMirror/commands/insertQuoteCommand.ts` - Editor command logic for quoting/toggling selected text
 - `src/contentScripts/codeMirror/commands/clearFormattingCommand.ts` - Editor command logic for removing supported markdown formatting from selections
-- `src/contentScripts/codeMirror/alerts/alertAutocomplete.ts` - CM6 completion source for alert-type dropdown triggers plus its icon theme
+- `src/contentScripts/codeMirror/alerts/alertAutocomplete.ts` - CM6 completion source for alert-type dropdown triggers
 - `src/contentScripts/codeMirror/pluginSettings.ts` - CM6 facet/compartment for editor-local settings consumed by content script extensions and commands
 - `src/contentScripts/codeMirror/shared/syntaxTreeUtils.ts` - Shared syntax-tree probing helpers used by CodeMirror commands and decorations
 - `src/contentScripts/codeMirror/shared/commandSelectionUtils.ts` - Shared selection-preserving dispatch helper for CodeMirror commands

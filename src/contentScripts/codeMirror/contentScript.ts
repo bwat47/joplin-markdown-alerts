@@ -2,6 +2,7 @@ import { EditorView } from '@codemirror/view';
 import type { CodeMirrorControl, ContentScriptContext } from 'api/types';
 
 import { createAlertCompletionSource } from './alerts/alertAutocomplete';
+import { createAlertAutocompleteThemeExtension } from './alerts/alertAutocompleteTheme';
 import { createAlertDecorationExtensions } from './alerts/alertDecorations';
 import { createClearFormattingCommand } from './commands/clearFormattingCommand';
 import { createInsertAlertCommand } from './commands/insertAlertCommand';
@@ -34,6 +35,7 @@ export default function (context: ContentScriptContext) {
 
             editorControl.addExtension(createMarkdownAlertEditorSettingsExtension());
             editorControl.addExtension(createAlertDecorationExtensions(isDarkTheme));
+            editorControl.addExtension(createAlertAutocompleteThemeExtension(isDarkTheme));
             editorControl.addExtension(editorControl.joplinExtensions.completionSource(createAlertCompletionSource()));
 
             editorControl.registerCommand(INSERT_ALERT_COMMAND, createInsertAlertCommand(editorControl.cm6));
@@ -58,27 +60,5 @@ export default function (context: ContentScriptContext) {
             });
         },
 
-        assets: function () {
-            let rootElement = document.documentElement;
-            try {
-                const topWindow = window.top;
-                if (topWindow?.document?.documentElement) {
-                    rootElement = topWindow.document.documentElement;
-                }
-            } catch {
-                rootElement = document.documentElement;
-            }
-
-            const appearance = (() => {
-                try {
-                    return getComputedStyle(rootElement).getPropertyValue('--joplin-appearance').trim();
-                } catch {
-                    return '';
-                }
-            })();
-
-            const themeAsset = appearance === 'dark' ? 'alertAutocomplete-dark.css' : 'alertAutocomplete-light.css';
-            return [{ name: themeAsset }];
-        },
     };
 }

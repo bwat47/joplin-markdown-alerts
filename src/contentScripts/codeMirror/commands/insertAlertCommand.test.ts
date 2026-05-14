@@ -1,26 +1,12 @@
 /** @jest-environment jsdom */
-import {
-    autocompletion,
-    completionStatus,
-    type CompletionContext,
-    type CompletionResult,
-} from '@codemirror/autocomplete';
+import { acceptCompletion, autocompletion, completionStatus, startCompletion } from '@codemirror/autocomplete';
 import { EditorSelection } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 
-import { createInsertAlertCommand, toggleAlertSelectionText } from './insertAlertCommand';
 import { createAlertCompletionSource } from '../alerts/alertAutocomplete';
+import { createInsertAlertCommand, toggleAlertSelectionText } from './insertAlertCommand';
 import { createMarkdownAlertEditorSettingsExtension } from '../pluginSettings';
 import { createEditorHarness } from '../shared/testUtils';
-
-function makeCompletionContext(view: EditorView, pos: number): CompletionContext {
-    return {
-        state: view.state,
-        pos,
-        explicit: false,
-        matchBefore: () => null,
-    } as unknown as CompletionContext;
-}
 
 describe('toggleAlertSelectionText', () => {
     test('adds an alert line and quotes when selection is not a blockquote', () => {
@@ -60,8 +46,13 @@ describe('toggleAlertSelectionText', () => {
 });
 
 describe('createInsertAlertCommand', () => {
-    async function waitForScheduledCompletionStart() {
-        await new Promise((resolve) => setTimeout(resolve, 0));
+    async function waitForCompletionStart(view: EditorView) {
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            if (completionStatus(view.state) === 'active') {
+                return;
+            }
+        }
     }
 
     function runCommand(input: string): string {
@@ -75,12 +66,12 @@ describe('createInsertAlertCommand', () => {
         }
     }
 
-    function runCommandWithCursor(input: string): { text: string; cursor: number } {
+    function runCommandWithSelection(input: string): { text: string; selection: { anchor: number; head: number } } {
         const harness = createEditorHarness(input);
         try {
             const command = createInsertAlertCommand(harness.view);
             command();
-            return { text: harness.getText(), cursor: harness.getCursor() };
+            return { text: harness.getText(), selection: harness.getSelection() };
         } finally {
             harness.destroy();
         }
@@ -100,45 +91,27 @@ describe('createInsertAlertCommand', () => {
         expect(runCommand(input)).toBe(expected);
     });
 
-    test('places cursor after alert marker on blank line', () => {
+    test('selects alert type after inserting alert marker on blank line', () => {
         const input = '|\n';
         const expectedText = `> [!NOTE] \n`;
-        const expectedCursor = expectedText.indexOf('\n');
 
-        const result = runCommandWithCursor(input);
+        const result = runCommandWithSelection(input);
 
         expect(result.text).toBe(expectedText);
-        expect(result.cursor).toBe(expectedCursor);
+        expect(result.selection).toEqual({ anchor: 4, head: 8 });
     });
 
-    test('keeps default blank-line insertion when autocomplete is explicitly disabled', () => {
-        const harness = createEditorHarness('|\n', {
-            extensions: [
-                createMarkdownAlertEditorSettingsExtension({
-                    enableAlertAutocomplete: false,
-                }),
-            ],
-        });
-
-        try {
-            const command = createInsertAlertCommand(harness.view);
-            command();
-
-            expect(harness.getText()).toBe(`> [!NOTE] \n`);
-            expect(harness.getCursor()).toBe(10);
-        } finally {
-            harness.destroy();
-        }
-    });
-
-    test('starts alert type autocomplete for a single cursor on a blank line when enabled', async () => {
-        const source = createAlertCompletionSource();
+    test('accepts autocomplete after replacing the selected default alert type without duplicating trailing space', async () => {
         const harness = createEditorHarness('|\n', {
             extensions: [
                 createMarkdownAlertEditorSettingsExtension({
                     enableAlertAutocomplete: true,
                 }),
-                autocompletion({ override: [source], activateOnTyping: false }),
+                autocompletion({
+                    override: [createAlertCompletionSource()],
+                    activateOnTyping: false,
+                    interactionDelay: 0,
+                }),
             ],
         });
 
@@ -146,24 +119,20 @@ describe('createInsertAlertCommand', () => {
             const command = createInsertAlertCommand(harness.view);
             command();
 
-            await waitForScheduledCompletionStart();
+            const selection = harness.view.state.selection.main;
+            harness.view.dispatch({
+                changes: { from: selection.from, to: selection.to, insert: 'w' },
+                selection: { anchor: selection.from + 1 },
+            });
 
-            expect(harness.getText()).toBe('> [!]\n');
-            expect(harness.getCursor()).toBe(4);
-            expect(completionStatus(harness.view.state)).not.toBeNull();
+            startCompletion(harness.view);
+            await waitForCompletionStart(harness.view);
+            expect(completionStatus(harness.view.state)).toBe('active');
 
-            const result = source(makeCompletionContext(harness.view, harness.getCursor())) as CompletionResult;
-            const option = result.options[1];
-            const applyFn = option.apply as (
-                view: EditorView,
-                completion: (typeof result.options)[0],
-                from: number,
-                to: number
-            ) => void;
-            applyFn(harness.view, option, result.from, result.to ?? harness.getCursor());
+            expect(acceptCompletion(harness.view)).toBe(true);
 
-            expect(harness.getText()).toBe('> [!TIP] \n');
-            expect(harness.getCursor()).toBe(9);
+            expect(harness.getText()).toBe(`> [!WARNING] \n`);
+            expect(harness.getCursor()).toBe('> [!WARNING] '.length);
         } finally {
             harness.destroy();
         }
@@ -219,7 +188,12 @@ describe('createInsertAlertCommand', () => {
             command();
 
             expect(harness.getText()).toBe(['> [!NOTE] ', '', '> [!NOTE]', '> Selected line'].join('\n'));
-            expect(harness.view.state.selection.ranges.map((range) => range.head)).toEqual([10, 37]);
+            const selections = harness.view.state.selection.ranges;
+            expect(selections.map((range) => ({ anchor: range.anchor, head: range.head }))).toEqual([
+                { anchor: 4, head: 8 },
+                { anchor: 24, head: 37 },
+            ]);
+            expect(harness.view.state.doc.sliceString(selections[1].anchor, selections[1].head)).toBe('Selected line');
         } finally {
             harness.destroy();
         }
@@ -257,7 +231,7 @@ describe('createInsertAlertCommand', () => {
         }
     });
 
-    test('places each cursor after inserted alert marker on blank lines', () => {
+    test('selects each alert type after inserting alert markers on blank lines', () => {
         const harness = createEditorHarness(['', '', ''].join('\n'));
 
         try {
@@ -275,42 +249,48 @@ describe('createInsertAlertCommand', () => {
             command();
 
             expect(harness.getText()).toBe(['> [!NOTE] ', '', '> [!NOTE] '].join('\n'));
-            expect(harness.view.state.selection.ranges.map((range) => range.head)).toEqual([10, 22]);
+            expect(
+                harness.view.state.selection.ranges.map((range) => ({ anchor: range.anchor, head: range.head }))
+            ).toEqual([
+                { anchor: 4, head: 8 },
+                { anchor: 16, head: 20 },
+            ]);
         } finally {
             harness.destroy();
         }
     });
 
-    test('keeps default blank-line insertion for multiple cursors when autocomplete is enabled', () => {
-        const harness = createEditorHarness(['', '', ''].join('\n'), {
-            extensions: [
-                createMarkdownAlertEditorSettingsExtension({
-                    enableAlertAutocomplete: true,
-                }),
-                autocompletion({
-                    override: [createAlertCompletionSource()],
-                    activateOnTyping: false,
-                }),
-            ],
-        });
+    test('preserves partial body selection when cycling an expanded alert paragraph', () => {
+        const harness = createEditorHarness(
+            ['> [!NOTE]', '> ABCACC', '> abc 123', '> [[sadads sad]] das abad s dsadsa dsa'].join('\n')
+        );
 
         try {
-            const line1 = harness.view.state.doc.line(1);
-            const line3 = harness.view.state.doc.line(3);
-
-            harness.view.dispatch({
-                selection: EditorSelection.create([
-                    EditorSelection.cursor(line1.from),
-                    EditorSelection.cursor(line3.from),
-                ]),
-            });
-
             const command = createInsertAlertCommand(harness.view);
             command();
 
-            expect(harness.getText()).toBe(['> [!NOTE] ', '', '> [!NOTE] '].join('\n'));
-            expect(harness.view.state.selection.ranges.map((range) => range.head)).toEqual([10, 22]);
-            expect(completionStatus(harness.view.state)).toBeNull();
+            expect(harness.getText()).toBe(
+                ['> [!TIP]', '> ABCACC', '> abc 123', '> sadads sad das abad s dsadsa dsa'].join('\n')
+            );
+
+            const selection = harness.getSelection();
+            expect(harness.view.state.doc.sliceString(selection.anchor, selection.head)).toBe('sadads sad');
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('selects the next alert type when cycling a selected alert type', () => {
+        const harness = createEditorHarness('> [![[NOTE]]] ');
+
+        try {
+            const command = createInsertAlertCommand(harness.view);
+            command();
+
+            expect(harness.getText()).toBe('> [!TIP] ');
+
+            const selection = harness.getSelection();
+            expect(harness.view.state.doc.sliceString(selection.anchor, selection.head)).toBe('TIP');
         } finally {
             harness.destroy();
         }

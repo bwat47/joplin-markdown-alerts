@@ -1,10 +1,7 @@
 import { EditorView } from '@codemirror/view';
 import type { CodeMirrorControl, ContentScriptContext } from 'api/types';
 
-import {
-    createAlertAutocompleteBackspaceActivationExtension,
-    createAlertCompletionSource,
-} from './alerts/alertAutocomplete';
+import { createAlertCompletionSource } from './alerts/alertAutocomplete';
 import { createAlertDecorationExtensions } from './alerts/alertDecorations';
 import { createClearFormattingCommand } from './commands/clearFormattingCommand';
 import { createInsertAlertCommand } from './commands/insertAlertCommand';
@@ -38,7 +35,6 @@ export default function (context: ContentScriptContext) {
             editorControl.addExtension(createMarkdownAlertEditorSettingsExtension());
             editorControl.addExtension(createAlertDecorationExtensions(isDarkTheme));
             editorControl.addExtension(editorControl.joplinExtensions.completionSource(createAlertCompletionSource()));
-            editorControl.addExtension(createAlertAutocompleteBackspaceActivationExtension());
 
             editorControl.registerCommand(INSERT_ALERT_COMMAND, createInsertAlertCommand(editorControl.cm6));
             editorControl.registerCommand(CLEAR_FORMATTING_COMMAND, createClearFormattingCommand(editorControl.cm6));

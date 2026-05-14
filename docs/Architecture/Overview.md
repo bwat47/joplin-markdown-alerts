@@ -80,7 +80,7 @@ GitHub alert syntax:
 - Toolbar visibility settings are read at plugin startup, so changes currently require a plugin restart
 - Superscript and subscript each expose a public syntax setting (`html` or `markdown`), defaulting to `html`
 - Syntax settings are read when the global command executes, so they apply immediately without a plugin restart
-- The `enableAlertAutocomplete` boolean setting (default `true`) controls alert autocomplete for `>!`, `> [!`, and single-cursor empty-line alert insertion. The CodeMirror content script always installs the command and completion source, then reconfigures a CM6 settings facet after fetching the setting once via `context.postMessage`; changes take effect when the note is reopened.
+- The `enableAlertAutocomplete` boolean setting (default `true`) controls alert autocomplete for `>!` and `> [!`. The CodeMirror content script always installs the command and completion source, then reconfigures a CM6 settings facet after fetching the setting once via `context.postMessage`; changes take effect when the note is reopened.
 
 ## Design Principles
 

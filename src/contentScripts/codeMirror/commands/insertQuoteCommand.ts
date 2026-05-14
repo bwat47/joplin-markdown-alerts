@@ -323,7 +323,7 @@ export function createInsertQuoteCommand(view: EditorView): () => boolean {
 
         const allQuoted = rangeTexts.every((entry) => isBlockquoteText(entry.text));
         ranges.forEach((range, index) => {
-            if (range.empty || explicitSelectionsByIndex.has(index)) {
+            if (range.empty) {
                 return;
             }
 

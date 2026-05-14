@@ -138,12 +138,12 @@ describe('createInsertAlertCommand', () => {
             command();
 
             expect(harness.getText()).toBe(['> [!NOTE] ', '', '> [!NOTE]', '> Selected line'].join('\n'));
-            expect(
-                harness.view.state.selection.ranges.map((range) => ({ anchor: range.anchor, head: range.head }))
-            ).toEqual([
+            const selections = harness.view.state.selection.ranges;
+            expect(selections.map((range) => ({ anchor: range.anchor, head: range.head }))).toEqual([
                 { anchor: 4, head: 8 },
-                { anchor: 12, head: 37 },
+                { anchor: 24, head: 37 },
             ]);
+            expect(harness.view.state.doc.sliceString(selections[1].anchor, selections[1].head)).toBe('Selected line');
         } finally {
             harness.destroy();
         }
@@ -210,4 +210,39 @@ describe('createInsertAlertCommand', () => {
         }
     });
 
+    test('preserves partial body selection when cycling an expanded alert paragraph', () => {
+        const harness = createEditorHarness(
+            ['> [!NOTE]', '> ABCACC', '> abc 123', '> [[sadads sad]] das abad s dsadsa dsa'].join('\n')
+        );
+
+        try {
+            const command = createInsertAlertCommand(harness.view);
+            command();
+
+            expect(harness.getText()).toBe(
+                ['> [!TIP]', '> ABCACC', '> abc 123', '> sadads sad das abad s dsadsa dsa'].join('\n')
+            );
+
+            const selection = harness.getSelection();
+            expect(harness.view.state.doc.sliceString(selection.anchor, selection.head)).toBe('sadads sad');
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('selects the next alert type when cycling a selected alert type', () => {
+        const harness = createEditorHarness('> [![[NOTE]]] ');
+
+        try {
+            const command = createInsertAlertCommand(harness.view);
+            command();
+
+            expect(harness.getText()).toBe('> [!TIP] ');
+
+            const selection = harness.getSelection();
+            expect(harness.view.state.doc.sliceString(selection.anchor, selection.head)).toBe('TIP');
+        } finally {
+            harness.destroy();
+        }
+    });
 });

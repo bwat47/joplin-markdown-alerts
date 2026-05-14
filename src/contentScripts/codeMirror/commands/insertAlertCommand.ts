@@ -1,5 +1,5 @@
 import type { EditorView } from '@codemirror/view';
-import type { EditorState } from '@codemirror/state';
+import type { EditorState, SelectionRange } from '@codemirror/state';
 import type { SyntaxNode } from '@lezer/common';
 
 import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine } from '../alerts/alertParsing';
@@ -19,11 +19,28 @@ const DEFAULT_ALERT_INSERT_TEXT = `> [!${DEFAULT_ALERT_TYPE}] `;
 const DEFAULT_ALERT_TYPE_SELECTION_FROM = DEFAULT_ALERT_INSERT_TEXT.indexOf(DEFAULT_ALERT_TYPE);
 const DEFAULT_ALERT_TYPE_SELECTION_TO = DEFAULT_ALERT_TYPE_SELECTION_FROM + DEFAULT_ALERT_TYPE.length;
 const BLOCKQUOTE_LINE_PREFIX = /^>\s?/;
+const BLOCKQUOTE_PREFIX_TEXT = '> ';
 
 type TextChange = {
     from: number;
     to: number;
     insert: string;
+};
+
+type AlertTarget = {
+    range: ParagraphRange;
+    text: string;
+    updatedText: string;
+};
+
+type TextPosition = {
+    lineIndex: number;
+    lineOffset: number;
+};
+
+type MappedAlertPosition = {
+    basePos: number;
+    offset: number;
 };
 
 function overlapsRange(change: TextChange, range: ParagraphRange): boolean {
@@ -58,6 +75,160 @@ function getToggledAlertLineText(line: string): string | null {
     const nextTypeUpper = GITHUB_ALERT_TYPES[nextIndex].toUpperCase();
 
     return line.slice(0, alertInfo.markerRange.from) + `[!${nextTypeUpper}]` + line.slice(alertInfo.markerRange.to);
+}
+
+function getTextPosition(text: string, offset: number): TextPosition {
+    const lines = text.split('\n');
+    let remainingOffset = offset;
+
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+        const lineLength = lines[lineIndex].length;
+        if (remainingOffset <= lineLength || lineIndex === lines.length - 1) {
+            return {
+                lineIndex,
+                lineOffset: Math.min(remainingOffset, lineLength),
+            };
+        }
+
+        remainingOffset -= lineLength + 1;
+    }
+
+    return {
+        lineIndex: lines.length - 1,
+        lineOffset: lines[lines.length - 1].length,
+    };
+}
+
+function getQuotedContentOffset(lines: string[], position: TextPosition): number {
+    let offset = createAlertLine('> ').length + 1;
+
+    for (let index = 0; index < position.lineIndex; index += 1) {
+        offset += BLOCKQUOTE_PREFIX_TEXT.length + lines[index].length + 1;
+    }
+
+    return offset + BLOCKQUOTE_PREFIX_TEXT.length + position.lineOffset;
+}
+
+function mapPositionThroughAlertTransform(target: AlertTarget, position: number): MappedAlertPosition | null {
+    if (position < target.range.from || position > target.range.to) {
+        return null;
+    }
+
+    const relativePosition = position - target.range.from;
+    const lines = target.text.split('\n');
+    const allQuoted = lines.every((line) => isBlockquoteLine(line));
+
+    if (!allQuoted) {
+        return {
+            basePos: target.range.from,
+            offset: getQuotedContentOffset(lines, getTextPosition(target.text, relativePosition)),
+        };
+    }
+
+    const firstLine = lines[0];
+    const alertInfo = parseGitHubAlertTitleLine(firstLine);
+    if (alertInfo) {
+        const updatedFirstLine = target.updatedText.split('\n')[0];
+        const updatedAlertInfo = parseGitHubAlertTitleLine(updatedFirstLine);
+        if (!updatedAlertInfo) {
+            return null;
+        }
+
+        const markerDelta =
+            updatedAlertInfo.markerRange.to -
+            updatedAlertInfo.markerRange.from -
+            (alertInfo.markerRange.to - alertInfo.markerRange.from);
+
+        if (relativePosition <= alertInfo.markerRange.from) {
+            return { basePos: target.range.from, offset: relativePosition };
+        }
+
+        if (relativePosition >= alertInfo.markerRange.to) {
+            return { basePos: target.range.from, offset: relativePosition + markerDelta };
+        }
+
+        return {
+            basePos: target.range.from,
+            offset:
+                updatedAlertInfo.markerRange.from +
+                Math.min(
+                    relativePosition - alertInfo.markerRange.from,
+                    updatedAlertInfo.markerRange.to - updatedAlertInfo.markerRange.from
+                ),
+        };
+    }
+
+    const prefix = getBlockquotePrefix(firstLine) ?? BLOCKQUOTE_PREFIX_TEXT;
+    return {
+        basePos: target.range.from,
+        offset: createAlertLine(prefix).length + 1 + relativePosition,
+    };
+}
+
+function findTargetContainingPosition(targets: AlertTarget[], position: number): AlertTarget | null {
+    return targets.find((target) => position >= target.range.from && position <= target.range.to) ?? null;
+}
+
+function createAlertTypeSelection(target: AlertTarget, range: SelectionRange): ExplicitCursorSelection | null {
+    const firstLine = target.text.split('\n')[0];
+    const alertInfo = parseGitHubAlertTitleLine(firstLine);
+    if (!alertInfo) {
+        return null;
+    }
+
+    const typeFrom = target.range.from + alertInfo.markerRange.from + 2;
+    const typeTo = target.range.from + alertInfo.markerRange.to - 1;
+    const selectionFrom = Math.min(range.anchor, range.head);
+    const selectionTo = Math.max(range.anchor, range.head);
+    if (selectionFrom !== typeFrom || selectionTo !== typeTo) {
+        return null;
+    }
+
+    const updatedFirstLine = target.updatedText.split('\n')[0];
+    const updatedAlertInfo = parseGitHubAlertTitleLine(updatedFirstLine);
+    if (!updatedAlertInfo) {
+        return null;
+    }
+
+    const nextTypeFrom = updatedAlertInfo.markerRange.from + 2;
+    const nextTypeTo = updatedAlertInfo.markerRange.to - 1;
+    const isForwardSelection = range.anchor <= range.head;
+
+    return {
+        anchorBasePos: target.range.from,
+        anchorOffset: isForwardSelection ? nextTypeFrom : nextTypeTo,
+        headBasePos: target.range.from,
+        headOffset: isForwardSelection ? nextTypeTo : nextTypeFrom,
+    };
+}
+
+function createExplicitAlertSelection(
+    targets: AlertTarget[],
+    range: SelectionRange
+): ExplicitCursorSelection | null {
+    const anchorTarget = findTargetContainingPosition(targets, range.anchor);
+    const headTarget = findTargetContainingPosition(targets, range.head);
+    if (!anchorTarget || !headTarget || anchorTarget !== headTarget) {
+        return null;
+    }
+
+    const alertTypeSelection = createAlertTypeSelection(anchorTarget, range);
+    if (alertTypeSelection) {
+        return alertTypeSelection;
+    }
+
+    const mappedAnchor = mapPositionThroughAlertTransform(anchorTarget, range.anchor);
+    const mappedHead = mapPositionThroughAlertTransform(headTarget, range.head);
+    if (!mappedAnchor || !mappedHead) {
+        return null;
+    }
+
+    return {
+        anchorBasePos: mappedAnchor.basePos,
+        anchorOffset: mappedAnchor.offset,
+        headBasePos: mappedHead.basePos,
+        headOffset: mappedHead.offset,
+    };
 }
 
 function createAlertCursorChange(
@@ -245,19 +416,36 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
                     return merged;
                 }, []);
 
-            const changes = mergedRanges.map((range) => {
+            const targets = mergedRanges.map((range) => {
                 const text = state.doc.sliceString(range.from, range.to);
                 const updated = toggleAlertSelectionText(text);
 
                 return {
-                    from: range.from,
-                    to: range.to,
-                    insert: updated,
+                    range,
+                    text,
+                    updatedText: updated,
                 };
+            });
+            const changes = targets.map((target) => ({
+                from: target.range.from,
+                to: target.range.to,
+                insert: target.updatedText,
+            }));
+
+            const explicitSelectionsByIndex = new Map<number, ExplicitCursorSelection>();
+            ranges.forEach((range, index) => {
+                if (range.empty) {
+                    return;
+                }
+
+                const explicitSelection = createExplicitAlertSelection(targets, range);
+                if (explicitSelection) {
+                    explicitSelectionsByIndex.set(index, explicitSelection);
+                }
             });
 
             if (emptyRanges.length === 0) {
-                view.dispatch({ changes });
+                dispatchChangesWithSelections(view, changes, explicitSelectionsByIndex);
                 view.focus();
                 return true;
             }
@@ -267,7 +455,6 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
                 changeMap.set(`selection:${change.from}:${change.to}`, change);
             });
 
-            const explicitSelectionsByIndex = new Map<number, ExplicitCursorSelection>();
             ranges.forEach((range, index) => {
                 if (!range.empty) {
                     return;

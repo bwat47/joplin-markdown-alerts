@@ -78,7 +78,7 @@ Examples:
 
 ## 2. Codemirror auto-complete for markdown alerts
 
-Typing `>!`, `> [!` at the beginning of an empty line will trigger an auto-completion dropdown to finish the alert syntax from the supported alert types.
+Typing `>!` or `> [!` at the beginning of an empty line will trigger an auto-completion dropdown to finish the alert syntax from the supported alert types.
 
 ![examples showing auto-completion of alerts](./images/autocomplete_examples.gif)
 

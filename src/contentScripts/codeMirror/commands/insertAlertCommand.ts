@@ -41,6 +41,18 @@ type MappedAlertPosition = {
     offset: number;
 };
 
+type TextRange = {
+    from: number;
+    to: number;
+};
+
+function getAlertTypeRange(markerRange: TextRange): TextRange {
+    return {
+        from: markerRange.from + 2,
+        to: markerRange.to - 1,
+    };
+}
+
 function overlapsRange(change: TextChange, range: ParagraphRange): boolean {
     if (change.from === change.to) {
         return change.from >= range.from && change.from <= range.to;
@@ -61,11 +73,12 @@ function createDefaultAlertTypeSelectionAt(basePos: number, text: string): Expli
         return undefined;
     }
 
+    const typeRange = getAlertTypeRange(alertInfo.markerRange);
     return {
         anchorBasePos: basePos,
-        anchorOffset: alertInfo.markerRange.from + 2,
+        anchorOffset: typeRange.from,
         headBasePos: basePos,
-        headOffset: alertInfo.markerRange.to - 1,
+        headOffset: typeRange.to,
     };
 }
 
@@ -190,8 +203,9 @@ function createAlertTypeSelection(target: AlertTarget, range: SelectionRange): E
         return null;
     }
 
-    const typeFrom = target.range.from + alertInfo.markerRange.from + 2;
-    const typeTo = target.range.from + alertInfo.markerRange.to - 1;
+    const typeRange = getAlertTypeRange(alertInfo.markerRange);
+    const typeFrom = target.range.from + typeRange.from;
+    const typeTo = target.range.from + typeRange.to;
     const selectionFrom = Math.min(range.anchor, range.head);
     const selectionTo = Math.max(range.anchor, range.head);
     if (selectionFrom !== typeFrom || selectionTo !== typeTo) {
@@ -204,15 +218,14 @@ function createAlertTypeSelection(target: AlertTarget, range: SelectionRange): E
         return null;
     }
 
-    const nextTypeFrom = updatedAlertInfo.markerRange.from + 2;
-    const nextTypeTo = updatedAlertInfo.markerRange.to - 1;
+    const nextTypeRange = getAlertTypeRange(updatedAlertInfo.markerRange);
     const isForwardSelection = range.anchor <= range.head;
 
     return {
         anchorBasePos: target.range.from,
-        anchorOffset: isForwardSelection ? nextTypeFrom : nextTypeTo,
+        anchorOffset: isForwardSelection ? nextTypeRange.from : nextTypeRange.to,
         headBasePos: target.range.from,
-        headOffset: isForwardSelection ? nextTypeTo : nextTypeFrom,
+        headOffset: isForwardSelection ? nextTypeRange.to : nextTypeRange.from,
     };
 }
 

@@ -120,7 +120,10 @@ export function createAlertCompletionSource(): CompletionSource {
                                 return EditorSelection.cursor(anchor);
                             }
 
-                            return EditorSelection.range(changeSet.mapPos(range.anchor, 1), changeSet.mapPos(range.head, 1));
+                            return EditorSelection.range(
+                                changeSet.mapPos(range.anchor, 1),
+                                changeSet.mapPos(range.head, 1)
+                            );
                         });
 
                         view.dispatch({

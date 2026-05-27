@@ -59,6 +59,5 @@ export default function (context: ContentScriptContext) {
                 enableAlertAutocomplete: autocompleteEnabled !== false,
             });
         },
-
     };
 }

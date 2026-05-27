@@ -101,6 +101,26 @@ describe('createInsertAlertCommand', () => {
         expect(result.selection).toEqual({ anchor: 4, head: 8 });
     });
 
+    test('selects alert type after inserting alert title above blockquote', () => {
+        const input = '> So|me line';
+        const expectedText = ['> [!NOTE]', '> Some line'].join('\n');
+
+        const result = runCommandWithSelection(input);
+
+        expect(result.text).toBe(expectedText);
+        expect(result.selection).toEqual({ anchor: 4, head: 8 });
+    });
+
+    test('selects alert type after converting a heading line into an alert', () => {
+        const input = '## Head|ing';
+        const expectedText = ['> [!NOTE]', '> ## Heading'].join('\n');
+
+        const result = runCommandWithSelection(input);
+
+        expect(result.text).toBe(expectedText);
+        expect(result.selection).toEqual({ anchor: 4, head: 8 });
+    });
+
     test('selects alert type after inserting alert marker on blank line', () => {
         const input = '|\n';
         const expectedText = `> [!NOTE] \n`;

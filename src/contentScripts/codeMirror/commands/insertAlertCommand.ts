@@ -2,7 +2,7 @@ import type { EditorView } from '@codemirror/view';
 import type { EditorState, SelectionRange } from '@codemirror/state';
 import type { SyntaxNode } from '@lezer/common';
 
-import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine } from '../alerts/alertParsing';
+import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine, type TextRange } from '../alerts/alertParsing';
 import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 import {
     collectParagraphRanges,
@@ -39,11 +39,6 @@ type TextPosition = {
 type MappedAlertPosition = {
     basePos: number;
     offset: number;
-};
-
-type TextRange = {
-    from: number;
-    to: number;
 };
 
 function getAlertTypeRange(markerRange: TextRange): TextRange {

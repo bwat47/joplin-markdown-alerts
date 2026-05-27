@@ -55,9 +55,10 @@ function createAlertLine(prefix: string): string {
     return `${prefix}[!${DEFAULT_ALERT_TYPE}]`;
 }
 
-function createAlertTypeSelectionAt(basePos: number, text: string): ExplicitCursorSelection | null {
+function createDefaultAlertTypeSelectionAt(basePos: number, text: string): ExplicitCursorSelection | null {
     const firstLine = text.split('\n')[0];
     const alertInfo = parseGitHubAlertTitleLine(firstLine);
+    // Only select newly inserted default markers; cycled alerts keep normal cursor mapping.
     if (!alertInfo || alertInfo.type.toUpperCase() !== DEFAULT_ALERT_TYPE) {
         return null;
     }
@@ -316,7 +317,7 @@ function createAlertCursorChange(
                     to: blockquoteStartLine.from,
                     insert,
                 },
-                explicitSelection: createAlertTypeSelectionAt(blockquoteStartLine.from, insert) ?? undefined,
+                explicitSelection: createDefaultAlertTypeSelectionAt(blockquoteStartLine.from, insert) ?? undefined,
             };
         }
     }
@@ -334,7 +335,7 @@ function createAlertCursorChange(
                 to: paragraphRange.to,
                 insert: updated,
             },
-            explicitSelection: createAlertTypeSelectionAt(paragraphRange.from, updated) ?? undefined,
+            explicitSelection: createDefaultAlertTypeSelectionAt(paragraphRange.from, updated) ?? undefined,
         };
     }
 
@@ -346,7 +347,7 @@ function createAlertCursorChange(
             to: cursorLine.to,
             insert: updatedFallbackLine,
         },
-        explicitSelection: createAlertTypeSelectionAt(cursorLine.from, updatedFallbackLine) ?? undefined,
+        explicitSelection: createDefaultAlertTypeSelectionAt(cursorLine.from, updatedFallbackLine) ?? undefined,
     };
 }
 

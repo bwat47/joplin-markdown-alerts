@@ -91,6 +91,16 @@ describe('createInsertAlertCommand', () => {
         expect(runCommand(input)).toBe(expected);
     });
 
+    test('selects alert type after converting paragraph around cursor', () => {
+        const input = 'Parag|raph';
+        const expectedText = ['> [!NOTE]', '> Paragraph'].join('\n');
+
+        const result = runCommandWithSelection(input);
+
+        expect(result.text).toBe(expectedText);
+        expect(result.selection).toEqual({ anchor: 4, head: 8 });
+    });
+
     test('selects alert type after inserting alert marker on blank line', () => {
         const input = '|\n';
         const expectedText = `> [!NOTE] \n`;

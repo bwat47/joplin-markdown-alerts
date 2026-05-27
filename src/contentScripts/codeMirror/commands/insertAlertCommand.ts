@@ -55,6 +55,21 @@ function createAlertLine(prefix: string): string {
     return `${prefix}[!${DEFAULT_ALERT_TYPE}]`;
 }
 
+function createAlertTypeSelectionAt(basePos: number, text: string): ExplicitCursorSelection | null {
+    const firstLine = text.split('\n')[0];
+    const alertInfo = parseGitHubAlertTitleLine(firstLine);
+    if (!alertInfo || alertInfo.type.toUpperCase() !== DEFAULT_ALERT_TYPE) {
+        return null;
+    }
+
+    return {
+        anchorBasePos: basePos,
+        anchorOffset: alertInfo.markerRange.from + 2,
+        headBasePos: basePos,
+        headOffset: alertInfo.markerRange.to - 1,
+    };
+}
+
 function isBlockquoteLine(line: string): boolean {
     return BLOCKQUOTE_PREFIX_PATTERN.test(line);
 }
@@ -202,10 +217,7 @@ function createAlertTypeSelection(target: AlertTarget, range: SelectionRange): E
     };
 }
 
-function createExplicitAlertSelection(
-    targets: AlertTarget[],
-    range: SelectionRange
-): ExplicitCursorSelection | null {
+function createExplicitAlertSelection(targets: AlertTarget[], range: SelectionRange): ExplicitCursorSelection | null {
     const anchorTarget = findTargetContainingPosition(targets, range.anchor);
     const headTarget = findTargetContainingPosition(targets, range.head);
     if (!anchorTarget || !headTarget || anchorTarget !== headTarget) {
@@ -296,13 +308,15 @@ function createAlertCursorChange(
         const blockquoteStartLine = state.doc.lineAt(outermostBlockquoteFrom);
         const match = BLOCKQUOTE_PREFIX_PATTERN.exec(blockquoteStartLine.text);
         if (match) {
+            const insert = `${createAlertLine(match[1])}\n`;
             return {
                 key: `insert:${blockquoteStartLine.from}`,
                 change: {
                     from: blockquoteStartLine.from,
                     to: blockquoteStartLine.from,
-                    insert: `${createAlertLine(match[1])}\n`,
+                    insert,
                 },
+                explicitSelection: createAlertTypeSelectionAt(blockquoteStartLine.from, insert) ?? undefined,
             };
         }
     }
@@ -320,6 +334,7 @@ function createAlertCursorChange(
                 to: paragraphRange.to,
                 insert: updated,
             },
+            explicitSelection: createAlertTypeSelectionAt(paragraphRange.from, updated) ?? undefined,
         };
     }
 
@@ -331,6 +346,7 @@ function createAlertCursorChange(
             to: cursorLine.to,
             insert: updatedFallbackLine,
         },
+        explicitSelection: createAlertTypeSelectionAt(cursorLine.from, updatedFallbackLine) ?? undefined,
     };
 }
 

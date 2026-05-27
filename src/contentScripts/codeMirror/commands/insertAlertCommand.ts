@@ -16,8 +16,6 @@ import {
 const BLOCKQUOTE_PREFIX_PATTERN = /^(\s*(?:>\s*)+)/;
 const DEFAULT_ALERT_TYPE = 'NOTE';
 const DEFAULT_ALERT_INSERT_TEXT = `> [!${DEFAULT_ALERT_TYPE}] `;
-const DEFAULT_ALERT_TYPE_SELECTION_FROM = DEFAULT_ALERT_INSERT_TEXT.indexOf(DEFAULT_ALERT_TYPE);
-const DEFAULT_ALERT_TYPE_SELECTION_TO = DEFAULT_ALERT_TYPE_SELECTION_FROM + DEFAULT_ALERT_TYPE.length;
 const BLOCKQUOTE_LINE_PREFIX = /^>\s?/;
 const BLOCKQUOTE_PREFIX_TEXT = '> ';
 
@@ -55,12 +53,12 @@ function createAlertLine(prefix: string): string {
     return `${prefix}[!${DEFAULT_ALERT_TYPE}]`;
 }
 
-function createDefaultAlertTypeSelectionAt(basePos: number, text: string): ExplicitCursorSelection | null {
+function createDefaultAlertTypeSelectionAt(basePos: number, text: string): ExplicitCursorSelection | undefined {
     const firstLine = text.split('\n')[0];
     const alertInfo = parseGitHubAlertTitleLine(firstLine);
     // Only select newly inserted default markers; cycled alerts keep normal cursor mapping.
     if (!alertInfo || alertInfo.type.toUpperCase() !== DEFAULT_ALERT_TYPE) {
-        return null;
+        return undefined;
     }
 
     return {
@@ -257,12 +255,7 @@ function createAlertCursorChange(
                 to: cursorLine.to,
                 insert: DEFAULT_ALERT_INSERT_TEXT,
             },
-            explicitSelection: {
-                anchorBasePos: cursorLine.from,
-                anchorOffset: DEFAULT_ALERT_TYPE_SELECTION_FROM,
-                headBasePos: cursorLine.from,
-                headOffset: DEFAULT_ALERT_TYPE_SELECTION_TO,
-            },
+            explicitSelection: createDefaultAlertTypeSelectionAt(cursorLine.from, DEFAULT_ALERT_INSERT_TEXT),
         };
     }
 
@@ -317,7 +310,7 @@ function createAlertCursorChange(
                     to: blockquoteStartLine.from,
                     insert,
                 },
-                explicitSelection: createDefaultAlertTypeSelectionAt(blockquoteStartLine.from, insert) ?? undefined,
+                explicitSelection: createDefaultAlertTypeSelectionAt(blockquoteStartLine.from, insert),
             };
         }
     }
@@ -335,7 +328,7 @@ function createAlertCursorChange(
                 to: paragraphRange.to,
                 insert: updated,
             },
-            explicitSelection: createDefaultAlertTypeSelectionAt(paragraphRange.from, updated) ?? undefined,
+            explicitSelection: createDefaultAlertTypeSelectionAt(paragraphRange.from, updated),
         };
     }
 
@@ -347,7 +340,7 @@ function createAlertCursorChange(
             to: cursorLine.to,
             insert: updatedFallbackLine,
         },
-        explicitSelection: createDefaultAlertTypeSelectionAt(cursorLine.from, updatedFallbackLine) ?? undefined,
+        explicitSelection: createDefaultAlertTypeSelectionAt(cursorLine.from, updatedFallbackLine),
     };
 }
 

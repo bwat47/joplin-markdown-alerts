@@ -13,9 +13,15 @@ const SETTINGS_SECTION = 'markdownAlerts.toolbarButtons';
 export const SHOW_ALERT_TOOLBAR_BUTTON_SETTING = 'showAlertToolbarButton';
 export const SHOW_QUOTE_TOOLBAR_BUTTON_SETTING = 'showQuoteToolbarButton';
 export const SHOW_CLEAR_FORMATTING_TOOLBAR_BUTTON_SETTING = 'showClearFormattingToolbarButton';
+export const UNDERLINE_SYNTAX_SETTING = 'underlineSyntax';
 export const SUPERSCRIPT_SYNTAX_SETTING = 'superscriptSyntax';
 export const SUBSCRIPT_SYNTAX_SETTING = 'subscriptSyntax';
 export const ENABLE_ALERT_AUTOCOMPLETE_SETTING = 'enableAlertAutocomplete';
+
+const UNDERLINE_SYNTAX_OPTIONS: Record<InlineFormatSyntaxMode, string> = {
+    html: 'Inline HTML (<ins>text</ins>)',
+    markdown: 'Markdown extension (++text++)',
+};
 
 const SUPERSCRIPT_SYNTAX_OPTIONS: Record<InlineFormatSyntaxMode, string> = {
     html: 'Inline HTML (<sup>text</sup>)',
@@ -34,6 +40,16 @@ export async function registerPluginSettings(): Promise<void> {
     });
 
     await joplin.settings.registerSettings({
+        [UNDERLINE_SYNTAX_SETTING]: {
+            value: INLINE_FORMAT_HTML_SYNTAX,
+            type: SettingItemType.String,
+            isEnum: true,
+            options: UNDERLINE_SYNTAX_OPTIONS,
+            public: true,
+            section: SETTINGS_SECTION,
+            label: 'Underline syntax',
+            description: 'Controls whether the underline command uses inline HTML or markdown extension syntax.',
+        },
         [SUPERSCRIPT_SYNTAX_SETTING]: {
             value: INLINE_FORMAT_HTML_SYNTAX,
             type: SettingItemType.String,
@@ -122,4 +138,8 @@ export async function getSuperscriptSyntaxSettingValue(): Promise<InlineFormatSy
 
 export async function getSubscriptSyntaxSettingValue(): Promise<InlineFormatSyntaxMode> {
     return getInlineFormatSyntaxSettingValue(SUBSCRIPT_SYNTAX_SETTING);
+}
+
+export async function getUnderlineSyntaxSettingValue(): Promise<InlineFormatSyntaxMode> {
+    return getInlineFormatSyntaxSettingValue(UNDERLINE_SYNTAX_SETTING);
 }

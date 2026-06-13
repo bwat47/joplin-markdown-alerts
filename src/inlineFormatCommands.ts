@@ -1,6 +1,6 @@
 export type InlineFormatId = 'highlight' | 'strikethrough' | 'underline' | 'superscript' | 'subscript';
 
-export type ConfigurableInlineFormatId = 'superscript' | 'subscript';
+export type ConfigurableInlineFormatId = 'underline' | 'superscript' | 'subscript';
 
 export type InlineFormatSyntaxMode = 'html' | 'markdown';
 
@@ -29,6 +29,7 @@ export const INLINE_FORMAT_HTML_SYNTAX: InlineFormatSyntaxMode = 'html';
 export const INLINE_FORMAT_MARKDOWN_SYNTAX: InlineFormatSyntaxMode = 'markdown';
 
 const DEFAULT_CONFIGURABLE_INLINE_FORMAT_SYNTAX: Record<ConfigurableInlineFormatId, InlineFormatSyntaxMode> = {
+    underline: INLINE_FORMAT_HTML_SYNTAX,
     superscript: INLINE_FORMAT_HTML_SYNTAX,
     subscript: INLINE_FORMAT_HTML_SYNTAX,
 };
@@ -104,9 +105,17 @@ export const INLINE_FORMAT_DEFINITIONS: InlineFormatDefinition[] = [
     },
     {
         id: 'underline',
+        syntaxMode: INLINE_FORMAT_MARKDOWN_SYNTAX,
         editorCommandName: 'markdownAlerts.insertUnderlineOrToggle',
         openingDelimiter: '++',
         closingDelimiter: '++',
+    },
+    {
+        id: 'underline',
+        syntaxMode: INLINE_FORMAT_HTML_SYNTAX,
+        editorCommandName: 'markdownAlerts.insertUnderlineHtmlOrToggle',
+        openingDelimiter: '<ins>',
+        closingDelimiter: '</ins>',
     },
     {
         id: 'superscript',
@@ -140,7 +149,7 @@ export const INLINE_FORMAT_DEFINITIONS: InlineFormatDefinition[] = [
 ];
 
 export function isConfigurableInlineFormatId(id: InlineFormatId): id is ConfigurableInlineFormatId {
-    return id === 'superscript' || id === 'subscript';
+    return id === 'underline' || id === 'superscript' || id === 'subscript';
 }
 
 export function getDefaultInlineFormatSyntaxMode(id: ConfigurableInlineFormatId): InlineFormatSyntaxMode {

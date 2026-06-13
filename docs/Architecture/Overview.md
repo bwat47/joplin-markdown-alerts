@@ -52,8 +52,8 @@ GitHub alert syntax:
 - `src/contentScripts/codeMirror/shared/syntaxTreeUtils.ts` - Shared syntax-tree probing helpers used by CodeMirror commands and decorations
 - `src/contentScripts/codeMirror/shared/commandSelectionUtils.ts` - Shared selection-preserving dispatch helper for CodeMirror commands
 - `src/inlineFormatCommands.ts` - Shared inline-format command metadata plus syntax-specific editor command definitions for configurable inline formats
-- `src/settings.ts` - Plugin settings registration for toolbar button visibility plus superscript/subscript syntax selection
-- `src/joplinCommandRegistration.ts` - Registers global Joplin commands (alerts + quote + clear-formatting + inline formatting, toolbar + shortcuts), gates toolbar buttons on plugin settings, and resolves superscript/subscript syntax at execution time
+- `src/settings.ts` - Plugin settings registration for toolbar button visibility plus underline/superscript/subscript syntax selection
+- `src/joplinCommandRegistration.ts` - Registers global Joplin commands (alerts + quote + clear-formatting + inline formatting, toolbar + shortcuts), gates toolbar buttons on plugin settings, and resolves configurable inline format syntax at execution time
 
 ### Commands
 
@@ -69,7 +69,7 @@ GitHub alert syntax:
     - Exposes an optional toolbar button controlled by plugin settings; no default shortcut is assigned.
 - `markdownAlerts.insertHighlight` / `markdownAlerts.insertStrikethrough` / `markdownAlerts.insertUnderline` / `markdownAlerts.insertSuperscript` / `markdownAlerts.insertSubscript`
     - Execute matching inline-format editor commands registered by the CodeMirror content script.
-    - Superscript and subscript resolve to either HTML-tag or markdown-delimiter editor commands based on plugin settings.
+    - Underline, superscript, and subscript resolve to either HTML-tag or markdown-delimiter editor commands based on plugin settings.
         - Empty selection inserts paired delimiters and places the cursor between them.
         - Selected text toggles the target inline delimiter; multiline full-line selections are handled line by line.
         - List-aware multiline formatting preserves blockquote prefixes, list markers, and task checkboxes while formatting only item content, and skips code blocks and markdown tables.
@@ -79,7 +79,7 @@ GitHub alert syntax:
 - Toolbar buttons are controlled by plugin boolean settings, one per button
 - Commands and menu items are always registered; only editor toolbar button creation is gated
 - Toolbar visibility settings are read at plugin startup, so changes currently require a plugin restart
-- Superscript and subscript each expose a public syntax setting (`html` or `markdown`), defaulting to `html`
+- Underline, superscript, and subscript each expose a public syntax setting (`html` or `markdown`), defaulting to `html`
 - Syntax settings are read when the global command executes, so they apply immediately without a plugin restart
 - The `enableAlertAutocomplete` boolean setting (default `true`) controls alert autocomplete for `>!` and `> [!`. The CodeMirror content script always installs the command and completion source, then reconfigures a CM6 settings facet after fetching the setting once via `context.postMessage`; changes take effect when the note is reopened.
 

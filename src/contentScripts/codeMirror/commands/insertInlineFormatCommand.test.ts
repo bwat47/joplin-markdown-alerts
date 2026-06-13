@@ -127,6 +127,13 @@ describe('createInsertInlineFormatCommand', () => {
         expect(result.cursor).toBe(5);
     });
 
+    test('inserts underline HTML tags at the cursor by default and places the cursor between them', () => {
+        const result = runCommandWithCursor('|', 'underline');
+
+        expect(result.text).toBe('<ins></ins>');
+        expect(result.cursor).toBe(5);
+    });
+
     test('inserts subscript HTML tags at the cursor and places the cursor between them', () => {
         const result = runCommandWithCursor('|', 'subscript', 'html');
 
@@ -148,7 +155,7 @@ describe('createInsertInlineFormatCommand', () => {
                 ]),
             });
 
-            const command = createInsertInlineFormatCommand(harness.view, getFormat('underline'));
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('underline', 'markdown'));
             command();
 
             expect(harness.getText()).toBe(['o++++ne', 't++++wo'].join('\n'));

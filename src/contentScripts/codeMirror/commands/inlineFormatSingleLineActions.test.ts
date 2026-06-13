@@ -46,6 +46,18 @@ describe('applyInlineFormattingToSelectionText', () => {
         expect(applyInlineFormattingToSelectionText('  ABC', getFormat('highlight'))).toBe('  ==ABC==');
     });
 
+    test('wraps the whole selection with underline HTML by default', () => {
+        expect(applyInlineFormattingToSelectionText('abc', getFormat('underline'))).toBe('<ins>abc</ins>');
+    });
+
+    test('unwraps exact underline HTML markup by default', () => {
+        expect(applyInlineFormattingToSelectionText('<ins>abc</ins>', getFormat('underline'))).toBe('abc');
+    });
+
+    test('wraps the whole selection with underline markdown when configured', () => {
+        expect(applyInlineFormattingToSelectionText('abc', getFormat('underline', 'markdown'))).toBe('++abc++');
+    });
+
     test('wraps the whole selection with superscript HTML when configured', () => {
         expect(applyInlineFormattingToSelectionText('abc', getFormat('superscript', 'html'))).toBe('<sup>abc</sup>');
     });

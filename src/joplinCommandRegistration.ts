@@ -5,12 +5,15 @@ import {
     getInlineFormatEditorCommandName,
     isConfigurableInlineFormatId,
     INLINE_FORMAT_COMMANDS,
+    type ConfigurableInlineFormatId,
     type InlineFormatCommandDefinition,
+    type InlineFormatSyntaxMode,
 } from './inlineFormatCommands';
 import { logger } from './logger';
 import {
     getSubscriptSyntaxSettingValue,
     getSuperscriptSyntaxSettingValue,
+    getUnderlineSyntaxSettingValue,
     isToolbarButtonEnabled,
     SHOW_ALERT_TOOLBAR_BUTTON_SETTING,
     SHOW_CLEAR_FORMATTING_TOOLBAR_BUTTON_SETTING,
@@ -39,6 +42,13 @@ const INSERT_NOTE_QUOTE_ICON_NAME = 'fas fa-quote-right';
 const CLEAR_MARKDOWN_FORMATTING_MENU_ITEM_ID = 'markdownAlerts.clearMarkdownFormatting.menuItem';
 const CLEAR_MARKDOWN_FORMATTING_TOOLBAR_BUTTON_ID = 'markdownAlerts.clearMarkdownFormatting.toolbarButton';
 const CLEAR_MARKDOWN_FORMATTING_ICON_NAME = 'fas fa-eraser';
+
+const INLINE_FORMAT_SYNTAX_SETTING_READERS: Record<ConfigurableInlineFormatId, () => Promise<InlineFormatSyntaxMode>> =
+    {
+        underline: getUnderlineSyntaxSettingValue,
+        superscript: getSuperscriptSyntaxSettingValue,
+        subscript: getSubscriptSyntaxSettingValue,
+    };
 
 async function executeMarkdownEditorCommand(commandName: string): Promise<void> {
     const isMarkdown = !!(await joplin.settings.globalValue('editor.codeView'));
@@ -80,8 +90,7 @@ async function resolveInlineFormatEditorCommandName(format: InlineFormatCommandD
         return getInlineFormatEditorCommandName(format.id);
     }
 
-    const syntaxMode =
-        format.id === 'superscript' ? await getSuperscriptSyntaxSettingValue() : await getSubscriptSyntaxSettingValue();
+    const syntaxMode = await INLINE_FORMAT_SYNTAX_SETTING_READERS[format.id]();
 
     return getInlineFormatEditorCommandName(format.id, syntaxMode);
 }

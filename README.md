@@ -3,7 +3,7 @@
 A Joplin plugin that adds the following functionality to the Markdown editor:
 
 - renders GitHub-style alerts in the Markdown viewer and Markdown editor
-- adds Markdown editor commands for alerts, blockquotes, and inline formatting (strikethrough/highlight/insert/superscript/subscript)
+- adds Markdown editor commands for alerts, blockquotes, and inline formatting (strikethrough/highlight/underline/superscript/subscript)
 - provides auto-complete dropdown for github alert syntax
 
 > [!NOTE]
@@ -133,7 +133,7 @@ Joplin supports various inline Markdown extensions, but the Markdown editor does
 
 - Highlight: `==text==`
 - Strikethrough: `~~text~~`
-- Underline: `++text++`
+- Underline: `<ins>text</ins>` by default, optionally `++text++`
 - Superscript: `<sup>text</sup>` by default, optionally `^text^`
 - Subscript: `<sub>text</sub>` by default, optionally `~text~`
 
@@ -198,7 +198,7 @@ Enable/Disable alert type autocomplete in the markdown editor (default enabled).
 
 ### Syntax
 
-Separate syntax settings for the superscript and subscript commands. Both default to inline HTML because Joplin (v3.6 and newer) renders that syntax in both the editor and the viewer.
+Separate syntax settings for the underline, superscript, and subscript commands. All default to inline HTML because Joplin (v3.6 and newer) renders that syntax in both the editor and the viewer.
 
 ### Toolbar buttons
 
@@ -220,4 +220,4 @@ All toolbar buttons are enabled by default.
 These settings only affect the editor toolbar buttons. The commands themselves, menu items, and shortcuts still remain available.
 
 Changing a toolbar visibility setting currently requires restarting the plugin to take effect.
-Changing the superscript or subscript syntax setting applies to commands immediately and does not require a restart.
+Changing the underline, superscript, or subscript syntax setting applies to commands immediately and does not require a restart.

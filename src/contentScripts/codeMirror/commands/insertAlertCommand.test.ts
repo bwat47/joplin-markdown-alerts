@@ -46,12 +46,18 @@ describe('toggleAlertSelectionText', () => {
 });
 
 describe('createInsertAlertCommand', () => {
+    const COMPLETION_START_TIMEOUT_MS = 250;
+    const COMPLETION_POLL_INTERVAL_MS = 10;
+
     async function waitForCompletionStart(view: EditorView) {
-        for (let attempt = 0; attempt < 5; attempt += 1) {
-            await new Promise((resolve) => setTimeout(resolve, 0));
+        const deadline = Date.now() + COMPLETION_START_TIMEOUT_MS;
+
+        while (Date.now() < deadline) {
             if (completionStatus(view.state) === 'active') {
                 return;
             }
+
+            await new Promise((resolve) => setTimeout(resolve, COMPLETION_POLL_INTERVAL_MS));
         }
     }
 

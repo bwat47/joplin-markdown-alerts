@@ -10,7 +10,7 @@ A Joplin plugin that adds the following functionality to the Markdown editor:
 > This plugin was created entirely with AI tools.
 
 > [!CAUTION]
-> The Rich Text Editor is not supported. Alerts may appear there, but editing in the Rich Text Editor will remove GitHub alert syntax.
+> The Rich Text Editor is not supported. The editor commands only work in the Markdown editor (the rich text editor already includes most of them anyway). Github Alerts will (sort of) render in the rich text editor, but making any edits in the Rich Text Editor will remove GitHub alert syntax.
 
 ## 1. GitHub Alert Rendering
 
@@ -145,7 +145,9 @@ Default shortcuts:
 - Superscript: no default shortcut
 - Subscript: no default shortcut
 
-### Command behavior:
+### Command behavior
+
+The commands behave similarly to joplin's standard inline formatting commands, and support multiple cursors/selections:
 
 - No active selection: insert the delimiter pair and place the cursor between them
     - If cursor is inside (or adjacent to) existing markdown formatted text:

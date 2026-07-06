@@ -27,7 +27,7 @@ Architecture overview: docs/Architecture/Overview.md
 
 ## Build, Test, and Development Commands
 
-- `npm test` Run Jest test suite with coverage.
+- `npm test` Run Vitest test suite.
 - `npm run test:watch` Run tests in watch mode during development.
 - `npm run dist` Build plugin and create archive at `publish/*.jpl`.
 - `npm run lint` Lint TypeScript with ESLint.

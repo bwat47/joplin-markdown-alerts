@@ -1,4 +1,4 @@
-/** @jest-environment jsdom */
+/** @vitest-environment jsdom */
 import { EditorSelection } from '@codemirror/state';
 
 import {

@@ -143,7 +143,7 @@ export function isConfigurableInlineFormatId(id: InlineFormatId): id is Configur
     return id === 'superscript' || id === 'subscript';
 }
 
-export function getDefaultInlineFormatSyntaxMode(id: ConfigurableInlineFormatId): InlineFormatSyntaxMode {
+function getDefaultInlineFormatSyntaxMode(id: ConfigurableInlineFormatId): InlineFormatSyntaxMode {
     return DEFAULT_CONFIGURABLE_INLINE_FORMAT_SYNTAX[id];
 }
 

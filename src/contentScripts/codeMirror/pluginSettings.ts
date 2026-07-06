@@ -5,7 +5,7 @@ export type MarkdownAlertEditorSettings = {
     enableAlertAutocomplete: boolean;
 };
 
-export const DEFAULT_MARKDOWN_ALERT_EDITOR_SETTINGS: MarkdownAlertEditorSettings = {
+const DEFAULT_MARKDOWN_ALERT_EDITOR_SETTINGS: MarkdownAlertEditorSettings = {
     enableAlertAutocomplete: false,
 };
 

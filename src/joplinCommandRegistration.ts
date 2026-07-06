@@ -17,15 +17,15 @@ import {
     SHOW_QUOTE_TOOLBAR_BUTTON_SETTING,
 } from './settings';
 
-export const INSERT_NOTE_ALERT_COMMAND_NAME = 'markdownAlerts.insertNoteAlert';
-export const INSERT_NOTE_ALERT_ACCELERATOR = 'CmdOrCtrl+Shift+A';
+const INSERT_NOTE_ALERT_COMMAND_NAME = 'markdownAlerts.insertNoteAlert';
+const INSERT_NOTE_ALERT_ACCELERATOR = 'CmdOrCtrl+Shift+A';
 const INSERT_ALERT_OR_TOGGLE_COMMAND = 'markdownAlerts.insertAlertOrToggle';
 
-export const INSERT_NOTE_QUOTE_COMMAND_NAME = 'markdownAlerts.insertNoteQuote';
-export const INSERT_NOTE_QUOTE_ACCELERATOR = 'CmdOrCtrl+Shift+.';
+const INSERT_NOTE_QUOTE_COMMAND_NAME = 'markdownAlerts.insertNoteQuote';
+const INSERT_NOTE_QUOTE_ACCELERATOR = 'CmdOrCtrl+Shift+.';
 const INSERT_QUOTE_OR_TOGGLE_COMMAND = 'markdownAlerts.insertQuoteOrToggle';
 
-export const CLEAR_MARKDOWN_FORMATTING_COMMAND_NAME = 'markdownAlerts.clearMarkdownFormatting';
+const CLEAR_MARKDOWN_FORMATTING_COMMAND_NAME = 'markdownAlerts.clearMarkdownFormatting';
 const CLEAR_FORMATTING_COMMAND = 'markdownAlerts.clearFormatting';
 
 const INSERT_NOTE_ALERT_MENU_ITEM_ID = 'markdownAlerts.insertNoteAlert.menuItem';

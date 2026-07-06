@@ -1,6 +1,6 @@
 import { type InlineFormatDefinition } from '../../../inlineFormatCommands';
 
-export type WrappedSegment = {
+type WrappedSegment = {
     from: number;
     to: number;
 };
@@ -66,7 +66,7 @@ function isDelimiterAt(
     return !isIndexPartOfLongerDelimiter(text, index, longerDelimiters);
 }
 
-export function findWrappedSegments(text: string, format: InlineFormatDefinition): WrappedSegment[] {
+function findWrappedSegments(text: string, format: InlineFormatDefinition): WrappedSegment[] {
     const segments: WrappedSegment[] = [];
     let index = 0;
 
@@ -238,7 +238,7 @@ export function lineHasTargetFormatting(line: string, format: InlineFormatDefini
     return findWrappedSegments(content, format).length > 0;
 }
 
-export function unwrapWrappedSegments(
+function unwrapWrappedSegments(
     text: string,
     segments: WrappedSegment[],
     format: InlineFormatDefinition,
@@ -262,7 +262,7 @@ export function unwrapWrappedSegments(
     return result;
 }
 
-export function mapOffsetAfterUnwrapping(
+function mapOffsetAfterUnwrapping(
     offset: number,
     segments: WrappedSegment[],
     format: InlineFormatDefinition

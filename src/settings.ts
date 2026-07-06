@@ -13,9 +13,9 @@ const SETTINGS_SECTION = 'markdownAlerts.toolbarButtons';
 export const SHOW_ALERT_TOOLBAR_BUTTON_SETTING = 'showAlertToolbarButton';
 export const SHOW_QUOTE_TOOLBAR_BUTTON_SETTING = 'showQuoteToolbarButton';
 export const SHOW_CLEAR_FORMATTING_TOOLBAR_BUTTON_SETTING = 'showClearFormattingToolbarButton';
-export const SUPERSCRIPT_SYNTAX_SETTING = 'superscriptSyntax';
-export const SUBSCRIPT_SYNTAX_SETTING = 'subscriptSyntax';
-export const ENABLE_ALERT_AUTOCOMPLETE_SETTING = 'enableAlertAutocomplete';
+const SUPERSCRIPT_SYNTAX_SETTING = 'superscriptSyntax';
+const SUBSCRIPT_SYNTAX_SETTING = 'subscriptSyntax';
+const ENABLE_ALERT_AUTOCOMPLETE_SETTING = 'enableAlertAutocomplete';
 
 const SUPERSCRIPT_SYNTAX_OPTIONS: Record<InlineFormatSyntaxMode, string> = {
     html: 'Inline HTML (<sup>text</sup>)',

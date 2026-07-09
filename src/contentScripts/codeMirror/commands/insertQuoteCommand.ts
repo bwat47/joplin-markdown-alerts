@@ -219,6 +219,27 @@ function createQuoteCursorTarget(state: EditorState, cursorPos: number): QuoteTa
     };
 }
 
+function addQuoteCursorTargets(
+    state: EditorState,
+    ranges: readonly SelectionRange[],
+    targetMap: Map<string, QuoteTarget>,
+    explicitSelectionsByIndex: Map<number, ExplicitCursorSelection>
+): void {
+    ranges.forEach((range, index) => {
+        if (!range.empty) {
+            return;
+        }
+
+        const cursorTarget = createQuoteCursorTarget(state, range.head);
+        if (!targetMap.has(cursorTarget.key)) {
+            targetMap.set(cursorTarget.key, cursorTarget);
+        }
+        if (cursorTarget.explicitSelection) {
+            explicitSelectionsByIndex.set(index, cursorTarget.explicitSelection);
+        }
+    });
+}
+
 /**
  * Toggles blockquote formatting for the cursor or the selected ranges.
  * - Cursor only: toggles the current paragraph (or line if no paragraph) and inserts `> ` on an empty line.
@@ -234,15 +255,7 @@ export function createInsertQuoteCommand(view: EditorView): () => boolean {
             const targetMap = new Map<string, QuoteTarget>();
             const explicitSelectionsByIndex = new Map<number, ExplicitCursorSelection>();
 
-            ranges.forEach((range, index) => {
-                const cursorTarget = createQuoteCursorTarget(state, range.head);
-                if (!targetMap.has(cursorTarget.key)) {
-                    targetMap.set(cursorTarget.key, cursorTarget);
-                }
-                if (cursorTarget.explicitSelection) {
-                    explicitSelectionsByIndex.set(index, cursorTarget.explicitSelection);
-                }
-            });
+            addQuoteCursorTargets(state, ranges, targetMap, explicitSelectionsByIndex);
 
             const changes = Array.from(targetMap.values()).map(({ range, text }) => {
                 const updated = isBlockquoteText(text) ? removeBlockquotePrefix(text) : addBlockquotePrefix(text);
@@ -301,19 +314,7 @@ export function createInsertQuoteCommand(view: EditorView): () => boolean {
             });
 
         const explicitSelectionsByIndex = new Map<number, ExplicitCursorSelection>();
-        ranges.forEach((range, index) => {
-            if (!range.empty) {
-                return;
-            }
-
-            const cursorTarget = createQuoteCursorTarget(state, range.head);
-            if (!targetMap.has(cursorTarget.key)) {
-                targetMap.set(cursorTarget.key, cursorTarget);
-            }
-            if (cursorTarget.explicitSelection) {
-                explicitSelectionsByIndex.set(index, cursorTarget.explicitSelection);
-            }
-        });
+        addQuoteCursorTargets(state, ranges, targetMap, explicitSelectionsByIndex);
 
         const rangeTexts = Array.from(targetMap.values()).sort((a, b) => a.range.from - b.range.from);
 

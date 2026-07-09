@@ -18,9 +18,9 @@ describe('toggleBlockquoteText', () => {
         expect(toggleBlockquoteText(input)).toBe(expected);
     });
 
-    test('adds blockquote prefix when any line is not quoted', () => {
+    test('adds blockquote prefix only to unquoted lines when any line is not quoted', () => {
         const input = ['> Quoted line', 'Plain line'].join('\n');
-        const expected = ['> > Quoted line', '> Plain line'].join('\n');
+        const expected = ['> Quoted line', '> Plain line'].join('\n');
 
         expect(toggleBlockquoteText(input)).toBe(expected);
     });
@@ -172,6 +172,29 @@ describe('createInsertQuoteCommand', () => {
         }
     });
 
+    test('normalizes quoted and unquoted paragraphs when multiple cursors are present', () => {
+        const harness = createEditorHarness(['> Quoted line', '', 'Plain line'].join('\n'));
+
+        try {
+            const quotedLine = harness.view.state.doc.line(1);
+            const plainLine = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.cursor(quotedLine.from + 2),
+                    EditorSelection.cursor(plainLine.from + 2),
+                ]),
+            });
+
+            const command = createInsertQuoteCommand(harness.view);
+            command();
+
+            expect(harness.getText()).toBe(['> Quoted line', '', '> Plain line'].join('\n'));
+        } finally {
+            harness.destroy();
+        }
+    });
+
     test('places each cursor after quote marker on blank lines', () => {
         const harness = createEditorHarness(['', '', ''].join('\n'));
 
@@ -264,6 +287,23 @@ describe('createInsertQuoteCommand', () => {
 
             const selection = harness.getSelection();
             expect(harness.view.state.doc.sliceString(selection.anchor, selection.head)).toBe('sadads sad');
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('normalizes quote depth and preserves selection for lazy-continuation paragraph', () => {
+        const harness = createEditorHarness(['[[> AAA', 'test', '> BBB]]'].join('\n'));
+
+        try {
+            const command = createInsertQuoteCommand(harness.view);
+            command();
+
+            expect(harness.getText()).toBe(['> AAA', '> test', '> BBB'].join('\n'));
+
+            const selection = harness.getSelection();
+            expect(selection.anchor).toBe(0);
+            expect(selection.head).toBe(harness.view.state.doc.length);
         } finally {
             harness.destroy();
         }

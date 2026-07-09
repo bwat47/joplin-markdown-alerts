@@ -23,59 +23,32 @@ type MappedQuotePosition = {
 };
 
 export function toggleBlockquoteText(text: string): string {
-    const lines = text.split('\n');
-    const allQuoted = lines.every((line) => BLOCKQUOTE_PREFIX_REGEX.test(line));
+    return transformQuoteText(text, isBlockquoteText(text));
+}
 
-    if (allQuoted) {
-        return removeBlockquotePrefix(text);
+/**
+ * Transforms one line for the quote toggle. Single source of truth for the
+ * text changes and the selection mapping. Adding never nests: lines that
+ * already carry a quote prefix are left unchanged, so mixed text (e.g. lazy
+ * continuation lines inside a blockquote) normalizes to one quote level.
+ */
+function transformQuoteLine(lineText: string, removeQuotePrefix: boolean): string {
+    if (removeQuotePrefix) {
+        return lineText.replace(BLOCKQUOTE_PREFIX_REGEX, '');
     }
 
-    return addBlockquotePrefix(text);
+    return BLOCKQUOTE_PREFIX_REGEX.test(lineText) ? lineText : `${BLOCKQUOTE_PREFIX}${lineText}`;
 }
 
-// Only prefixes lines that are not already quoted, so mixed text (e.g. lazy
-// continuation lines inside a blockquote) is normalized to one quote level
-// instead of nesting the already-quoted lines deeper.
-function addBlockquotePrefix(text: string): string {
+function transformQuoteText(text: string, removeQuotePrefix: boolean): string {
     return text
         .split('\n')
-        .map((line) => (BLOCKQUOTE_PREFIX_REGEX.test(line) ? line : `${BLOCKQUOTE_PREFIX}${line}`))
-        .join('\n');
-}
-
-function removeBlockquotePrefix(text: string): string {
-    return text
-        .split('\n')
-        .map((line) => line.replace(BLOCKQUOTE_PREFIX_REGEX, ''))
+        .map((line) => transformQuoteLine(line, removeQuotePrefix))
         .join('\n');
 }
 
 function isBlockquoteText(text: string): boolean {
     return text.split('\n').every((line) => BLOCKQUOTE_PREFIX_REGEX.test(line));
-}
-
-function getTransformedLineLength(lineText: string, removeQuotePrefix: boolean): number {
-    if (!removeQuotePrefix) {
-        // Mirrors addBlockquotePrefix: already-quoted lines are left unchanged.
-        return BLOCKQUOTE_PREFIX_REGEX.test(lineText) ? lineText.length : lineText.length + BLOCKQUOTE_PREFIX.length;
-    }
-
-    const prefixMatch = BLOCKQUOTE_PREFIX_REGEX.exec(lineText);
-    return prefixMatch ? lineText.length - prefixMatch[0].length : lineText.length;
-}
-
-function getMappedLineOffset(lineText: string, lineOffset: number, removeQuotePrefix: boolean): number {
-    if (!removeQuotePrefix) {
-        // Mirrors addBlockquotePrefix: already-quoted lines are left unchanged.
-        return BLOCKQUOTE_PREFIX_REGEX.test(lineText) ? lineOffset : lineOffset + BLOCKQUOTE_PREFIX.length;
-    }
-
-    const prefixMatch = BLOCKQUOTE_PREFIX_REGEX.exec(lineText);
-    if (!prefixMatch) {
-        return lineOffset;
-    }
-
-    return Math.max(0, lineOffset - prefixMatch[0].length);
 }
 
 function mapPositionThroughQuoteTransform(
@@ -101,10 +74,15 @@ function mapPositionThroughQuoteTransform(
 
     let transformedOffset = 0;
     for (let index = 0; index < targetLineIndex; index += 1) {
-        transformedOffset += getTransformedLineLength(lines[index], removeQuotePrefix) + 1;
+        transformedOffset += transformQuoteLine(lines[index], removeQuotePrefix).length + 1;
     }
 
-    transformedOffset += getMappedLineOffset(lines[targetLineIndex], lineOffset, removeQuotePrefix);
+    // The transform only edits the start of a line, so the position keeps its
+    // offset from the line end; clamp to line start for positions inside a
+    // removed prefix.
+    const targetLineText = lines[targetLineIndex];
+    const lineDelta = transformQuoteLine(targetLineText, removeQuotePrefix).length - targetLineText.length;
+    transformedOffset += Math.max(0, lineOffset + lineDelta);
 
     return {
         basePos: target.range.from,
@@ -263,8 +241,7 @@ export function createInsertQuoteCommand(view: EditorView): () => boolean {
             addQuoteCursorTargets(state, ranges, targetMap, explicitSelectionsByIndex);
 
             const changes = Array.from(targetMap.values()).map(({ range, text }) => {
-                const updated = isBlockquoteText(text) ? removeBlockquotePrefix(text) : addBlockquotePrefix(text);
-                return { from: range.from, to: range.to, insert: updated };
+                return { from: range.from, to: range.to, insert: toggleBlockquoteText(text) };
             });
 
             dispatchChangesWithSelections(view, changes, explicitSelectionsByIndex);
@@ -341,20 +318,11 @@ export function createInsertQuoteCommand(view: EditorView): () => boolean {
 
         const changes = rangeTexts
             .map(({ range, text }) => {
-                if (allQuoted) {
-                    const updated = removeBlockquotePrefix(text);
-                    if (updated === text) {
-                        return null;
-                    }
-                    return { from: range.from, to: range.to, insert: updated };
+                const updated = transformQuoteText(text, allQuoted);
+                if (updated === text) {
+                    return null;
                 }
-
-                if (!isBlockquoteText(text)) {
-                    const updated = addBlockquotePrefix(text);
-                    return { from: range.from, to: range.to, insert: updated };
-                }
-
-                return null;
+                return { from: range.from, to: range.to, insert: updated };
             })
             .filter((change): change is { from: number; to: number; insert: string } => Boolean(change));
 

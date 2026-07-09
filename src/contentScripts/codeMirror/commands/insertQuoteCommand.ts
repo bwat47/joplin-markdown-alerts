@@ -33,10 +33,13 @@ export function toggleBlockquoteText(text: string): string {
     return addBlockquotePrefix(text);
 }
 
+// Only prefixes lines that are not already quoted, so mixed text (e.g. lazy
+// continuation lines inside a blockquote) is normalized to one quote level
+// instead of nesting the already-quoted lines deeper.
 function addBlockquotePrefix(text: string): string {
     return text
         .split('\n')
-        .map((line) => `${BLOCKQUOTE_PREFIX}${line}`)
+        .map((line) => (BLOCKQUOTE_PREFIX_REGEX.test(line) ? line : `${BLOCKQUOTE_PREFIX}${line}`))
         .join('\n');
 }
 
@@ -53,7 +56,8 @@ function isBlockquoteText(text: string): boolean {
 
 function getTransformedLineLength(lineText: string, removeQuotePrefix: boolean): number {
     if (!removeQuotePrefix) {
-        return lineText.length + BLOCKQUOTE_PREFIX.length;
+        // Mirrors addBlockquotePrefix: already-quoted lines are left unchanged.
+        return BLOCKQUOTE_PREFIX_REGEX.test(lineText) ? lineText.length : lineText.length + BLOCKQUOTE_PREFIX.length;
     }
 
     const prefixMatch = BLOCKQUOTE_PREFIX_REGEX.exec(lineText);
@@ -62,7 +66,8 @@ function getTransformedLineLength(lineText: string, removeQuotePrefix: boolean):
 
 function getMappedLineOffset(lineText: string, lineOffset: number, removeQuotePrefix: boolean): number {
     if (!removeQuotePrefix) {
-        return lineOffset + BLOCKQUOTE_PREFIX.length;
+        // Mirrors addBlockquotePrefix: already-quoted lines are left unchanged.
+        return BLOCKQUOTE_PREFIX_REGEX.test(lineText) ? lineOffset : lineOffset + BLOCKQUOTE_PREFIX.length;
     }
 
     const prefixMatch = BLOCKQUOTE_PREFIX_REGEX.exec(lineText);
@@ -81,15 +86,6 @@ function mapPositionThroughQuoteTransform(
 ): MappedQuotePosition | null {
     if (position < target.range.from || position > target.range.to) {
         return null;
-    }
-
-    // When quoting a mixed selection, already-quoted targets are left unchanged,
-    // so positions inside them must map through unchanged as well.
-    if (!removeQuotePrefix && isBlockquoteText(target.text)) {
-        return {
-            basePos: target.range.from,
-            offset: position - target.range.from,
-        };
     }
 
     const targetText = target.text;

@@ -83,6 +83,15 @@ function mapPositionThroughQuoteTransform(
         return null;
     }
 
+    // When quoting a mixed selection, already-quoted targets are left unchanged,
+    // so positions inside them must map through unchanged as well.
+    if (!removeQuotePrefix && isBlockquoteText(target.text)) {
+        return {
+            basePos: target.range.from,
+            offset: position - target.range.from,
+        };
+    }
+
     const targetText = target.text;
     const targetLine = state.doc.lineAt(position);
     const lineOffset = position - targetLine.from;

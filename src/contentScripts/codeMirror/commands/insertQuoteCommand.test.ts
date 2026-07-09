@@ -269,6 +269,23 @@ describe('createInsertQuoteCommand', () => {
         }
     });
 
+    test('preserves selection over already-quoted paragraphs in mixed selection', () => {
+        const harness = createEditorHarness(['[[> AAA', '', 'test', '', '> BBB]]'].join('\n'));
+
+        try {
+            const command = createInsertQuoteCommand(harness.view);
+            command();
+
+            expect(harness.getText()).toBe(['> AAA', '> ', '> test', '> ', '> BBB'].join('\n'));
+
+            const selection = harness.getSelection();
+            expect(selection.anchor).toBe(0);
+            expect(selection.head).toBe(harness.view.state.doc.length);
+        } finally {
+            harness.destroy();
+        }
+    });
+
     test('preserves partial selection when quoting an expanded paragraph', () => {
         const harness = createEditorHarness(['ABCACC', 'abc 123', '[[sadads sad]] das abad s dsadsa dsa'].join('\n'));
 

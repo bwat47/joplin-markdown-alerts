@@ -242,9 +242,16 @@ export function createInsertQuoteCommand(view: EditorView): () => boolean {
 
             const cursorTargets = Array.from(targetMap.values());
             const allQuoted = cursorTargets.every((target) => isBlockquoteText(target.text));
-            const changes = cursorTargets.map(({ range, text }) => {
-                return { from: range.from, to: range.to, insert: transformQuoteText(text, allQuoted) };
-            });
+            const changes = cursorTargets
+                .map(({ range, text }) => {
+                    const updated = transformQuoteText(text, allQuoted);
+                    return updated === text ? null : { from: range.from, to: range.to, insert: updated };
+                })
+                .filter((change): change is { from: number; to: number; insert: string } => Boolean(change));
+
+            if (changes.length === 0) {
+                return false;
+            }
 
             dispatchChangesWithSelections(view, changes, explicitSelectionsByIndex);
             view.focus();

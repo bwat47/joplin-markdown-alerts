@@ -240,8 +240,10 @@ export function createInsertQuoteCommand(view: EditorView): () => boolean {
 
             addQuoteCursorTargets(state, ranges, targetMap, explicitSelectionsByIndex);
 
-            const changes = Array.from(targetMap.values()).map(({ range, text }) => {
-                return { from: range.from, to: range.to, insert: toggleBlockquoteText(text) };
+            const cursorTargets = Array.from(targetMap.values());
+            const allQuoted = cursorTargets.every((target) => isBlockquoteText(target.text));
+            const changes = cursorTargets.map(({ range, text }) => {
+                return { from: range.from, to: range.to, insert: transformQuoteText(text, allQuoted) };
             });
 
             dispatchChangesWithSelections(view, changes, explicitSelectionsByIndex);

@@ -172,6 +172,29 @@ describe('createInsertQuoteCommand', () => {
         }
     });
 
+    test('normalizes quoted and unquoted paragraphs when multiple cursors are present', () => {
+        const harness = createEditorHarness(['> Quoted line', '', 'Plain line'].join('\n'));
+
+        try {
+            const quotedLine = harness.view.state.doc.line(1);
+            const plainLine = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.cursor(quotedLine.from + 2),
+                    EditorSelection.cursor(plainLine.from + 2),
+                ]),
+            });
+
+            const command = createInsertQuoteCommand(harness.view);
+            command();
+
+            expect(harness.getText()).toBe(['> Quoted line', '', '> Plain line'].join('\n'));
+        } finally {
+            harness.destroy();
+        }
+    });
+
     test('places each cursor after quote marker on blank lines', () => {
         const harness = createEditorHarness(['', '', ''].join('\n'));
 

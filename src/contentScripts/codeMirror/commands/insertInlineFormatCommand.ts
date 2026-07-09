@@ -12,6 +12,7 @@ import {
     splitStructuralLineParts,
 } from './inlineFormatSingleLineActions';
 import { parseGitHubAlertTitleLine } from '../alerts/alertParsing';
+import { changeOverlapsRange } from '../shared/commandRangeUtils';
 import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 import { getProbePositions, getSyntaxTree } from '../shared/syntaxTreeUtils';
 
@@ -297,14 +298,6 @@ function createCursorInsertion(
     };
 }
 
-function overlapsRange(change: TextChange, range: SelectionRange): boolean {
-    if (change.from === change.to) {
-        return change.from >= range.from && change.from <= range.to;
-    }
-
-    return change.from < range.to && change.to > range.from;
-}
-
 /**
  * Creates an inline-format command that supports multiple selections, cursor insertion, and
  * list-aware multiline full-line formatting.
@@ -328,7 +321,9 @@ export function createInsertInlineFormatCommand(view: EditorView, format: Inline
                 }
 
                 const cursorInsertion = createCursorInsertion(range.head, format);
-                if (nonEmptyRanges.some((nonEmptyRange) => overlapsRange(cursorInsertion.change, nonEmptyRange))) {
+                if (
+                    nonEmptyRanges.some((nonEmptyRange) => changeOverlapsRange(cursorInsertion.change, nonEmptyRange))
+                ) {
                     return;
                 }
 

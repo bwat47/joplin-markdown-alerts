@@ -3,6 +3,7 @@ import type { EditorState, SelectionRange } from '@codemirror/state';
 import type { SyntaxNode } from '@lezer/common';
 
 import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine, type TextRange } from '../alerts/alertParsing';
+import { changeOverlapsRange } from '../shared/commandRangeUtils';
 import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 import {
     collectParagraphRanges,
@@ -46,14 +47,6 @@ function getAlertTypeRange(markerRange: TextRange): TextRange {
         from: markerRange.from + 2,
         to: markerRange.to - 1,
     };
-}
-
-function overlapsRange(change: TextChange, range: ParagraphRange): boolean {
-    if (change.from === change.to) {
-        return change.from >= range.from && change.from <= range.to;
-    }
-
-    return change.from < range.to && change.to > range.from;
 }
 
 function createAlertLine(prefix: string): string {
@@ -479,7 +472,7 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
                 }
 
                 const cursorChange = createAlertCursorChange(state, range.head);
-                if (mergedRanges.some((mergedRange) => overlapsRange(cursorChange.change, mergedRange))) {
+                if (mergedRanges.some((mergedRange) => changeOverlapsRange(cursorChange.change, mergedRange))) {
                     return;
                 }
 

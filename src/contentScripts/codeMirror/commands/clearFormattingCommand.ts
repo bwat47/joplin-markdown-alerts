@@ -24,17 +24,21 @@ type PlaceholderStore = {
 const PLACEHOLDER_SENTINEL = '\u0000';
 const PLACEHOLDER_LABEL = 'MDCLR';
 const JOPLIN_RESOURCE_ID_REGEX = /^:\/[0-9a-f]{32}$/i;
-const HTML_IMAGE_REGEX = /<img\b[^>]*\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>/gi;
+// Matched in two steps (tag, then src attribute) so neither pattern mixes ambiguous `[^>]*` runs around the
+// quoted/bare src alternation, which backtracks super-linearly when combined into one regex.
+const HTML_IMAGE_TAG_REGEX = /<img\b[^>]*>/gi;
+const HTML_IMAGE_SRC_ATTRIBUTE_REGEX = /\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i;
 const URL_SCHEME_REGEX = /^[a-z][a-z0-9+.-]*:/i;
-const REFERENCE_LINK_DEFINITION_REGEX = /^\s*\[(?!\^)[^\]]+\]:\s*(.+?)\s*$/;
-const FOOTNOTE_DEFINITION_REGEX = /^\s*\[\^([^\]]+)\]:?\s*(.*)$/;
+// Bracket labels exclude `[` as well as `]` so a run of `[[[[` cannot force quadratic backtracking.
+const REFERENCE_LINK_DEFINITION_REGEX = /^\s*\[(?!\^)[^[\]]+\]:(.*)$/;
+const FOOTNOTE_DEFINITION_REGEX = /^\s*\[\^([^[\]]+)\]:?(.*)$/;
 const BLOCKQUOTE_PREFIX_REGEX = /^\s*(?:>\s*)+/;
 const HEADING_PREFIX_REGEX = /^\s{0,3}#{1,6}[ \t]+/;
 const LIST_MARKER_REGEX = /^\s*(?:[-+*]|\d+[.)])\s+/;
-const TASK_LIST_MARKER_REGEX = /^\[(?: |x|X)\]\s+/;
+const TASK_LIST_MARKER_REGEX = /^\[[ xX]\]\s+/;
 const PLAIN_ALERT_TITLE_LINE_REGEX = new RegExp(`^\\s*\\[!(${GITHUB_ALERT_TYPES.join('|')})\\](?:[ \\t]+(.*))?$`, 'i');
 const REFERENCE_STYLE_IMAGE_REGEX = /!\[([^\]]*)\]\[([^\]]+)\]/g;
-const REFERENCE_LINK_REGEX = /\[([^\]]+)\]\[[^\]]+\]/g;
+const REFERENCE_LINK_REGEX = /\[([^[\]]+)\]\[[^[\]]+\]/g;
 const FOOTNOTE_REFERENCE_REGEX = /[ \t]?\[\^[^\]]+\]/g;
 const HTML_FORMATTING_TAGS = ['sup', 'sub', 'u', 's', 'strong', 'b', 'em', 'i', 'mark', 'del', 'strike', 'ins', 'span'];
 const MAX_CLEARING_PASSES = 10;
@@ -251,18 +255,21 @@ function createLinkOrImageEdit(text: string, node: SyntaxNode, store: Placeholde
     return createDirectLinkOrImageEdit(text, node, store) ?? createReferenceStyleLinkOrImageEdit(text, node);
 }
 
+function resolveFootnoteDefinitionText(label: string, destination: string | null, store: PlaceholderStore): string {
+    if (!destination || destination.length === 0) {
+        return label.slice(1);
+    }
+
+    return isUrlLikeText(destination) ? store.create(destination) : applyLezerFormattingEdits(destination, store);
+}
+
 function createLinkReferenceEdit(text: string, node: SyntaxNode, store: PlaceholderStore): FormattingEdit | null {
     const labelNode = findChildNode(node, 'LinkLabel');
     const destination = getDirectUrlDestination(text, node);
     const label = labelNode ? parseCompleteBracketLabel(getNodeText(text, labelNode)) : null;
 
     if (label?.startsWith('^')) {
-        const replacement =
-            destination && destination.length > 0
-                ? isUrlLikeText(destination)
-                    ? store.create(destination)
-                    : applyLezerFormattingEdits(destination, store)
-                : label.slice(1);
+        const replacement = resolveFootnoteDefinitionText(label, destination, store);
 
         return {
             from: node.from,
@@ -461,17 +468,20 @@ function extractLinkDestination(rawDestination: string): string | null {
 }
 
 function replaceHtmlImages(text: string, store: PlaceholderStore): string {
-    return text.replace(
-        HTML_IMAGE_REGEX,
-        (match, doubleQuotedSrc: string, singleQuotedSrc: string, bareSrc: string) => {
-            const src = (doubleQuotedSrc ?? singleQuotedSrc ?? bareSrc ?? '').trim();
-            if (src.length === 0) {
-                return match;
-            }
-
-            return isResourceLinkTarget(src) ? store.create(match) : store.create(src);
+    return text.replace(HTML_IMAGE_TAG_REGEX, (match: string) => {
+        const srcMatch = HTML_IMAGE_SRC_ATTRIBUTE_REGEX.exec(match);
+        if (!srcMatch) {
+            return match;
         }
-    );
+
+        const [, doubleQuotedSrc, singleQuotedSrc, bareSrc] = srcMatch;
+        const src = (doubleQuotedSrc ?? singleQuotedSrc ?? bareSrc ?? '').trim();
+        if (src.length === 0) {
+            return match;
+        }
+
+        return isResourceLinkTarget(src) ? store.create(match) : store.create(src);
+    });
 }
 
 function clearAlertTitleLine(line: string): string | null {
@@ -509,7 +519,8 @@ function clearStructuralLineFormatting(line: string, store: PlaceholderStore): s
 
     const footnoteDefinitionMatch = FOOTNOTE_DEFINITION_REGEX.exec(line);
     if (footnoteDefinitionMatch) {
-        return footnoteDefinitionMatch[2].length > 0 ? footnoteDefinitionMatch[2] : footnoteDefinitionMatch[1];
+        const footnoteText = footnoteDefinitionMatch[2].trimStart();
+        return footnoteText.length > 0 ? footnoteText : footnoteDefinitionMatch[1];
     }
 
     const clearedAlertTitleLine = clearAlertTitleLine(line);

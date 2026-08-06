@@ -7,148 +7,117 @@ import { createEditorHarness } from '../shared/testUtils';
 const RESOURCE_ID = ':/5622253ddc404beaa9becd86d48095c5';
 
 describe('clearMarkdownFormattingSelectionText', () => {
-    test('removes supported inline markdown formatting markers', () => {
-        const input = '**_Bold Italic_** ~~Strike~~ ==Highlight== ++Underline++ ^Sup^ ~Sub~';
-        const expected = 'Bold Italic Strike Highlight Underline Sup Sub';
-
-        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
-    });
-
-    test('leaves incomplete standard markdown delimiters to the parser instead of regex fallbacks', () => {
-        const input = '**Bold and _italic';
-
-        expect(clearMarkdownFormattingSelectionText(input)).toBe(input);
-    });
-
-    test('does not rewrite literal text that matches the old printable placeholder format', () => {
-        const input = '@@MDCLR0@@ [Link](https://example.com)';
-        const expected = '@@MDCLR0@@ https://example.com';
-
-        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
-    });
-
-    test('removes heading and blockquote markers without breaking table pipes', () => {
-        const input = ['> ## **Title**', '| **A** | [B](https://example.com/path) |'].join('\n');
-        const expected = ['Title', '| A | https://example.com/path |'].join('\n');
-
-        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
-    });
-
-    test('removes numbered, nested, and task list markers', () => {
-        const input = ['1. **Item**', '  - - _Sub-item_', '- [ ] ~~Task~~', '  1. [x] ++Done++'].join('\n');
-        const expected = ['Item', 'Sub-item', 'Task', 'Done'].join('\n');
-
-        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
-    });
-
-    test('extracts external markdown and html image destinations while preserving Joplin resources', () => {
-        const input = [
-            '[Joplin Cloud](https://joplinapp.org/plans/)',
-            '![External](https://example.com/image.png)',
-            '![Alt][external-image]',
-            `![Resource](${RESOURCE_ID})`,
-            '<img src="https://example.com/external.png" alt="External">',
-            `<img src="${RESOURCE_ID}" alt="Resource">`,
-        ].join('\n');
-        const expected = [
-            'https://joplinapp.org/plans/',
-            'https://example.com/image.png',
-            'Alt',
-            `![Resource](${RESOURCE_ID})`,
-            'https://example.com/external.png',
-            `<img src="${RESOURCE_ID}" alt="Resource">`,
-        ].join('\n');
-
-        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
-    });
-
-    test('uses parser destinations for nested formatted links with titles and parentheses', () => {
-        const input = '**[Label](https://example.com/a_(b) "title")**';
-        const expected = 'https://example.com/a_(b)';
-
-        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
-    });
-
-    test('removes reference-link and footnote syntax from selected text', () => {
-        const input = [
-            'Link to [Case Test][UpPeR] and ref [^1]',
-            '[^1]: Footnote1',
-            '[UpPeR]: https://example.com/reference',
-        ].join('\n');
-        const expected = ['Link to Case Test and ref', 'Footnote1', 'https://example.com/reference'].join('\n');
-
-        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
-    });
-
-    test('clears markdown syntax from footnote definition bodies', () => {
-        const input = [
-            '[^1]: [link](https://example.com/footnote)',
-            '[^2]: ![alt](https://example.com/image.png)',
-        ].join('\n');
-        const expected = ['https://example.com/footnote', 'https://example.com/image.png'].join('\n');
-
-        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
-    });
-
-    test('preserves markdown-like text in footnote definition URLs', () => {
-        const input = '[^1]: https://example.com/++foo++';
-        const expected = 'https://example.com/++foo++';
-
-        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
-    });
-
-    test('preserves table structure while clearing inline cell formatting', () => {
-        const input = [
-            '| **Name** | [Site](https://example.com/a_(b)) |',
-            '| --- | --- |',
-            '| `**Literal**` | ~~Done~~ |',
-        ].join('\n');
-        const expected = ['| Name | https://example.com/a_(b) |', '| --- | --- |', '| **Literal** | Done |'].join('\n');
-
-        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
-    });
-
-    test('removes code markers while preserving literal markdown inside code content', () => {
-        const input = ['`**bold**`', '```ts', '**literal**', '[link](https://example.com)', '```'].join('\n');
-        const expected = ['**bold**', '**literal**', '[link](https://example.com)'].join('\n');
-
-        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
-    });
-
-    test('preserves literal markdown inside inline and fenced code after other cleanup passes', () => {
-        const input = ['`[link](https://example.com) and ~~strike~~`', '~~~', '++under++ and ==mark==', '~~~'].join(
-            '\n'
-        );
-        const expected = ['[link](https://example.com) and ~~strike~~', '++under++ and ==mark=='].join('\n');
-
-        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
-    });
-
-    test('removes supported html formatting tags', () => {
-        const input = '<sup>Sup</sup> <sub>Sub</sub> <strong>Bold</strong> <em>Italic</em>';
-        const expected = 'Sup Sub Bold Italic';
-
-        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
-    });
-
-    test('removes GitHub alert marker lines and keeps custom titles', () => {
-        const input = ['> [!NOTE]', '> body', '> [!WARNING] Custom title', '> **bold** body'].join('\n');
-        const expected = ['', 'body', 'Custom title', 'bold body'].join('\n');
-
-        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
-    });
-
-    test('removes plain alert marker lines without blockquote prefixes', () => {
-        const input = ['[!TIP]', '[!IMPORTANT] Optional title'].join('\n');
-        const expected = ['', 'Optional title'].join('\n');
-
-        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
-    });
-
-    test('removes thematic break lines', () => {
-        const input = ['***', '* * *', '---', '- - -', '___', '_ _ _', '> ---', '> * * *'].join('\n');
-        const expected = ['', '', '', '', '', '', '', ''].join('\n');
-
+    test.each([
+        {
+            name: 'removes supported inline markdown formatting markers',
+            input: '**_Bold Italic_** ~~Strike~~ ==Highlight== ++Underline++ ^Sup^ ~Sub~',
+            expected: 'Bold Italic Strike Highlight Underline Sup Sub',
+        },
+        {
+            name: 'leaves incomplete standard markdown delimiters to the parser instead of regex fallbacks',
+            input: '**Bold and _italic',
+            expected: '**Bold and _italic',
+        },
+        {
+            name: 'does not rewrite literal text that matches the old printable placeholder format',
+            input: '@@MDCLR0@@ [Link](https://example.com)',
+            expected: '@@MDCLR0@@ https://example.com',
+        },
+        {
+            name: 'removes heading and blockquote markers without breaking table pipes',
+            input: ['> ## **Title**', '| **A** | [B](https://example.com/path) |'].join('\n'),
+            expected: ['Title', '| A | https://example.com/path |'].join('\n'),
+        },
+        {
+            name: 'removes numbered, nested, and task list markers',
+            input: ['1. **Item**', '  - - _Sub-item_', '- [ ] ~~Task~~', '  1. [x] ++Done++'].join('\n'),
+            expected: ['Item', 'Sub-item', 'Task', 'Done'].join('\n'),
+        },
+        {
+            name: 'extracts external markdown and html image destinations while preserving Joplin resources',
+            input: [
+                '[Joplin Cloud](https://joplinapp.org/plans/)',
+                '![External](https://example.com/image.png)',
+                '![Alt][external-image]',
+                `![Resource](${RESOURCE_ID})`,
+                '<img src="https://example.com/external.png" alt="External">',
+                `<img src="${RESOURCE_ID}" alt="Resource">`,
+            ].join('\n'),
+            expected: [
+                'https://joplinapp.org/plans/',
+                'https://example.com/image.png',
+                'Alt',
+                `![Resource](${RESOURCE_ID})`,
+                'https://example.com/external.png',
+                `<img src="${RESOURCE_ID}" alt="Resource">`,
+            ].join('\n'),
+        },
+        {
+            name: 'uses parser destinations for nested formatted links with titles and parentheses',
+            input: '**[Label](https://example.com/a_(b) "title")**',
+            expected: 'https://example.com/a_(b)',
+        },
+        {
+            name: 'removes reference-link and footnote syntax from selected text',
+            input: [
+                'Link to [Case Test][UpPeR] and ref [^1]',
+                '[^1]: Footnote1',
+                '[UpPeR]: https://example.com/reference',
+            ].join('\n'),
+            expected: ['Link to Case Test and ref', 'Footnote1', 'https://example.com/reference'].join('\n'),
+        },
+        {
+            name: 'clears markdown syntax from footnote definition bodies',
+            input: ['[^1]: [link](https://example.com/footnote)', '[^2]: ![alt](https://example.com/image.png)'].join(
+                '\n'
+            ),
+            expected: ['https://example.com/footnote', 'https://example.com/image.png'].join('\n'),
+        },
+        {
+            name: 'preserves markdown-like text in footnote definition URLs',
+            input: '[^1]: https://example.com/++foo++',
+            expected: 'https://example.com/++foo++',
+        },
+        {
+            name: 'preserves table structure while clearing inline cell formatting',
+            input: [
+                '| **Name** | [Site](https://example.com/a_(b)) |',
+                '| --- | --- |',
+                '| `**Literal**` | ~~Done~~ |',
+            ].join('\n'),
+            expected: ['| Name | https://example.com/a_(b) |', '| --- | --- |', '| **Literal** | Done |'].join('\n'),
+        },
+        {
+            name: 'removes code markers while preserving literal markdown inside code content',
+            input: ['`**bold**`', '```ts', '**literal**', '[link](https://example.com)', '```'].join('\n'),
+            expected: ['**bold**', '**literal**', '[link](https://example.com)'].join('\n'),
+        },
+        {
+            name: 'preserves literal markdown inside inline and fenced code after other cleanup passes',
+            input: ['`[link](https://example.com) and ~~strike~~`', '~~~', '++under++ and ==mark==', '~~~'].join('\n'),
+            expected: ['[link](https://example.com) and ~~strike~~', '++under++ and ==mark=='].join('\n'),
+        },
+        {
+            name: 'removes supported html formatting tags',
+            input: '<sup>Sup</sup> <sub>Sub</sub> <strong>Bold</strong> <em>Italic</em>',
+            expected: 'Sup Sub Bold Italic',
+        },
+        {
+            name: 'removes GitHub alert marker lines and keeps custom titles',
+            input: ['> [!NOTE]', '> body', '> [!WARNING] Custom title', '> **bold** body'].join('\n'),
+            expected: ['', 'body', 'Custom title', 'bold body'].join('\n'),
+        },
+        {
+            name: 'removes plain alert marker lines without blockquote prefixes',
+            input: ['[!TIP]', '[!IMPORTANT] Optional title'].join('\n'),
+            expected: ['', 'Optional title'].join('\n'),
+        },
+        {
+            name: 'removes thematic break lines',
+            input: ['***', '* * *', '---', '- - -', '___', '_ _ _', '> ---', '> * * *'].join('\n'),
+            expected: ['', '', '', '', '', '', '', ''].join('\n'),
+        },
+    ])('$name', ({ input, expected }) => {
         expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
     });
 });

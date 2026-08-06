@@ -97,44 +97,35 @@ describe('createInsertAlertCommand', () => {
         expect(runCommand(input)).toBe(expected);
     });
 
-    test('selects alert type after converting paragraph around cursor', () => {
-        const input = 'Parag|raph';
-        const expectedText = ['> [!NOTE]', '> Paragraph'].join('\n');
+    // The inserted alert type is always selected, i.e. "NOTE" in "> [!NOTE]"
+    const ALERT_TYPE_SELECTION = { anchor: 4, head: 8 };
 
+    test.each([
+        {
+            name: 'selects alert type after converting paragraph around cursor',
+            input: 'Parag|raph',
+            expectedText: ['> [!NOTE]', '> Paragraph'].join('\n'),
+        },
+        {
+            name: 'selects alert type after inserting alert title above blockquote',
+            input: '> So|me line',
+            expectedText: ['> [!NOTE]', '> Some line'].join('\n'),
+        },
+        {
+            name: 'selects alert type after converting a heading line into an alert',
+            input: '## Head|ing',
+            expectedText: ['> [!NOTE]', '> ## Heading'].join('\n'),
+        },
+        {
+            name: 'selects alert type after inserting alert marker on blank line',
+            input: '|\n',
+            expectedText: '> [!NOTE] \n',
+        },
+    ])('$name', ({ input, expectedText }) => {
         const result = runCommandWithSelection(input);
 
         expect(result.text).toBe(expectedText);
-        expect(result.selection).toEqual({ anchor: 4, head: 8 });
-    });
-
-    test('selects alert type after inserting alert title above blockquote', () => {
-        const input = '> So|me line';
-        const expectedText = ['> [!NOTE]', '> Some line'].join('\n');
-
-        const result = runCommandWithSelection(input);
-
-        expect(result.text).toBe(expectedText);
-        expect(result.selection).toEqual({ anchor: 4, head: 8 });
-    });
-
-    test('selects alert type after converting a heading line into an alert', () => {
-        const input = '## Head|ing';
-        const expectedText = ['> [!NOTE]', '> ## Heading'].join('\n');
-
-        const result = runCommandWithSelection(input);
-
-        expect(result.text).toBe(expectedText);
-        expect(result.selection).toEqual({ anchor: 4, head: 8 });
-    });
-
-    test('selects alert type after inserting alert marker on blank line', () => {
-        const input = '|\n';
-        const expectedText = `> [!NOTE] \n`;
-
-        const result = runCommandWithSelection(input);
-
-        expect(result.text).toBe(expectedText);
-        expect(result.selection).toEqual({ anchor: 4, head: 8 });
+        expect(result.selection).toEqual(ALERT_TYPE_SELECTION);
     });
 
     test('accepts autocomplete after replacing the selected default alert type without duplicating trailing space', async () => {

@@ -213,69 +213,85 @@ describe('createAlertCompletionSource — apply', () => {
         }
     }
 
-    test('replaces >! with the full alert syntax (note = index 0)', () => {
-        const { text } = applyCompletion('>!|', 0);
-        expect(text).toBe('> [!NOTE] ');
+    // Option order: 0 = note, 1 = tip, 2 = important, 3 = warning
+    test.each([
+        {
+            name: 'replaces >! with the full alert syntax',
+            input: '>!|',
+            typeIndex: 0,
+            expected: '> [!NOTE] ',
+        },
+        {
+            name: 'replaces >!partial with the full alert syntax',
+            input: '>!no|',
+            typeIndex: 0,
+            expected: '> [!NOTE] ',
+        },
+        {
+            name: 'completes full alert syntax prefix without duplicating the marker',
+            input: '> [!no|',
+            typeIndex: 0,
+            expected: '> [!NOTE] ',
+        },
+        {
+            name: 'replaces auto-paired closing bracket when completing full alert syntax prefix',
+            input: '> [!|]',
+            typeIndex: 0,
+            expected: '> [!NOTE] ',
+        },
+        {
+            name: 'preserves an existing custom title without adding a double space',
+            input: '> [!no|] Title',
+            typeIndex: 1,
+            expected: '> [!TIP] Title',
+        },
+        {
+            name: 'normalizes existing custom title separator whitespace to one space',
+            input: '> [!no|]   Title',
+            typeIndex: 1,
+            expected: '> [!TIP] Title',
+        },
+        {
+            name: 'replaces the remaining marker suffix when completing from the middle of an alert type',
+            input: '> [!|OTE]',
+            typeIndex: 1,
+            expected: '> [!TIP] ',
+        },
+        {
+            name: 'does not consume following text that is not part of a closed marker',
+            input: '> [!|Title',
+            typeIndex: 1,
+            expected: '> [!TIP] Title',
+        },
+        {
+            name: 'preserves leading whitespace in the resulting line',
+            input: '   >!|',
+            typeIndex: 2,
+            expected: '   > [!IMPORTANT] ',
+        },
+        {
+            name: 'inserts tip with uppercase type',
+            input: '>!|',
+            typeIndex: 1,
+            expected: '> [!TIP] ',
+        },
+        {
+            name: 'works on a line that is not the first line of the document',
+            input: 'first line\n>!|',
+            typeIndex: 3,
+            expected: 'first line\n> [!WARNING] ',
+        },
+    ])('$name', ({ input, typeIndex, expected }) => {
+        const { text } = applyCompletion(input, typeIndex);
+        expect(text).toBe(expected);
     });
 
-    test('replaces >!partial with the full alert syntax', () => {
-        const { text } = applyCompletion('>!no|', 0);
-        expect(text).toBe('> [!NOTE] ');
-    });
-
-    test('completes full alert syntax prefix without duplicating the marker', () => {
-        const { text } = applyCompletion('> [!no|', 0);
-        expect(text).toBe('> [!NOTE] ');
-    });
-
-    test('replaces auto-paired closing bracket when completing full alert syntax prefix', () => {
-        const { text } = applyCompletion('> [!|]', 0);
-        expect(text).toBe('> [!NOTE] ');
-    });
-
-    test('preserves an existing custom title without adding a double space', () => {
-        const { text } = applyCompletion('> [!no|] Title', 1); // index 1 = tip
-        expect(text).toBe('> [!TIP] Title');
-    });
-
-    test('normalizes existing custom title separator whitespace to one space', () => {
-        const { text } = applyCompletion('> [!no|]   Title', 1);
-        expect(text).toBe('> [!TIP] Title');
-    });
-
-    test('replaces the remaining marker suffix when completing from the middle of an alert type', () => {
-        const { text } = applyCompletion('> [!|OTE]', 1);
-        expect(text).toBe('> [!TIP] ');
-    });
-
-    test('does not consume following text that is not part of a closed marker', () => {
-        const { text } = applyCompletion('> [!|Title', 1);
-        expect(text).toBe('> [!TIP] Title');
-    });
-
-    test('cursor is placed immediately after the trailing space', () => {
-        const { text, cursor } = applyCompletion('>!|', 0);
-        expect(cursor).toBe(text.length); // end of "> [!NOTE] "
-    });
-
-    test('preserves leading whitespace in the resulting line', () => {
-        const { text } = applyCompletion('   >!|', 2); // index 2 = important
-        expect(text).toBe('   > [!IMPORTANT] ');
-    });
-
-    test('cursor is correct when leading whitespace is present', () => {
-        const { text, cursor } = applyCompletion('   >!|', 2);
+    test.each([
+        { name: 'cursor is placed immediately after the trailing space', input: '>!|', typeIndex: 0 },
+        { name: 'cursor is correct when leading whitespace is present', input: '   >!|', typeIndex: 2 },
+    ])('$name', ({ input, typeIndex }) => {
+        const { text, cursor } = applyCompletion(input, typeIndex);
         expect(cursor).toBe(text.length);
-    });
-
-    test('inserts tip (index 1) with uppercase type', () => {
-        const { text } = applyCompletion('>!|', 1);
-        expect(text).toBe('> [!TIP] ');
-    });
-
-    test('works on a line that is not the first line of the document', () => {
-        const { text } = applyCompletion('first line\n>!|', 3); // index 3 = warning
-        expect(text).toBe('first line\n> [!WARNING] ');
     });
 
     test('applies the selected completion to every matching cursor', () => {

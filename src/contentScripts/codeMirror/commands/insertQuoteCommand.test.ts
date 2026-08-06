@@ -49,31 +49,28 @@ describe('createInsertQuoteCommand', () => {
         }
     }
 
-    test('quotes paragraph when cursor is at the start', () => {
-        const input = '|Paragraph';
-        const expected = '> Paragraph';
-
-        expect(runCommand(input)).toBe(expected);
-    });
-
-    test('quotes entire paragraph when cursor is inside it', () => {
-        const input = ['First line', 'Sec|ond line'].join('\n');
-        const expected = ['> First line', '> Second line'].join('\n');
-
-        expect(runCommand(input)).toBe(expected);
-    });
-
-    test('unquotes when cursor is before the blockquote marker', () => {
-        const input = '|> Quoted line';
-        const expected = 'Quoted line';
-
-        expect(runCommand(input)).toBe(expected);
-    });
-
-    test('inserts empty blockquote on blank line', () => {
-        const input = '|\n';
-        const expected = '> \n';
-
+    test.each([
+        {
+            name: 'quotes paragraph when cursor is at the start',
+            input: '|Paragraph',
+            expected: '> Paragraph',
+        },
+        {
+            name: 'quotes entire paragraph when cursor is inside it',
+            input: ['First line', 'Sec|ond line'].join('\n'),
+            expected: ['> First line', '> Second line'].join('\n'),
+        },
+        {
+            name: 'unquotes when cursor is before the blockquote marker',
+            input: '|> Quoted line',
+            expected: 'Quoted line',
+        },
+        {
+            name: 'inserts empty blockquote on blank line',
+            input: '|\n',
+            expected: '> \n',
+        },
+    ])('$name', ({ input, expected }) => {
         expect(runCommand(input)).toBe(expected);
     });
 

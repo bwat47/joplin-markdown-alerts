@@ -668,8 +668,17 @@ describe('createInsertInlineFormatCommand', () => {
             expect(result.selection.head).toBe('<sup>text</sup>'.length);
         });
 
-        test('removes formatting and selects content when cursor is right after the closing delimiter', () => {
-            const result = runCommandWithSelection('~~text~~|', 'strikethrough');
+        test.each([
+            {
+                name: 'removes formatting and selects content when cursor is right after the closing delimiter',
+                input: '~~text~~|',
+            },
+            // cursor at position 1 (inside '~~' opening delimiter)
+            { name: 'removes formatting when cursor is on the opening delimiter', input: '~|~text~~' },
+            // cursor at position inside the closing '~~'
+            { name: 'removes formatting when cursor is on the closing delimiter', input: '~~text~|~' },
+        ])('$name', ({ input }) => {
+            const result = runCommandWithSelection(input, 'strikethrough');
             expect(result.text).toBe('text');
             expect(result.selection.anchor).toBe(0);
             expect(result.selection.head).toBe('text'.length);
@@ -680,22 +689,6 @@ describe('createInsertInlineFormatCommand', () => {
             // so no segment is found and the cursor insertion path runs instead
             const result = runCommandWithSelection('~~|~~', 'strikethrough');
             expect(result.text).toBe('~~~~~~~~');
-        });
-
-        test('removes formatting when cursor is on the opening delimiter', () => {
-            // cursor at position 1 (inside '~~' opening delimiter)
-            const result = runCommandWithSelection('~|~text~~', 'strikethrough');
-            expect(result.text).toBe('text');
-            expect(result.selection.anchor).toBe(0);
-            expect(result.selection.head).toBe('text'.length);
-        });
-
-        test('removes formatting when cursor is on the closing delimiter', () => {
-            // cursor at position inside the closing '~~'
-            const result = runCommandWithSelection('~~text~|~', 'strikethrough');
-            expect(result.text).toBe('text');
-            expect(result.selection.anchor).toBe(0);
-            expect(result.selection.head).toBe('text'.length);
         });
 
         test('removes correct segment when multiple formatted segments exist on a line', () => {

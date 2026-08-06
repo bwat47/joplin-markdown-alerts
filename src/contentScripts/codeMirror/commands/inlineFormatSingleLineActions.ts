@@ -27,12 +27,38 @@ export type SingleLineRelativeAction = {
     selectionBase: number;
 };
 
-const BLOCKQUOTE_PREFIX_REGEX = /^(\s*(?:>\s*)*)(.*)$/;
-const HEADING_PREFIX_REGEX = /^(#{1,6}\s+)(.*)$/;
-const LIST_PREFIX_REGEX = /^((?:[-+*]|\d+[.)])\s+(?:\[(?: |x|X)\]\s+)?)(.*)$/;
-const INDENTED_CONTENT_REGEX = /^(\s+)(.*)$/;
-const LEADING_WHITESPACE_REGEX = /^([ \t]+)/;
-const TRAILING_WHITESPACE_REGEX = /([ \t]+)$/;
+// These only match the structural prefix; the content is the remainder of the line. Pairing an ambiguous
+// prefix with a `(.*)$` tail backtracks super-linearly, so the split is done by slicing instead.
+const BLOCKQUOTE_PREFIX_REGEX = /^\s*(?:>\s*)*/;
+const HEADING_PREFIX_REGEX = /^#{1,6}\s+/;
+const LIST_PREFIX_REGEX = /^(?:[-+*]|\d+[.)])\s+(?:\[[ xX]\]\s+)?/;
+const INDENTED_CONTENT_REGEX = /^\s+/;
+const HORIZONTAL_WHITESPACE_CHARACTERS = new Set([' ', '\t']);
+
+function matchPrefixLength(text: string, prefixRegex: RegExp): number {
+    return prefixRegex.exec(text)?.[0].length ?? 0;
+}
+
+function leadingHorizontalWhitespaceLength(text: string): number {
+    let length = 0;
+
+    while (length < text.length && HORIZONTAL_WHITESPACE_CHARACTERS.has(text[length])) {
+        length += 1;
+    }
+
+    return length;
+}
+
+// Scanned rather than matched with `/[ \t]+$/`, which backtracks quadratically on whitespace-heavy lines.
+function trailingHorizontalWhitespaceLength(text: string): number {
+    let length = 0;
+
+    while (length < text.length && HORIZONTAL_WHITESPACE_CHARACTERS.has(text[text.length - 1 - length])) {
+        length += 1;
+    }
+
+    return length;
+}
 
 function isIndexPartOfLongerDelimiter(text: string, index: number, longerDelimiters: string[] | undefined): boolean {
     if (!longerDelimiters || longerDelimiters.length === 0) {
@@ -108,12 +134,8 @@ function findWrappedSegments(text: string, format: InlineFormatDefinition): Wrap
 }
 
 export function splitStructuralLineParts(line: string): StructuralLineParts | null {
-    const blockquoteMatch = BLOCKQUOTE_PREFIX_REGEX.exec(line);
-    if (!blockquoteMatch) {
-        return null;
-    }
-
-    const [, blockquotePrefix, rest] = blockquoteMatch;
+    const blockquotePrefix = line.slice(0, matchPrefixLength(line, BLOCKQUOTE_PREFIX_REGEX));
+    const rest = line.slice(blockquotePrefix.length);
 
     if (blockquotePrefix && rest.length === 0) {
         return {
@@ -122,27 +144,27 @@ export function splitStructuralLineParts(line: string): StructuralLineParts | nu
         };
     }
 
-    const headingMatch = HEADING_PREFIX_REGEX.exec(rest);
-    if (headingMatch) {
+    const headingPrefixLength = matchPrefixLength(rest, HEADING_PREFIX_REGEX);
+    if (headingPrefixLength > 0) {
         return {
-            prefix: `${blockquotePrefix}${headingMatch[1]}`,
-            content: headingMatch[2],
+            prefix: `${blockquotePrefix}${rest.slice(0, headingPrefixLength)}`,
+            content: rest.slice(headingPrefixLength),
         };
     }
 
-    const listMatch = LIST_PREFIX_REGEX.exec(rest);
-    if (listMatch) {
+    const listPrefixLength = matchPrefixLength(rest, LIST_PREFIX_REGEX);
+    if (listPrefixLength > 0) {
         return {
-            prefix: `${blockquotePrefix}${listMatch[1]}`,
-            content: listMatch[2],
+            prefix: `${blockquotePrefix}${rest.slice(0, listPrefixLength)}`,
+            content: rest.slice(listPrefixLength),
         };
     }
 
-    const indentedContentMatch = INDENTED_CONTENT_REGEX.exec(rest);
-    if (indentedContentMatch && indentedContentMatch[2].length > 0) {
+    const indentLength = matchPrefixLength(rest, INDENTED_CONTENT_REGEX);
+    if (indentLength > 0 && indentLength < rest.length) {
         return {
-            prefix: `${blockquotePrefix}${indentedContentMatch[1]}`,
-            content: indentedContentMatch[2],
+            prefix: `${blockquotePrefix}${rest.slice(0, indentLength)}`,
+            content: rest.slice(indentLength),
         };
     }
 
@@ -157,10 +179,8 @@ export function splitStructuralLineParts(line: string): StructuralLineParts | nu
 }
 
 function wrapTextPreservingTrailingWhitespace(text: string, format: InlineFormatDefinition): string {
-    const leadingWhitespaceMatch = LEADING_WHITESPACE_REGEX.exec(text);
-    const trailingWhitespaceMatch = TRAILING_WHITESPACE_REGEX.exec(text);
-    const leadingWhitespace = leadingWhitespaceMatch ? leadingWhitespaceMatch[1] : '';
-    const trailingWhitespace = trailingWhitespaceMatch ? trailingWhitespaceMatch[1] : '';
+    const leadingWhitespace = text.slice(0, leadingHorizontalWhitespaceLength(text));
+    const trailingWhitespace = text.slice(text.length - trailingHorizontalWhitespaceLength(text));
     const content = text.slice(leadingWhitespace.length, text.length - trailingWhitespace.length);
 
     if (content.length === 0) {

@@ -1,6 +1,6 @@
 import type { EditorView } from '@codemirror/view';
 import type { EditorState, SelectionRange } from '@codemirror/state';
-import type { SyntaxNode } from '@lezer/common';
+import type { SyntaxNode, Tree } from '@lezer/common';
 
 import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine, type TextRange } from '../alerts/alertParsing';
 import { changeOverlapsRange } from '../shared/commandRangeUtils';
@@ -40,6 +40,12 @@ type TextPosition = {
 type MappedAlertPosition = {
     basePos: number;
     offset: number;
+};
+
+type CursorAlertChange = {
+    key: string;
+    change: TextChange;
+    explicitSelection?: ExplicitCursorSelection;
 };
 
 function getAlertTypeRange(markerRange: TextRange): TextRange {
@@ -243,77 +249,98 @@ function createExplicitAlertSelection(targets: AlertTarget[], range: SelectionRa
     };
 }
 
-function createAlertCursorChange(
-    state: EditorState,
-    cursorPos: number
-): { key: string; change: TextChange; explicitSelection?: ExplicitCursorSelection } {
-    const cursorLine = state.doc.lineAt(cursorPos);
-    if (cursorLine.text.trim() === '') {
-        return {
-            key: `line:${cursorLine.from}:${cursorLine.to}`,
-            change: {
-                from: cursorLine.from,
-                to: cursorLine.to,
-                insert: DEFAULT_ALERT_INSERT_TEXT,
-            },
-            explicitSelection: createDefaultAlertTypeSelectionAt(cursorLine.from, DEFAULT_ALERT_INSERT_TEXT),
-        };
-    }
+function createLineReplacementChange(
+    lineRange: TextRange,
+    insert: string,
+    explicitSelection?: ExplicitCursorSelection
+): CursorAlertChange {
+    return {
+        key: `line:${lineRange.from}:${lineRange.to}`,
+        change: {
+            from: lineRange.from,
+            to: lineRange.to,
+            insert,
+        },
+        explicitSelection,
+    };
+}
 
-    const updatedCursorLine = getToggledAlertLineText(cursorLine.text);
-    if (updatedCursorLine) {
-        return {
-            key: `line:${cursorLine.from}:${cursorLine.to}`,
-            change: {
-                from: cursorLine.from,
-                to: cursorLine.to,
-                insert: updatedCursorLine,
-            },
-        };
-    }
-
-    const tree = getSyntaxTree(state, cursorPos);
-    let outermostBlockquoteFrom: number | null = null;
+/**
+ * Collects the start positions of every blockquote enclosing the cursor, innermost first
+ * per probe position, so callers can prefer the innermost alert title line while still
+ * knowing the outermost blockquote start.
+ */
+function collectEnclosingBlockquoteStarts(state: EditorState, tree: Tree, cursorPos: number): number[] {
+    const starts: number[] = [];
 
     for (const position of getProbePositions(state, cursorPos, BLOCKQUOTE_LINE_PREFIX)) {
         let node: SyntaxNode | null = tree.resolveInner(position, -1);
         while (node) {
             if (node.name.toLowerCase() === 'blockquote') {
-                outermostBlockquoteFrom = node.from;
-
-                const blockquoteStartLine = state.doc.lineAt(node.from);
-                const updatedBlockquoteLine = getToggledAlertLineText(blockquoteStartLine.text);
-                if (updatedBlockquoteLine) {
-                    return {
-                        key: `line:${blockquoteStartLine.from}:${blockquoteStartLine.to}`,
-                        change: {
-                            from: blockquoteStartLine.from,
-                            to: blockquoteStartLine.to,
-                            insert: updatedBlockquoteLine,
-                        },
-                    };
-                }
+                starts.push(node.from);
             }
 
             node = node.parent;
         }
     }
 
-    if (outermostBlockquoteFrom !== null) {
-        const blockquoteStartLine = state.doc.lineAt(outermostBlockquoteFrom);
-        const match = BLOCKQUOTE_PREFIX_PATTERN.exec(blockquoteStartLine.text);
-        if (match) {
-            const insert = `${createAlertLine(match[1])}\n`;
-            return {
-                key: `insert:${blockquoteStartLine.from}`,
-                change: {
-                    from: blockquoteStartLine.from,
-                    to: blockquoteStartLine.from,
-                    insert,
-                },
-                explicitSelection: createDefaultAlertTypeSelectionAt(blockquoteStartLine.from, insert),
-            };
+    return starts;
+}
+
+function createBlockquoteAlertChange(state: EditorState, blockquoteStarts: number[]): CursorAlertChange | null {
+    for (const start of blockquoteStarts) {
+        const blockquoteStartLine = state.doc.lineAt(start);
+        const updatedBlockquoteLine = getToggledAlertLineText(blockquoteStartLine.text);
+        if (updatedBlockquoteLine) {
+            return createLineReplacementChange(blockquoteStartLine, updatedBlockquoteLine);
         }
+    }
+
+    const outermostBlockquoteFrom = blockquoteStarts[blockquoteStarts.length - 1];
+    if (outermostBlockquoteFrom === undefined) {
+        return null;
+    }
+
+    const blockquoteStartLine = state.doc.lineAt(outermostBlockquoteFrom);
+    const match = BLOCKQUOTE_PREFIX_PATTERN.exec(blockquoteStartLine.text);
+    if (!match) {
+        return null;
+    }
+
+    const insert = `${createAlertLine(match[1])}\n`;
+    return {
+        key: `insert:${blockquoteStartLine.from}`,
+        change: {
+            from: blockquoteStartLine.from,
+            to: blockquoteStartLine.from,
+            insert,
+        },
+        explicitSelection: createDefaultAlertTypeSelectionAt(blockquoteStartLine.from, insert),
+    };
+}
+
+function createAlertCursorChange(state: EditorState, cursorPos: number): CursorAlertChange {
+    const cursorLine = state.doc.lineAt(cursorPos);
+    if (cursorLine.text.trim() === '') {
+        return createLineReplacementChange(
+            cursorLine,
+            DEFAULT_ALERT_INSERT_TEXT,
+            createDefaultAlertTypeSelectionAt(cursorLine.from, DEFAULT_ALERT_INSERT_TEXT)
+        );
+    }
+
+    const updatedCursorLine = getToggledAlertLineText(cursorLine.text);
+    if (updatedCursorLine) {
+        return createLineReplacementChange(cursorLine, updatedCursorLine);
+    }
+
+    const tree = getSyntaxTree(state, cursorPos);
+    const blockquoteChange = createBlockquoteAlertChange(
+        state,
+        collectEnclosingBlockquoteStarts(state, tree, cursorPos)
+    );
+    if (blockquoteChange) {
+        return blockquoteChange;
     }
 
     const paragraphNode = findParagraphNodeAt(state, tree, cursorPos, BLOCKQUOTE_LINE_PREFIX);
@@ -334,15 +361,11 @@ function createAlertCursorChange(
     }
 
     const updatedFallbackLine = toggleAlertSelectionText(cursorLine.text);
-    return {
-        key: `line:${cursorLine.from}:${cursorLine.to}`,
-        change: {
-            from: cursorLine.from,
-            to: cursorLine.to,
-            insert: updatedFallbackLine,
-        },
-        explicitSelection: createDefaultAlertTypeSelectionAt(cursorLine.from, updatedFallbackLine),
-    };
+    return createLineReplacementChange(
+        cursorLine,
+        updatedFallbackLine,
+        createDefaultAlertTypeSelectionAt(cursorLine.from, updatedFallbackLine)
+    );
 }
 
 /**

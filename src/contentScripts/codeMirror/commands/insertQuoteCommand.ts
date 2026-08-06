@@ -17,6 +17,12 @@ type LineRange = {
     to: number;
 };
 
+type TextChange = {
+    from: number;
+    to: number;
+    insert: string;
+};
+
 type MappedQuotePosition = {
     basePos: number;
     offset: number;
@@ -223,6 +229,139 @@ function addQuoteCursorTargets(
     });
 }
 
+function buildQuoteChanges(targets: QuoteTarget[], removeQuotePrefix: boolean): TextChange[] {
+    return targets
+        .map(({ range, text }) => {
+            const updated = transformQuoteText(text, removeQuotePrefix);
+            return updated === text ? null : { from: range.from, to: range.to, insert: updated };
+        })
+        .filter((change): change is TextChange => change !== null);
+}
+
+function addRangeToMap<T extends LineRange>(rangeMap: Map<string, T>, range: T): void {
+    const key = `${range.from}:${range.to}`;
+    if (!rangeMap.has(key)) {
+        rangeMap.set(key, range);
+    }
+}
+
+/**
+ * Paragraph ranges covered by a selection, falling back to the paragraph containing the
+ * selection start so a selection inside a single paragraph still toggles the whole paragraph.
+ */
+function resolveSelectionParagraphRanges(state: EditorState, range: SelectionRange): ParagraphRange[] {
+    const tree = getSyntaxTree(state, range.to);
+    const paragraphRanges = collectParagraphRanges(state, tree, range.from, range.to);
+    if (paragraphRanges.length > 0) {
+        return paragraphRanges;
+    }
+
+    const paragraphNode = findParagraphNodeAt(state, tree, range.from, BLOCKQUOTE_PREFIX_REGEX);
+    return paragraphNode ? [getParagraphLineRange(state, paragraphNode)] : [];
+}
+
+function collectSelectionQuoteTargets(state: EditorState, nonEmptyRanges: SelectionRange[]): Map<string, QuoteTarget> {
+    const paragraphRangeMap = new Map<string, ParagraphRange>();
+    const nonParagraphLineRangeMap = new Map<string, LineRange>();
+
+    for (const range of nonEmptyRanges) {
+        const paragraphRanges = resolveSelectionParagraphRanges(state, range);
+        for (const paragraphRange of paragraphRanges) {
+            addRangeToMap(paragraphRangeMap, paragraphRange);
+        }
+
+        const nonParagraphLineRanges = collectNonParagraphLineRanges(state, paragraphRanges, range.from, range.to);
+        for (const nonParagraphRange of nonParagraphLineRanges) {
+            addRangeToMap(nonParagraphLineRangeMap, nonParagraphRange);
+        }
+    }
+
+    const paragraphRanges = Array.from(paragraphRangeMap.values()).sort((a, b) => a.from - b.from);
+    const nonParagraphLineRanges = Array.from(nonParagraphLineRangeMap.values()).sort((a, b) => a.from - b.from);
+
+    const targetMap = new Map<string, QuoteTarget>();
+    [...paragraphRanges, ...nonParagraphLineRanges]
+        .sort((a, b) => a.from - b.from)
+        .forEach((range) => {
+            const key = `${range.from}:${range.to}`;
+            targetMap.set(key, {
+                key,
+                range,
+                text: state.doc.sliceString(range.from, range.to),
+            });
+        });
+
+    return targetMap;
+}
+
+function addExplicitQuoteSelections(
+    state: EditorState,
+    ranges: readonly SelectionRange[],
+    targets: QuoteTarget[],
+    removeQuotePrefix: boolean,
+    explicitSelectionsByIndex: Map<number, ExplicitCursorSelection>
+): void {
+    ranges.forEach((range, index) => {
+        if (range.empty) {
+            return;
+        }
+
+        const explicitSelection = createExplicitQuoteSelection(state, targets, range, removeQuotePrefix);
+        if (explicitSelection) {
+            explicitSelectionsByIndex.set(index, explicitSelection);
+        }
+    });
+}
+
+function applyCursorQuoteChanges(view: EditorView, ranges: readonly SelectionRange[]): boolean {
+    const state = view.state;
+    const targetMap = new Map<string, QuoteTarget>();
+    const explicitSelectionsByIndex = new Map<number, ExplicitCursorSelection>();
+
+    addQuoteCursorTargets(state, ranges, targetMap, explicitSelectionsByIndex);
+
+    const cursorTargets = Array.from(targetMap.values());
+    const allQuoted = cursorTargets.every((target) => isBlockquoteText(target.text));
+    const changes = buildQuoteChanges(cursorTargets, allQuoted);
+
+    if (changes.length === 0) {
+        return false;
+    }
+
+    dispatchChangesWithSelections(view, changes, explicitSelectionsByIndex);
+    view.focus();
+    return true;
+}
+
+function applySelectionQuoteChanges(
+    view: EditorView,
+    ranges: readonly SelectionRange[],
+    nonEmptyRanges: SelectionRange[]
+): boolean {
+    const state = view.state;
+    const targetMap = collectSelectionQuoteTargets(state, nonEmptyRanges);
+    const explicitSelectionsByIndex = new Map<number, ExplicitCursorSelection>();
+
+    addQuoteCursorTargets(state, ranges, targetMap, explicitSelectionsByIndex);
+
+    const targets = Array.from(targetMap.values()).sort((a, b) => a.range.from - b.range.from);
+    if (targets.length === 0) {
+        return false;
+    }
+
+    const allQuoted = targets.every((target) => isBlockquoteText(target.text));
+    addExplicitQuoteSelections(state, ranges, targets, allQuoted, explicitSelectionsByIndex);
+
+    const changes = buildQuoteChanges(targets, allQuoted);
+    if (changes.length === 0) {
+        return false;
+    }
+
+    dispatchChangesWithSelections(view, changes, explicitSelectionsByIndex);
+    view.focus();
+    return true;
+}
+
 /**
  * Toggles blockquote formatting for the cursor or the selected ranges.
  * - Cursor only: toggles the current paragraph (or line if no paragraph) and inserts `> ` on an empty line.
@@ -230,117 +369,13 @@ function addQuoteCursorTargets(
  */
 export function createInsertQuoteCommand(view: EditorView): () => boolean {
     return () => {
-        const state = view.state;
-        const ranges = state.selection.ranges;
+        const ranges = view.state.selection.ranges;
         const nonEmptyRanges = ranges.filter((range) => !range.empty);
 
         if (nonEmptyRanges.length === 0) {
-            const targetMap = new Map<string, QuoteTarget>();
-            const explicitSelectionsByIndex = new Map<number, ExplicitCursorSelection>();
-
-            addQuoteCursorTargets(state, ranges, targetMap, explicitSelectionsByIndex);
-
-            const cursorTargets = Array.from(targetMap.values());
-            const allQuoted = cursorTargets.every((target) => isBlockquoteText(target.text));
-            const changes = cursorTargets
-                .map(({ range, text }) => {
-                    const updated = transformQuoteText(text, allQuoted);
-                    return updated === text ? null : { from: range.from, to: range.to, insert: updated };
-                })
-                .filter((change): change is { from: number; to: number; insert: string } => Boolean(change));
-
-            if (changes.length === 0) {
-                return false;
-            }
-
-            dispatchChangesWithSelections(view, changes, explicitSelectionsByIndex);
-            view.focus();
-            return true;
+            return applyCursorQuoteChanges(view, ranges);
         }
 
-        const paragraphRangeMap = new Map<string, ParagraphRange>();
-        const nonParagraphLineRangeMap = new Map<string, LineRange>();
-
-        for (const range of nonEmptyRanges) {
-            const tree = getSyntaxTree(state, range.to);
-            let paragraphRanges = collectParagraphRanges(state, tree, range.from, range.to);
-
-            if (paragraphRanges.length === 0) {
-                const paragraphNode = findParagraphNodeAt(state, tree, range.from, BLOCKQUOTE_PREFIX_REGEX);
-                if (paragraphNode) {
-                    paragraphRanges = [getParagraphLineRange(state, paragraphNode)];
-                }
-            }
-
-            for (const paragraphRange of paragraphRanges) {
-                const key = `${paragraphRange.from}:${paragraphRange.to}`;
-                if (!paragraphRangeMap.has(key)) {
-                    paragraphRangeMap.set(key, paragraphRange);
-                }
-            }
-
-            const nonParagraphLineRanges = collectNonParagraphLineRanges(state, paragraphRanges, range.from, range.to);
-            for (const nonParagraphRange of nonParagraphLineRanges) {
-                const key = `${nonParagraphRange.from}:${nonParagraphRange.to}`;
-                if (!nonParagraphLineRangeMap.has(key)) {
-                    nonParagraphLineRangeMap.set(key, nonParagraphRange);
-                }
-            }
-        }
-
-        const paragraphRanges = Array.from(paragraphRangeMap.values()).sort((a, b) => a.from - b.from);
-        const nonParagraphLineRanges = Array.from(nonParagraphLineRangeMap.values()).sort((a, b) => a.from - b.from);
-
-        const targetMap = new Map<string, QuoteTarget>();
-
-        [...paragraphRanges, ...nonParagraphLineRanges]
-            .sort((a, b) => a.from - b.from)
-            .forEach((range) => {
-                const key = `${range.from}:${range.to}`;
-                targetMap.set(key, {
-                    key,
-                    range,
-                    text: state.doc.sliceString(range.from, range.to),
-                });
-            });
-
-        const explicitSelectionsByIndex = new Map<number, ExplicitCursorSelection>();
-        addQuoteCursorTargets(state, ranges, targetMap, explicitSelectionsByIndex);
-
-        const rangeTexts = Array.from(targetMap.values()).sort((a, b) => a.range.from - b.range.from);
-
-        if (rangeTexts.length === 0) {
-            return false;
-        }
-
-        const allQuoted = rangeTexts.every((entry) => isBlockquoteText(entry.text));
-        ranges.forEach((range, index) => {
-            if (range.empty) {
-                return;
-            }
-
-            const explicitSelection = createExplicitQuoteSelection(state, rangeTexts, range, allQuoted);
-            if (explicitSelection) {
-                explicitSelectionsByIndex.set(index, explicitSelection);
-            }
-        });
-
-        const changes = rangeTexts
-            .map(({ range, text }) => {
-                const updated = transformQuoteText(text, allQuoted);
-                if (updated === text) {
-                    return null;
-                }
-                return { from: range.from, to: range.to, insert: updated };
-            })
-            .filter((change): change is { from: number; to: number; insert: string } => Boolean(change));
-
-        if (changes.length === 0) {
-            return false;
-        }
-
-        dispatchChangesWithSelections(view, changes, explicitSelectionsByIndex);
-        view.focus();
-        return true;
+        return applySelectionQuoteChanges(view, ranges, nonEmptyRanges);
     };
 }

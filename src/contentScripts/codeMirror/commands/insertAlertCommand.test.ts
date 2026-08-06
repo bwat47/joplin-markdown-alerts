@@ -9,38 +9,33 @@ import { createMarkdownAlertEditorSettingsExtension } from '../pluginSettings';
 import { createEditorHarness } from '../shared/testUtils';
 
 describe('toggleAlertSelectionText', () => {
-    test('adds an alert line and quotes when selection is not a blockquote', () => {
-        const input = ['Line one', 'Line two'].join('\n');
-        const expected = ['> [!NOTE]', '> Line one', '> Line two'].join('\n');
-
-        expect(toggleAlertSelectionText(input)).toBe(expected);
-    });
-
-    test('inserts alert line above quoted selection without an alert marker', () => {
-        const input = ['> Line one', '> Line two'].join('\n');
-        const expected = ['> [!NOTE]', '> Line one', '> Line two'].join('\n');
-
-        expect(toggleAlertSelectionText(input)).toBe(expected);
-    });
-
-    test('preserves nested blockquote prefix when inserting alert line', () => {
-        const input = ['>> Nested line', '>> Another line'].join('\n');
-        const expected = ['>> [!NOTE]', '>> Nested line', '>> Another line'].join('\n');
-
-        expect(toggleAlertSelectionText(input)).toBe(expected);
-    });
-
-    test('toggles alert type when selection already includes alert marker', () => {
-        const input = ['> [!NOTE]', '> Line one'].join('\n');
-        const expected = ['> [!TIP]', '> Line one'].join('\n');
-
-        expect(toggleAlertSelectionText(input)).toBe(expected);
-    });
-
-    test('toggles alert type while preserving the title text', () => {
-        const input = ['> [!warning] Custom title', '> Line one'].join('\n');
-        const expected = ['> [!CAUTION] Custom title', '> Line one'].join('\n');
-
+    test.each([
+        {
+            name: 'adds an alert line and quotes when selection is not a blockquote',
+            input: ['Line one', 'Line two'].join('\n'),
+            expected: ['> [!NOTE]', '> Line one', '> Line two'].join('\n'),
+        },
+        {
+            name: 'inserts alert line above quoted selection without an alert marker',
+            input: ['> Line one', '> Line two'].join('\n'),
+            expected: ['> [!NOTE]', '> Line one', '> Line two'].join('\n'),
+        },
+        {
+            name: 'preserves nested blockquote prefix when inserting alert line',
+            input: ['>> Nested line', '>> Another line'].join('\n'),
+            expected: ['>> [!NOTE]', '>> Nested line', '>> Another line'].join('\n'),
+        },
+        {
+            name: 'toggles alert type when selection already includes alert marker',
+            input: ['> [!NOTE]', '> Line one'].join('\n'),
+            expected: ['> [!TIP]', '> Line one'].join('\n'),
+        },
+        {
+            name: 'toggles alert type while preserving the title text',
+            input: ['> [!warning] Custom title', '> Line one'].join('\n'),
+            expected: ['> [!CAUTION] Custom title', '> Line one'].join('\n'),
+        },
+    ])('$name', ({ input, expected }) => {
         expect(toggleAlertSelectionText(input)).toBe(expected);
     });
 });
@@ -48,6 +43,8 @@ describe('toggleAlertSelectionText', () => {
 describe('createInsertAlertCommand', () => {
     const COMPLETION_START_TIMEOUT_MS = 250;
     const COMPLETION_POLL_INTERVAL_MS = 10;
+    // The inserted alert type is always selected, i.e. "NOTE" in "> [!NOTE]"
+    const ALERT_TYPE_SELECTION = { anchor: 4, head: 8 };
 
     async function waitForCompletionStart(view: EditorView) {
         const deadline = Date.now() + COMPLETION_START_TIMEOUT_MS;
@@ -83,22 +80,20 @@ describe('createInsertAlertCommand', () => {
         }
     }
 
-    test('toggles alert marker when cursor is before the blockquote marker', () => {
-        const input = ['|> [!NOTE]', '> Line one'].join('\n');
-        const expected = ['> [!TIP]', '> Line one'].join('\n');
-
+    test.each([
+        {
+            name: 'toggles alert marker when cursor is before the blockquote marker',
+            input: ['|> [!NOTE]', '> Line one'].join('\n'),
+            expected: ['> [!TIP]', '> Line one'].join('\n'),
+        },
+        {
+            name: 'converts the entire paragraph when cursor is inside it',
+            input: 'Parag|raph',
+            expected: ['> [!NOTE]', '> Paragraph'].join('\n'),
+        },
+    ])('$name', ({ input, expected }) => {
         expect(runCommand(input)).toBe(expected);
     });
-
-    test('converts the entire paragraph when cursor is inside it', () => {
-        const input = 'Parag|raph';
-        const expected = ['> [!NOTE]', '> Paragraph'].join('\n');
-
-        expect(runCommand(input)).toBe(expected);
-    });
-
-    // The inserted alert type is always selected, i.e. "NOTE" in "> [!NOTE]"
-    const ALERT_TYPE_SELECTION = { anchor: 4, head: 8 };
 
     test.each([
         {

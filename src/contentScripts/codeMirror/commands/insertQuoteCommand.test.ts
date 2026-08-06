@@ -4,24 +4,23 @@ import { createInsertQuoteCommand, toggleBlockquoteText } from './insertQuoteCom
 import { createEditorHarness } from '../shared/testUtils';
 
 describe('toggleBlockquoteText', () => {
-    test('removes blockquote prefix when all lines are quoted', () => {
-        const input = ['> First line', '> ', '> Second line'].join('\n');
-        const expected = ['First line', '', 'Second line'].join('\n');
-
-        expect(toggleBlockquoteText(input)).toBe(expected);
-    });
-
-    test('removes a single blockquote level from nested quotes', () => {
-        const input = ['>> Nested line', '>> Another line'].join('\n');
-        const expected = ['> Nested line', '> Another line'].join('\n');
-
-        expect(toggleBlockquoteText(input)).toBe(expected);
-    });
-
-    test('adds blockquote prefix only to unquoted lines when any line is not quoted', () => {
-        const input = ['> Quoted line', 'Plain line'].join('\n');
-        const expected = ['> Quoted line', '> Plain line'].join('\n');
-
+    test.each([
+        {
+            name: 'removes blockquote prefix when all lines are quoted',
+            input: ['> First line', '> ', '> Second line'].join('\n'),
+            expected: ['First line', '', 'Second line'].join('\n'),
+        },
+        {
+            name: 'removes a single blockquote level from nested quotes',
+            input: ['>> Nested line', '>> Another line'].join('\n'),
+            expected: ['> Nested line', '> Another line'].join('\n'),
+        },
+        {
+            name: 'adds blockquote prefix only to unquoted lines when any line is not quoted',
+            input: ['> Quoted line', 'Plain line'].join('\n'),
+            expected: ['> Quoted line', '> Plain line'].join('\n'),
+        },
+    ])('$name', ({ input, expected }) => {
         expect(toggleBlockquoteText(input)).toBe(expected);
     });
 });
@@ -70,6 +69,16 @@ describe('createInsertQuoteCommand', () => {
             input: '|\n',
             expected: '> \n',
         },
+        {
+            name: 'quotes code block lines inside selection',
+            input: ['[[Paragraph', '', '```', 'code block', '```', '', 'Paragraph]]'].join('\n'),
+            expected: ['> Paragraph', '> ', '> ```', '> code block', '> ```', '> ', '> Paragraph'].join('\n'),
+        },
+        {
+            name: 'quotes non-paragraph selection such as a code block',
+            input: ['[[```', 'code block', '```]]'].join('\n'),
+            expected: ['> ```', '> code block', '> ```'].join('\n'),
+        },
     ])('$name', ({ input, expected }) => {
         expect(runCommand(input)).toBe(expected);
     });
@@ -83,20 +92,6 @@ describe('createInsertQuoteCommand', () => {
 
         expect(result.text).toBe(expectedText);
         expect(result.cursor).toBe(expectedCursor);
-    });
-
-    test('quotes code block lines inside selection', () => {
-        const input = ['[[Paragraph', '', '```', 'code block', '```', '', 'Paragraph]]'].join('\n');
-        const expected = ['> Paragraph', '> ', '> ```', '> code block', '> ```', '> ', '> Paragraph'].join('\n');
-
-        expect(runCommand(input)).toBe(expected);
-    });
-
-    test('quotes non-paragraph selection such as a code block', () => {
-        const input = ['[[```', 'code block', '```]]'].join('\n');
-        const expected = ['> ```', '> code block', '> ```'].join('\n');
-
-        expect(runCommand(input)).toBe(expected);
     });
 
     test('handles a mixed selection and additional cursor', () => {

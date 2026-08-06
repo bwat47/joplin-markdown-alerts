@@ -10,6 +10,7 @@ import {
     formatFullLineText,
     lineHasTargetFormatting,
     splitStructuralLineParts,
+    type SingleLineRelativeAction,
 } from './inlineFormatSingleLineActions';
 import { parseGitHubAlertTitleLine } from '../alerts/alertParsing';
 import { changeOverlapsRange } from '../shared/commandRangeUtils';
@@ -242,6 +243,22 @@ function findSelectionFormattingAction(
     };
 }
 
+function buildCursorActionKey(
+    kind: SingleLineRelativeAction['kind'],
+    cursorPos: number,
+    docChangeFrom: number,
+    docChangeTo: number
+): string {
+    switch (kind) {
+        case 'cursor-jump-in':
+            return `jump-in:${cursorPos}`;
+        case 'cursor-jump-out':
+            return `jump:${cursorPos}`;
+        default:
+            return `removal:${docChangeFrom}:${docChangeTo}`;
+    }
+}
+
 function findCursorFormattingAction(
     view: EditorView,
     cursorPos: number,
@@ -258,12 +275,7 @@ function findCursorFormattingAction(
     const docChangeTo = line.from + action.replaceTo;
     const absoluteAnchor = line.from + action.nextAnchor;
     const absoluteHead = line.from + action.nextHead;
-    const key =
-        action.kind === 'cursor-jump-in'
-            ? `jump-in:${cursorPos}`
-            : action.kind === 'cursor-jump-out'
-              ? `jump:${cursorPos}`
-              : `removal:${docChangeFrom}:${docChangeTo}`;
+    const key = buildCursorActionKey(action.kind, cursorPos, docChangeFrom, docChangeTo);
 
     return {
         key,

@@ -56,8 +56,17 @@ Architecture overview: docs/Architecture/Overview.md
 ## Tests
 
 - Focus on Behavior, not Implementation details.
-- If something is difficult to test, do NOT create a separate implementation "just for tests". Propose solutions to test the existing implementation.
 
 ## Log messages
 
 - Use `src/logger.ts` wrapper
+
+## Git
+
+- Use conventional commit format for commit messages. Only use "fix" for bugfixes.
+- Never run git commit proactively; always wait for explicit user consent.
+
+## Codex working instructions
+
+- GitHub credentials are stored in the OS keyring.
+- If `gh auth status` fails inside the sandbox, retry it with escalated permissions before asking me to authenticate.

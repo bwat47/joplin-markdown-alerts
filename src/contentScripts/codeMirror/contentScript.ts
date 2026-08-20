@@ -1,5 +1,5 @@
 import { EditorView } from '@codemirror/view';
-import type { CodeMirrorControl, ContentScriptContext } from 'api/types';
+import type { CodeMirrorControl, ContentScriptContext, MarkdownEditorContentScriptModule } from 'api/types';
 
 import { createAlertCompletionSource } from './alerts/alertAutocomplete';
 import { createAlertAutocompleteThemeExtension } from './alerts/alertAutocompleteTheme';
@@ -21,7 +21,7 @@ const INSERT_QUOTE_COMMAND = 'markdownAlerts.insertQuoteOrToggle';
  *
  * Registers the alert decorations extension and the editor commands for alerts and blockquotes.
  */
-export default function (context: ContentScriptContext) {
+export default function (context: ContentScriptContext): MarkdownEditorContentScriptModule {
     return {
         plugin: async function (editorControl: CodeMirrorControl) {
             if (!editorControl?.cm6) {

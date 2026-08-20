@@ -1,6 +1,6 @@
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
-import type { SyntaxNode, SyntaxNodeRef } from '@lezer/common';
+import type { SyntaxNode, SyntaxNodeRef, Tree } from '@lezer/common';
 
 const DEFAULT_SYNTAX_TREE_TIMEOUT = 100;
 
@@ -14,7 +14,7 @@ type NodeRange = {
     to: number;
 };
 
-export function getSyntaxTree(state: EditorState, position: number, timeoutMs = DEFAULT_SYNTAX_TREE_TIMEOUT) {
+export function getSyntaxTree(state: EditorState, position: number, timeoutMs = DEFAULT_SYNTAX_TREE_TIMEOUT): Tree {
     let tree = ensureSyntaxTree(state, position, timeoutMs);
     if (!tree) {
         tree = syntaxTree(state);

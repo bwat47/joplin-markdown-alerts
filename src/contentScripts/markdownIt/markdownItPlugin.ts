@@ -1,4 +1,5 @@
 import type MarkdownIt from 'markdown-it';
+import type { MarkdownItContentScriptModule } from 'api/types';
 
 import MarkdownItGitHubAlerts from 'markdown-it-github-alerts';
 
@@ -7,7 +8,7 @@ import { ALERT_ICONS } from '../codeMirror/alerts/alertIcons';
 
 type AssetsItem = { name: string };
 
-export default function () {
+export default function (): MarkdownItContentScriptModule {
     return {
         plugin: function (md: MarkdownIt, pluginOptions: unknown) {
             md.use(MarkdownItGitHubAlerts, {

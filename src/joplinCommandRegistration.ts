@@ -11,10 +11,11 @@ import { logger } from './logger';
 import {
     getSubscriptSyntaxSettingValue,
     getSuperscriptSyntaxSettingValue,
-    isToolbarButtonEnabled,
+    getToolbarButtonSettings,
     SHOW_ALERT_TOOLBAR_BUTTON_SETTING,
     SHOW_CLEAR_FORMATTING_TOOLBAR_BUTTON_SETTING,
     SHOW_QUOTE_TOOLBAR_BUTTON_SETTING,
+    type ToolbarButtonSettings,
 } from './settings';
 
 const INSERT_NOTE_ALERT_COMMAND_NAME = 'markdownAlerts.insertNoteAlert';
@@ -64,11 +65,12 @@ async function executeMarkdownEditorCommand(commandName: string): Promise<void> 
 }
 
 async function createToolbarButtonIfEnabled(
+    toolbarButtonSettings: ToolbarButtonSettings,
     settingKey: string,
     toolbarButtonId: string,
     commandName: string
 ): Promise<void> {
-    if (!(await isToolbarButtonEnabled(settingKey))) {
+    if (!toolbarButtonSettings[settingKey]) {
         return;
     }
 
@@ -86,7 +88,7 @@ async function resolveInlineFormatEditorCommandName(format: InlineFormatCommandD
     return getInlineFormatEditorCommandName(format.id, syntaxMode);
 }
 
-export async function registerInsertNoteAlertCommand(): Promise<void> {
+async function registerInsertNoteAlertCommand(toolbarButtonSettings: ToolbarButtonSettings): Promise<void> {
     await joplin.commands.register({
         name: INSERT_NOTE_ALERT_COMMAND_NAME,
         label: 'Insert or Toggle Markdown Alert',
@@ -106,13 +108,14 @@ export async function registerInsertNoteAlertCommand(): Promise<void> {
     );
 
     await createToolbarButtonIfEnabled(
+        toolbarButtonSettings,
         SHOW_ALERT_TOOLBAR_BUTTON_SETTING,
         INSERT_NOTE_ALERT_TOOLBAR_BUTTON_ID,
         INSERT_NOTE_ALERT_COMMAND_NAME
     );
 }
 
-export async function registerInsertNoteQuoteCommand(): Promise<void> {
+async function registerInsertNoteQuoteCommand(toolbarButtonSettings: ToolbarButtonSettings): Promise<void> {
     await joplin.commands.register({
         name: INSERT_NOTE_QUOTE_COMMAND_NAME,
         label: 'Insert or Toggle Blockquote',
@@ -132,13 +135,14 @@ export async function registerInsertNoteQuoteCommand(): Promise<void> {
     );
 
     await createToolbarButtonIfEnabled(
+        toolbarButtonSettings,
         SHOW_QUOTE_TOOLBAR_BUTTON_SETTING,
         INSERT_NOTE_QUOTE_TOOLBAR_BUTTON_ID,
         INSERT_NOTE_QUOTE_COMMAND_NAME
     );
 }
 
-export async function registerClearMarkdownFormattingCommand(): Promise<void> {
+async function registerClearMarkdownFormattingCommand(toolbarButtonSettings: ToolbarButtonSettings): Promise<void> {
     await joplin.commands.register({
         name: CLEAR_MARKDOWN_FORMATTING_COMMAND_NAME,
         label: 'Clear Markdown Formatting in Selection',
@@ -155,13 +159,17 @@ export async function registerClearMarkdownFormattingCommand(): Promise<void> {
     );
 
     await createToolbarButtonIfEnabled(
+        toolbarButtonSettings,
         SHOW_CLEAR_FORMATTING_TOOLBAR_BUTTON_SETTING,
         CLEAR_MARKDOWN_FORMATTING_TOOLBAR_BUTTON_ID,
         CLEAR_MARKDOWN_FORMATTING_COMMAND_NAME
     );
 }
 
-async function registerInlineFormatCommand(format: InlineFormatCommandDefinition): Promise<void> {
+async function registerInlineFormatCommand(
+    toolbarButtonSettings: ToolbarButtonSettings,
+    format: InlineFormatCommandDefinition
+): Promise<void> {
     await joplin.commands.register({
         name: format.globalCommandName,
         label: format.label,
@@ -180,14 +188,28 @@ async function registerInlineFormatCommand(format: InlineFormatCommandDefinition
     }
 
     await createToolbarButtonIfEnabled(
+        toolbarButtonSettings,
         format.toolbarButtonSettingKey,
         format.toolbarButtonId,
         format.globalCommandName
     );
 }
 
-export async function registerInlineFormatCommands(): Promise<void> {
+async function registerInlineFormatCommands(toolbarButtonSettings: ToolbarButtonSettings): Promise<void> {
     for (const format of INLINE_FORMAT_COMMANDS) {
-        await registerInlineFormatCommand(format);
+        await registerInlineFormatCommand(toolbarButtonSettings, format);
     }
+}
+
+/**
+ * Registers every command, menu item and toolbar button. Toolbar visibility settings are read
+ * once up front so plugin startup makes a single settings call rather than one per button.
+ */
+export async function registerAllCommands(): Promise<void> {
+    const toolbarButtonSettings = await getToolbarButtonSettings();
+
+    await registerInsertNoteAlertCommand(toolbarButtonSettings);
+    await registerInsertNoteQuoteCommand(toolbarButtonSettings);
+    await registerClearMarkdownFormattingCommand(toolbarButtonSettings);
+    await registerInlineFormatCommands(toolbarButtonSettings);
 }

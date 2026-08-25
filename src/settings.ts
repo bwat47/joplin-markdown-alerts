@@ -17,6 +17,17 @@ const SUPERSCRIPT_SYNTAX_SETTING = 'superscriptSyntax';
 const SUBSCRIPT_SYNTAX_SETTING = 'subscriptSyntax';
 const ENABLE_ALERT_AUTOCOMPLETE_SETTING = 'enableAlertAutocomplete';
 
+const TOOLBAR_BUTTON_DEFAULT_ENABLED = true;
+
+export type ToolbarButtonSettings = Record<string, boolean>;
+
+const TOOLBAR_BUTTON_SETTING_KEYS: string[] = [
+    SHOW_ALERT_TOOLBAR_BUTTON_SETTING,
+    SHOW_QUOTE_TOOLBAR_BUTTON_SETTING,
+    SHOW_CLEAR_FORMATTING_TOOLBAR_BUTTON_SETTING,
+    ...INLINE_FORMAT_COMMANDS.map((format) => format.toolbarButtonSettingKey),
+];
+
 const SUPERSCRIPT_SYNTAX_OPTIONS: Record<InlineFormatSyntaxMode, string> = {
     html: 'Inline HTML (<sup>text</sup>)',
     markdown: 'Markdown extension (^text^)',
@@ -64,7 +75,7 @@ export async function registerPluginSettings(): Promise<void> {
                 'When typing >! or > [! at the start of a line, show a dropdown of alert types. Requires reopening the note to take effect.',
         },
         [SHOW_ALERT_TOOLBAR_BUTTON_SETTING]: {
-            value: true,
+            value: TOOLBAR_BUTTON_DEFAULT_ENABLED,
             type: SettingItemType.Bool,
             public: true,
             section: SETTINGS_SECTION,
@@ -72,7 +83,7 @@ export async function registerPluginSettings(): Promise<void> {
             description: 'Requires a plugin restart to take effect.',
         },
         [SHOW_QUOTE_TOOLBAR_BUTTON_SETTING]: {
-            value: true,
+            value: TOOLBAR_BUTTON_DEFAULT_ENABLED,
             type: SettingItemType.Bool,
             public: true,
             section: SETTINGS_SECTION,
@@ -80,7 +91,7 @@ export async function registerPluginSettings(): Promise<void> {
             description: 'Requires a plugin restart to take effect.',
         },
         [SHOW_CLEAR_FORMATTING_TOOLBAR_BUTTON_SETTING]: {
-            value: true,
+            value: TOOLBAR_BUTTON_DEFAULT_ENABLED,
             type: SettingItemType.Bool,
             public: true,
             section: SETTINGS_SECTION,
@@ -91,7 +102,7 @@ export async function registerPluginSettings(): Promise<void> {
             INLINE_FORMAT_COMMANDS.map((format) => [
                 format.toolbarButtonSettingKey,
                 {
-                    value: true,
+                    value: TOOLBAR_BUTTON_DEFAULT_ENABLED,
                     type: SettingItemType.Bool,
                     public: true,
                     section: SETTINGS_SECTION,
@@ -103,8 +114,19 @@ export async function registerPluginSettings(): Promise<void> {
     });
 }
 
-export async function isToolbarButtonEnabled(settingKey: string): Promise<boolean> {
-    return Boolean(await joplin.settings.value(settingKey));
+/**
+ * Reads every toolbar button visibility setting in one call. Joplin recommends `values()` over
+ * repeated `value()` calls when a plugin reads its settings at startup.
+ *
+ * Keys missing from the response fall back to the registered default so a button is never
+ * silently hidden.
+ */
+export async function getToolbarButtonSettings(): Promise<ToolbarButtonSettings> {
+    const values = await joplin.settings.values(TOOLBAR_BUTTON_SETTING_KEYS);
+
+    return Object.fromEntries(
+        TOOLBAR_BUTTON_SETTING_KEYS.map((key) => [key, Boolean(values[key] ?? TOOLBAR_BUTTON_DEFAULT_ENABLED)])
+    );
 }
 
 export async function isAlertAutocompleteEnabled(): Promise<boolean> {

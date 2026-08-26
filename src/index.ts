@@ -2,12 +2,7 @@ import joplin from 'api';
 import { ContentScriptType } from 'api/types';
 
 import { logger } from './logger';
-import {
-    registerClearMarkdownFormattingCommand,
-    registerInlineFormatCommands,
-    registerInsertNoteAlertCommand,
-    registerInsertNoteQuoteCommand,
-} from './joplinCommandRegistration';
+import { registerAllCommands } from './joplinCommandRegistration';
 import { isAlertAutocompleteEnabled, registerPluginSettings } from './settings';
 
 joplin.plugins.register({
@@ -15,10 +10,7 @@ joplin.plugins.register({
         logger.info('Markdown Alerts plugin started');
 
         await registerPluginSettings();
-        await registerInsertNoteAlertCommand();
-        await registerInsertNoteQuoteCommand();
-        await registerClearMarkdownFormattingCommand();
-        await registerInlineFormatCommands();
+        await registerAllCommands();
 
         await joplin.contentScripts.register(
             ContentScriptType.MarkdownItPlugin,

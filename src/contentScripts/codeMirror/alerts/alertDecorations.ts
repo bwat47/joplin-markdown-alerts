@@ -16,6 +16,9 @@ const BLOCKQUOTE_LINE_PATTERN = /^\s*>/;
 
 const ALERT_LINE_PADDING_LEFT = '8px';
 
+/** Line class Joplin's editor adds to fenced/indented code block lines (see Joplin's markdownDecorationExtension). */
+const JOPLIN_CODE_BLOCK_LINE_CLASS = 'cm-codeBlock';
+
 const quoteMarkDecoration = Decoration.mark({ class: 'cm-gh-alert-quote-mark' });
 
 /** Base structural styles (no colors) */
@@ -24,11 +27,12 @@ const alertsBaseTheme = EditorView.baseTheme({
         borderLeft: '4px solid var(--cm-gh-alert-color)',
         paddingLeft: ALERT_LINE_PADDING_LEFT,
         marginLeft: '0',
-        backgroundColor: 'var(--cm-gh-alert-bg)',
         opacity: 1,
     },
-    '.cm-line.cm-gh-alert.cm-gh-alert-no-bg': {
-        backgroundColor: 'transparent',
+    // Code block lines share the same `.cm-line` element, so an alert background here would replace
+    // Joplin's code block background. Skip them to keep the code block's own styling.
+    [`.cm-line.cm-gh-alert:not(.cm-gh-alert-no-bg):not(.${JOPLIN_CODE_BLOCK_LINE_CLASS})`]: {
+        backgroundColor: 'var(--cm-gh-alert-bg)',
     },
     '.cm-line.cm-gh-alert-title': {
         color: 'var(--cm-gh-alert-color)',

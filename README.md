@@ -202,6 +202,10 @@ Enable/Disable alert type autocomplete in the markdown editor (default enabled).
 
 Separate syntax settings for the superscript and subscript commands. Both default to inline HTML because Joplin (v3.6 and newer) renders that syntax in both the editor and the viewer.
 
+### Alert Styling
+
+Enable/Disable alert title rendering and alert background color.
+
 ### Toolbar buttons
 
 The plugin includes settings to enable or disable each editor toolbar button independently.

@@ -63,6 +63,7 @@ export default function (context: ContentScriptContext): MarkdownEditorContentSc
             applyMarkdownAlertEditorSettings(editorControl.cm6, {
                 enableAlertAutocomplete: settings?.enableAlertAutocomplete !== false,
                 renderAlertTitles: settings?.renderAlertTitles !== false,
+                showAlertBackground: settings?.showAlertBackground !== false,
             });
         },
     };

@@ -2,17 +2,27 @@
 import { EditorSelection } from '@codemirror/state';
 
 import { createAlertDecorationExtensions } from './alertDecorations';
-import { applyMarkdownAlertEditorSettings, createMarkdownAlertEditorSettingsExtension } from '../pluginSettings';
+import {
+    type MarkdownAlertEditorSettings,
+    applyMarkdownAlertEditorSettings,
+    createMarkdownAlertEditorSettingsExtension,
+} from '../pluginSettings';
 import { createEditorHarness } from '../shared/testUtils';
 
 const ALERT_DOC = '> [!NOTE]\n> Body line\n> > Nested line';
 const BODY_LINE_START = ALERT_DOC.indexOf('> Body');
 
-function createAlertHarness(renderAlertTitles: boolean, cursor = BODY_LINE_START) {
+const DEFAULT_TEST_SETTINGS: MarkdownAlertEditorSettings = {
+    enableAlertAutocomplete: false,
+    renderAlertTitles: true,
+    showAlertBackground: true,
+};
+
+function createAlertHarness(settings: Partial<MarkdownAlertEditorSettings> = {}, cursor = BODY_LINE_START) {
     const harness = createEditorHarness(ALERT_DOC, {
         rawInput: true,
         extensions: [
-            createMarkdownAlertEditorSettingsExtension({ enableAlertAutocomplete: false, renderAlertTitles }),
+            createMarkdownAlertEditorSettingsExtension({ ...DEFAULT_TEST_SETTINGS, ...settings }),
             createAlertDecorationExtensions(false),
         ],
     });
@@ -28,7 +38,7 @@ function getTitleLine(harness: ReturnType<typeof createAlertHarness>): Element {
 
 describe('alert decorations', () => {
     test('renders the title widget when title rendering is enabled', () => {
-        const harness = createAlertHarness(true);
+        const harness = createAlertHarness();
         try {
             const titleLine = getTitleLine(harness);
             expect(titleLine.querySelector('.cm-gh-alert-title-widget')?.textContent).toBe('Note');
@@ -40,7 +50,7 @@ describe('alert decorations', () => {
     });
 
     test('shows the raw title syntax when the title line is selected', () => {
-        const harness = createAlertHarness(true, 0);
+        const harness = createAlertHarness({}, 0);
         try {
             const titleLine = getTitleLine(harness);
             expect(titleLine.querySelector('.cm-gh-alert-title-widget')).toBeNull();
@@ -51,7 +61,7 @@ describe('alert decorations', () => {
     });
 
     test('shows the raw title syntax with alert styling when title rendering is disabled', () => {
-        const harness = createAlertHarness(false);
+        const harness = createAlertHarness({ renderAlertTitles: false });
         try {
             const titleLine = getTitleLine(harness);
             expect(titleLine.classList.contains('cm-gh-alert-note')).toBe(true);
@@ -64,12 +74,9 @@ describe('alert decorations', () => {
     });
 
     test('updates title rendering when the setting is reconfigured', () => {
-        const harness = createAlertHarness(true);
+        const harness = createAlertHarness();
         try {
-            applyMarkdownAlertEditorSettings(harness.view, {
-                enableAlertAutocomplete: false,
-                renderAlertTitles: false,
-            });
+            applyMarkdownAlertEditorSettings(harness.view, { ...DEFAULT_TEST_SETTINGS, renderAlertTitles: false });
             expect(getTitleLine(harness).querySelector('.cm-gh-alert-title-widget')).toBeNull();
         } finally {
             harness.destroy();
@@ -77,10 +84,31 @@ describe('alert decorations', () => {
     });
 
     test('marks every blockquote marker in the alert', () => {
-        const harness = createAlertHarness(false);
+        const harness = createAlertHarness({ renderAlertTitles: false });
         try {
             const marks = [...harness.view.contentDOM.querySelectorAll('.cm-gh-alert-quote-mark')];
             expect(marks.map((mark) => mark.textContent)).toEqual(['>', '>', '>', '>']);
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('marks alert lines for a transparent background when the background setting is disabled', () => {
+        const harness = createAlertHarness({ showAlertBackground: false });
+        try {
+            const alertLines = harness.view.contentDOM.querySelectorAll('.cm-line.cm-gh-alert');
+            const noBackgroundLines = harness.view.contentDOM.querySelectorAll('.cm-line.cm-gh-alert-no-bg');
+            expect(alertLines.length).toBe(3);
+            expect(noBackgroundLines.length).toBe(alertLines.length);
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('keeps the alert background by default', () => {
+        const harness = createAlertHarness();
+        try {
+            expect(harness.view.contentDOM.querySelector('.cm-gh-alert-no-bg')).toBeNull();
         } finally {
             harness.destroy();
         }

@@ -27,6 +27,9 @@ const alertsBaseTheme = EditorView.baseTheme({
         backgroundColor: 'var(--cm-gh-alert-bg)',
         opacity: 1,
     },
+    '.cm-line.cm-gh-alert.cm-gh-alert-no-bg': {
+        backgroundColor: 'transparent',
+    },
     '.cm-line.cm-gh-alert-title': {
         fontWeight: '600',
         color: 'var(--cm-gh-alert-color)',
@@ -82,7 +85,7 @@ function computeDecorations(view: EditorView): DecorationSet {
     const ranges: Range<Decoration>[] = [];
     const seenBlockquotes = new Set<string>();
     const tree = getSyntaxTree(view.state, view.viewport.to);
-    const { renderAlertTitles } = getMarkdownAlertEditorSettings(view.state);
+    const { renderAlertTitles, showAlertBackground } = getMarkdownAlertEditorSettings(view.state);
 
     const findContiguousBlockquoteEndLineNo = (startLineNo: number, initialEndLineNo: number) => {
         let endLineNo = initialEndLineNo;
@@ -137,6 +140,7 @@ function computeDecorations(view: EditorView): DecorationSet {
             const currentLine = doc.line(n);
             const classes = ['cm-gh-alert', `cm-gh-alert-${title.type}`];
             if (n === startLineNo) classes.push('cm-gh-alert-title');
+            if (!showAlertBackground) classes.push('cm-gh-alert-no-bg');
             ranges.push(Decoration.line({ class: classes.join(' ') }).range(currentLine.from));
 
             for (const offset of findBlockquoteMarkerOffsets(currentLine.text)) {

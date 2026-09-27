@@ -4,11 +4,13 @@ import type { EditorView } from '@codemirror/view';
 export type MarkdownAlertEditorSettings = {
     enableAlertAutocomplete: boolean;
     renderAlertTitles: boolean;
+    showAlertBackground: boolean;
 };
 
 const DEFAULT_MARKDOWN_ALERT_EDITOR_SETTINGS: MarkdownAlertEditorSettings = {
     enableAlertAutocomplete: false,
     renderAlertTitles: true,
+    showAlertBackground: true,
 };
 
 const markdownAlertEditorSettingsFacet = Facet.define<MarkdownAlertEditorSettings, MarkdownAlertEditorSettings>({

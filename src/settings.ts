@@ -7,6 +7,8 @@ import {
     INLINE_FORMAT_MARKDOWN_SYNTAX,
     type InlineFormatSyntaxMode,
 } from './inlineFormatCommands';
+import type { MarkdownAlertEditorSettings } from './contentScripts/codeMirror/pluginSettings';
+import { SHOW_ALERT_BACKGROUND_SETTING } from './settingKeys';
 
 const SETTINGS_SECTION = 'markdownAlerts.toolbarButtons';
 
@@ -16,8 +18,12 @@ export const SHOW_CLEAR_FORMATTING_TOOLBAR_BUTTON_SETTING = 'showClearFormatting
 const SUPERSCRIPT_SYNTAX_SETTING = 'superscriptSyntax';
 const SUBSCRIPT_SYNTAX_SETTING = 'subscriptSyntax';
 const ENABLE_ALERT_AUTOCOMPLETE_SETTING = 'enableAlertAutocomplete';
+const RENDER_ALERT_TITLES_SETTING = 'renderAlertTitles';
 
 const TOOLBAR_BUTTON_DEFAULT_ENABLED = true;
+const ENABLE_ALERT_AUTOCOMPLETE_DEFAULT = true;
+const RENDER_ALERT_TITLES_DEFAULT = true;
+const SHOW_ALERT_BACKGROUND_DEFAULT = true;
 
 export type ToolbarButtonSettings = Record<string, boolean>;
 
@@ -65,8 +71,26 @@ export async function registerPluginSettings(): Promise<void> {
             label: 'Subscript syntax',
             description: 'Controls whether the subscript command uses inline HTML or markdown extension syntax.',
         },
+        [RENDER_ALERT_TITLES_SETTING]: {
+            value: RENDER_ALERT_TITLES_DEFAULT,
+            type: SettingItemType.Bool,
+            public: true,
+            section: SETTINGS_SECTION,
+            label: 'Render alert titles in editor',
+            description:
+                'Replace the [!TYPE] marker on alert title lines with an icon and title. When disabled, the raw title line is shown in the alert color. Requires reopening the note to take effect.',
+        },
+        [SHOW_ALERT_BACKGROUND_SETTING]: {
+            value: SHOW_ALERT_BACKGROUND_DEFAULT,
+            type: SettingItemType.Bool,
+            public: true,
+            section: SETTINGS_SECTION,
+            label: 'Show alert background color',
+            description:
+                'Fill alerts with a tinted background in the editor and viewer. Editor changes require reopening the note; the viewer updates on its next render (e.g. after editing or switching notes).',
+        },
         [ENABLE_ALERT_AUTOCOMPLETE_SETTING]: {
-            value: true,
+            value: ENABLE_ALERT_AUTOCOMPLETE_DEFAULT,
             type: SettingItemType.Bool,
             public: true,
             section: SETTINGS_SECTION,
@@ -129,8 +153,24 @@ export async function getToolbarButtonSettings(): Promise<ToolbarButtonSettings>
     );
 }
 
-export async function isAlertAutocompleteEnabled(): Promise<boolean> {
-    return Boolean(await joplin.settings.value(ENABLE_ALERT_AUTOCOMPLETE_SETTING));
+/**
+ * Reads the settings consumed by the CodeMirror content script. Missing keys fall back to their
+ * registered defaults.
+ */
+export async function getMarkdownAlertEditorSettingValues(): Promise<MarkdownAlertEditorSettings> {
+    const values = await joplin.settings.values([
+        ENABLE_ALERT_AUTOCOMPLETE_SETTING,
+        RENDER_ALERT_TITLES_SETTING,
+        SHOW_ALERT_BACKGROUND_SETTING,
+    ]);
+
+    return {
+        enableAlertAutocomplete: Boolean(
+            values[ENABLE_ALERT_AUTOCOMPLETE_SETTING] ?? ENABLE_ALERT_AUTOCOMPLETE_DEFAULT
+        ),
+        renderAlertTitles: Boolean(values[RENDER_ALERT_TITLES_SETTING] ?? RENDER_ALERT_TITLES_DEFAULT),
+        showAlertBackground: Boolean(values[SHOW_ALERT_BACKGROUND_SETTING] ?? SHOW_ALERT_BACKGROUND_DEFAULT),
+    };
 }
 
 async function getInlineFormatSyntaxSettingValue(settingKey: string): Promise<InlineFormatSyntaxMode> {

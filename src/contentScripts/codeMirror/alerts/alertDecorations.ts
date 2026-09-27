@@ -3,25 +3,43 @@ import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate
 
 import { ALERT_COLORS } from './alertColors';
 import { ALERT_ICONS } from './alertIcons';
-import { GITHUB_ALERT_TYPES, type GitHubAlertType, parseGitHubAlertTitleLine } from './alertParsing';
+import {
+    GITHUB_ALERT_TYPES,
+    type GitHubAlertType,
+    findBlockquoteMarkerOffsets,
+    parseGitHubAlertTitleLine,
+} from './alertParsing';
+import { getMarkdownAlertEditorSettings } from '../pluginSettings';
 import { getSyntaxTree } from '../shared/syntaxTreeUtils';
 
 const BLOCKQUOTE_LINE_PATTERN = /^\s*>/;
+
+const ALERT_LINE_PADDING_LEFT = '8px';
+
+const quoteMarkDecoration = Decoration.mark({ class: 'cm-gh-alert-quote-mark' });
 
 /** Base structural styles (no colors) */
 const alertsBaseTheme = EditorView.baseTheme({
     '.cm-line.cm-gh-alert': {
         borderLeft: '4px solid var(--cm-gh-alert-color)',
-        paddingLeft: '8px',
+        paddingLeft: ALERT_LINE_PADDING_LEFT,
         marginLeft: '0',
         backgroundColor: 'var(--cm-gh-alert-bg)',
         opacity: 1,
     },
+    '.cm-line.cm-gh-alert.cm-gh-alert-no-bg': {
+        backgroundColor: 'transparent',
+    },
     '.cm-line.cm-gh-alert-title': {
-        fontWeight: '600',
         color: 'var(--cm-gh-alert-color)',
-        textIndent: '0 !important',
-        paddingLeft: '1px !important',
+    },
+    // Syntax highlighting (e.g. link styling on `[!NOTE]`) would otherwise override the title color
+    // while the raw title syntax is visible.
+    '.cm-line.cm-gh-alert-title *': {
+        color: 'var(--cm-gh-alert-color)',
+    },
+    '.cm-gh-alert-quote-mark, .cm-gh-alert-quote-mark *': {
+        color: 'var(--cm-gh-alert-color)',
     },
     '.cm-gh-alert-icon': {
         display: 'inline-flex',
@@ -32,9 +50,18 @@ const alertsBaseTheme = EditorView.baseTheme({
     '.cm-gh-alert-icon svg': {
         fill: 'currentColor',
     },
+    // Inline (not flex) so the title text shares the line's baseline with any visible `>` markers.
+    // Only the rendered title is semibold; raw title syntax keeps the normal weight.
     '.cm-gh-alert-title-widget': {
-        display: 'inline-flex',
-        alignItems: 'center',
+        display: 'inline',
+        fontWeight: '600',
+    },
+    // Hanging-indent extensions (e.g. Rich Markdown, Wrapped Line Indent) put a negative inline
+    // text-indent on quote lines. text-indent is inherited, so reset it inside the widget to keep
+    // its contents from shifting. The line's own padding/indent is left alone so the title stays
+    // aligned with the body lines, which receive the same treatment.
+    '.cm-gh-alert-title-widget, .cm-gh-alert-title-widget *': {
+        textIndent: '0',
     },
 });
 
@@ -59,6 +86,7 @@ function computeDecorations(view: EditorView): DecorationSet {
     const ranges: Range<Decoration>[] = [];
     const seenBlockquotes = new Set<string>();
     const tree = getSyntaxTree(view.state, view.viewport.to);
+    const { renderAlertTitles, showAlertBackground } = getMarkdownAlertEditorSettings(view.state);
 
     const findContiguousBlockquoteEndLineNo = (startLineNo: number, initialEndLineNo: number) => {
         let endLineNo = initialEndLineNo;
@@ -90,7 +118,7 @@ function computeDecorations(view: EditorView): DecorationSet {
             (range) => range.from <= titleLine.to && range.to >= titleLine.from
         );
 
-        if (!isLineSelected) {
+        if (renderAlertTitles && !isLineSelected) {
             if ('title' in title) {
                 // Custom title: replace marker + title with icon + custom title widget
                 ranges.push(
@@ -113,7 +141,13 @@ function computeDecorations(view: EditorView): DecorationSet {
             const currentLine = doc.line(n);
             const classes = ['cm-gh-alert', `cm-gh-alert-${title.type}`];
             if (n === startLineNo) classes.push('cm-gh-alert-title');
+            if (!showAlertBackground) classes.push('cm-gh-alert-no-bg');
             ranges.push(Decoration.line({ class: classes.join(' ') }).range(currentLine.from));
+
+            for (const offset of findBlockquoteMarkerOffsets(currentLine.text)) {
+                const markerFrom = currentLine.from + offset;
+                ranges.push(quoteMarkDecoration.range(markerFrom, markerFrom + 1));
+            }
         }
     };
 
@@ -143,7 +177,9 @@ const alertsPlugin = ViewPlugin.fromClass(
         }
 
         update(update: ViewUpdate) {
-            if (update.docChanged || update.viewportChanged || update.selectionSet) {
+            const settingsChanged =
+                getMarkdownAlertEditorSettings(update.startState) !== getMarkdownAlertEditorSettings(update.state);
+            if (update.docChanged || update.viewportChanged || update.selectionSet || settingsChanged) {
                 this.decorations = computeDecorations(update.view);
             }
         }

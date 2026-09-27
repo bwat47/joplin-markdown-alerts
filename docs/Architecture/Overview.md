@@ -17,11 +17,13 @@ GitHub alert syntax:
 
 - Joplin `MarkdownItPlugin` content script using `markdown-it-github-alerts` library
 - CSS assets loaded via content script `assets()` hook
+- Wraps the library's `alert_open` renderer to add `markdown-alert-no-bg` when the `showAlertBackground` setting is off, reading it per render via Joplin's `pluginOptions.settingValue`
 - Theme detection via `--joplin-appearance` CSS variable with fallback for cross-origin iframes
 
 **Files:**
 
 - `src/contentScripts/markdownIt/markdownItPlugin.ts` - Plugin integration
+- `src/contentScripts/markdownIt/alertContainerClass.ts` - Adds classes to the rendered alert container's opening tag
 - `src/contentScripts/markdownIt/alerts.css` - Alert styles with transparent backgrounds
 - `src/contentScripts/markdownIt/alerts-theme-*.css` - Theme-specific color variables
 
@@ -29,7 +31,8 @@ GitHub alert syntax:
 
 - Joplin `CodeMirrorPlugin` content script using line decorations (keeps source visible/editable)
 - Detects alert blocks via CM6 syntax tree: finds blockquotes, validates first line matches `> [!TYPE]`
-- Implements "clean titles": Replaces `[!TYPE]` marker with an inline widget containing the alert icon and either the alert type name (e.g., "Note", "Tip", "Important", "Warning", "Caution") or a custom title if provided.
+- Implements "clean titles": Replaces `[!TYPE]` marker with an inline widget containing the alert icon and either the alert type name (e.g., "Note", "Tip", "Important", "Warning", "Caution") or a custom title if provided. Skipped while the title line is selected or when the `renderAlertTitles` setting is off. The widget resets the inherited `text-indent`; the title line's own padding/indent is not overridden, so it stays aligned with body lines under hanging-indent extensions.
+- Colors every leading `>` marker in an alert (via mark decorations) and all raw title-line text with the alert color.
 - Theme detection via `EditorView.darkTheme` facet at content script initialization
 - Applies appropriate color theme based on detected theme (passed into editor-local decoration and autocomplete theme extensions)
 - Provides alert autocomplete triggers: typing `>!` or `> [!` at the start of a line shows a dropdown of all alert types; selecting one inserts `> [!TYPE] ` with the cursor after the trailing space
@@ -81,7 +84,10 @@ GitHub alert syntax:
 - Toolbar visibility settings are read at plugin startup, so changes currently require a plugin restart
 - Superscript and subscript each expose a public syntax setting (`html` or `markdown`), defaulting to `html`
 - Syntax settings are read when the global command executes, so they apply immediately without a plugin restart
-- The `enableAlertAutocomplete` boolean setting (default `true`) controls alert autocomplete for `>!` and `> [!`. The CodeMirror content script always installs the command and completion source, then reconfigures a CM6 settings facet after fetching the setting once via `context.postMessage`; changes take effect when the note is reopened.
+- The `enableAlertAutocomplete` boolean setting (default `true`) controls alert autocomplete for `>!` and `> [!`. The CodeMirror content script always installs the command and completion source.
+- The `renderAlertTitles` boolean setting (default `true`) controls the editor's clean-title widget. The viewer is unaffected.
+- The `showAlertBackground` boolean setting (default `true`) controls the tinted alert background in both the editor (`cm-gh-alert-no-bg` line class) and the viewer. Its key lives in `src/settingKeys.ts` so the viewer content script can read it. Joplin's render cache ignores plugin settings, so the viewer applies a change on its next render of different content (e.g. after editing or switching notes).
+- Editor settings are fetched once per editor via `context.postMessage` (`GET_EDITOR_SETTINGS_MESSAGE` in `src/editorSettingsMessage.ts`) and applied by reconfiguring a CM6 settings facet; changes take effect when the note is reopened.
 
 ## Design Principles
 

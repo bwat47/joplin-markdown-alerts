@@ -8,7 +8,12 @@ import { createClearFormattingCommand } from './commands/clearFormattingCommand'
 import { createInsertAlertCommand } from './commands/insertAlertCommand';
 import { createInsertInlineFormatCommand } from './commands/insertInlineFormatCommand';
 import { createInsertQuoteCommand } from './commands/insertQuoteCommand';
-import { applyMarkdownAlertEditorSettings, createMarkdownAlertEditorSettingsExtension } from './pluginSettings';
+import {
+    type MarkdownAlertEditorSettings,
+    applyMarkdownAlertEditorSettings,
+    createMarkdownAlertEditorSettingsExtension,
+} from './pluginSettings';
+import { GET_EDITOR_SETTINGS_MESSAGE } from '../../editorSettingsMessage';
 import { INLINE_FORMAT_DEFINITIONS } from '../../inlineFormatCommands';
 import { logger } from '../../logger';
 
@@ -48,15 +53,17 @@ export default function (context: ContentScriptContext): MarkdownEditorContentSc
                 );
             }
 
-            let autocompleteEnabled = true;
+            let settings: Partial<MarkdownAlertEditorSettings> | null = null;
             try {
-                autocompleteEnabled = await context.postMessage({ type: 'getAutocompleteSetting' });
+                settings = await context.postMessage({ type: GET_EDITOR_SETTINGS_MESSAGE });
             } catch (err) {
-                logger.warn('Failed to fetch autocomplete setting; defaulting to enabled.', err);
+                logger.warn('Failed to fetch editor settings; defaulting to enabled.', err);
             }
 
             applyMarkdownAlertEditorSettings(editorControl.cm6, {
-                enableAlertAutocomplete: autocompleteEnabled !== false,
+                enableAlertAutocomplete: settings?.enableAlertAutocomplete !== false,
+                renderAlertTitles: settings?.renderAlertTitles !== false,
+                showAlertBackground: settings?.showAlertBackground !== false,
             });
         },
     };

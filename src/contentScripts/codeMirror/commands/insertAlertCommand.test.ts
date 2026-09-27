@@ -128,6 +128,8 @@ describe('createInsertAlertCommand', () => {
             extensions: [
                 createMarkdownAlertEditorSettingsExtension({
                     enableAlertAutocomplete: true,
+                    renderAlertTitles: true,
+                    showAlertBackground: true,
                 }),
                 autocompletion({
                     override: [createAlertCompletionSource()],

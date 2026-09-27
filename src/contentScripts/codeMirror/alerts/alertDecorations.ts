@@ -31,7 +31,6 @@ const alertsBaseTheme = EditorView.baseTheme({
         backgroundColor: 'transparent',
     },
     '.cm-line.cm-gh-alert-title': {
-        fontWeight: '600',
         color: 'var(--cm-gh-alert-color)',
     },
     // Syntax highlighting (e.g. link styling on `[!NOTE]`) would otherwise override the title color
@@ -52,8 +51,10 @@ const alertsBaseTheme = EditorView.baseTheme({
         fill: 'currentColor',
     },
     // Inline (not flex) so the title text shares the line's baseline with any visible `>` markers.
+    // Only the rendered title is semibold; raw title syntax keeps the normal weight.
     '.cm-gh-alert-title-widget': {
         display: 'inline',
+        fontWeight: '600',
     },
     // Hanging-indent extensions (e.g. Rich Markdown, Wrapped Line Indent) put a negative inline
     // text-indent on quote lines. text-indent is inherited, so reset it inside the widget to keep

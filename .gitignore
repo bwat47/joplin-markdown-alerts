@@ -12,3 +12,4 @@ publish/
 gemini/
 prompts/
 .claude/settings.local.json
+.fallowrc.json

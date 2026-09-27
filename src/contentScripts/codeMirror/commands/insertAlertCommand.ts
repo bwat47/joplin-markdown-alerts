@@ -48,6 +48,20 @@ type CursorAlertChange = {
     explicitSelection?: ExplicitCursorSelection;
 };
 
+function addCursorAlertChange(
+    cursorChange: CursorAlertChange,
+    selectionIndex: number,
+    changeMap: Map<string, TextChange>,
+    explicitSelectionsByIndex: Map<number, ExplicitCursorSelection>
+): void {
+    if (!changeMap.has(cursorChange.key)) {
+        changeMap.set(cursorChange.key, cursorChange.change);
+    }
+    if (cursorChange.explicitSelection) {
+        explicitSelectionsByIndex.set(selectionIndex, cursorChange.explicitSelection);
+    }
+}
+
 function getAlertTypeRange(markerRange: TextRange): TextRange {
     return {
         from: markerRange.from + 2,
@@ -499,12 +513,7 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
                     return;
                 }
 
-                if (!changeMap.has(cursorChange.key)) {
-                    changeMap.set(cursorChange.key, cursorChange.change);
-                }
-                if (cursorChange.explicitSelection) {
-                    explicitSelectionsByIndex.set(index, cursorChange.explicitSelection);
-                }
+                addCursorAlertChange(cursorChange, index, changeMap, explicitSelectionsByIndex);
             });
 
             dispatchChangesWithSelections(view, Array.from(changeMap.values()), explicitSelectionsByIndex);
@@ -517,12 +526,7 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
 
         ranges.forEach((range, index) => {
             const cursorChange = createAlertCursorChange(state, range.head);
-            if (!changeMap.has(cursorChange.key)) {
-                changeMap.set(cursorChange.key, cursorChange.change);
-            }
-            if (cursorChange.explicitSelection) {
-                explicitSelectionsByIndex.set(index, cursorChange.explicitSelection);
-            }
+            addCursorAlertChange(cursorChange, index, changeMap, explicitSelectionsByIndex);
         });
 
         dispatchChangesWithSelections(view, Array.from(changeMap.values()), explicitSelectionsByIndex);

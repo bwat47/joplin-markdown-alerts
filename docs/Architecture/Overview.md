@@ -29,7 +29,7 @@ GitHub alert syntax:
 
 - Joplin `CodeMirrorPlugin` content script using line decorations (keeps source visible/editable)
 - Detects alert blocks via CM6 syntax tree: finds blockquotes, validates first line matches `> [!TYPE]`
-- Implements "clean titles": Replaces `[!TYPE]` marker with an inline widget containing the alert icon and either the alert type name (e.g., "Note", "Tip", "Important", "Warning", "Caution") or a custom title if provided. The widget resets the inherited `text-indent`; the title line's own padding/indent is not overridden, so it stays aligned with body lines under hanging-indent extensions.
+- Implements "clean titles": Replaces `[!TYPE]` marker with an inline widget containing the alert icon and either the alert type name (e.g., "Note", "Tip", "Important", "Warning", "Caution") or a custom title if provided. Skipped while the title line is selected or when the `renderAlertTitles` setting is off. The widget resets the inherited `text-indent`; the title line's own padding/indent is not overridden, so it stays aligned with body lines under hanging-indent extensions.
 - Colors every leading `>` marker in an alert (via mark decorations) and all raw title-line text with the alert color.
 - Theme detection via `EditorView.darkTheme` facet at content script initialization
 - Applies appropriate color theme based on detected theme (passed into editor-local decoration and autocomplete theme extensions)
@@ -82,7 +82,9 @@ GitHub alert syntax:
 - Toolbar visibility settings are read at plugin startup, so changes currently require a plugin restart
 - Superscript and subscript each expose a public syntax setting (`html` or `markdown`), defaulting to `html`
 - Syntax settings are read when the global command executes, so they apply immediately without a plugin restart
-- The `enableAlertAutocomplete` boolean setting (default `true`) controls alert autocomplete for `>!` and `> [!`. The CodeMirror content script always installs the command and completion source, then reconfigures a CM6 settings facet after fetching the setting once via `context.postMessage`; changes take effect when the note is reopened.
+- The `enableAlertAutocomplete` boolean setting (default `true`) controls alert autocomplete for `>!` and `> [!`. The CodeMirror content script always installs the command and completion source.
+- The `renderAlertTitles` boolean setting (default `true`) controls the editor's clean-title widget. The viewer is unaffected.
+- Editor settings are fetched once per editor via `context.postMessage` (`GET_EDITOR_SETTINGS_MESSAGE` in `src/editorSettingsMessage.ts`) and applied by reconfiguring a CM6 settings facet; changes take effect when the note is reopened.
 
 ## Design Principles
 

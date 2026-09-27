@@ -3,7 +3,8 @@ import { ContentScriptType } from 'api/types';
 
 import { logger } from './logger';
 import { registerAllCommands } from './joplinCommandRegistration';
-import { isAlertAutocompleteEnabled, registerPluginSettings } from './settings';
+import { GET_EDITOR_SETTINGS_MESSAGE } from './editorSettingsMessage';
+import { getMarkdownAlertEditorSettingValues, registerPluginSettings } from './settings';
 
 joplin.plugins.register({
     onStart: async function () {
@@ -25,8 +26,8 @@ joplin.plugins.register({
         );
 
         await joplin.contentScripts.onMessage('markdownAlerts.codeMirror', async (message: unknown) => {
-            if ((message as { type?: string })?.type === 'getAutocompleteSetting') {
-                return await isAlertAutocompleteEnabled();
+            if ((message as { type?: string })?.type === GET_EDITOR_SETTINGS_MESSAGE) {
+                return await getMarkdownAlertEditorSettingValues();
             }
             return null;
         });

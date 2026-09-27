@@ -9,6 +9,7 @@ import {
     findBlockquoteMarkerOffsets,
     parseGitHubAlertTitleLine,
 } from './alertParsing';
+import { getMarkdownAlertEditorSettings } from '../pluginSettings';
 import { getSyntaxTree } from '../shared/syntaxTreeUtils';
 
 const BLOCKQUOTE_LINE_PATTERN = /^\s*>/;
@@ -81,6 +82,7 @@ function computeDecorations(view: EditorView): DecorationSet {
     const ranges: Range<Decoration>[] = [];
     const seenBlockquotes = new Set<string>();
     const tree = getSyntaxTree(view.state, view.viewport.to);
+    const { renderAlertTitles } = getMarkdownAlertEditorSettings(view.state);
 
     const findContiguousBlockquoteEndLineNo = (startLineNo: number, initialEndLineNo: number) => {
         let endLineNo = initialEndLineNo;
@@ -112,7 +114,7 @@ function computeDecorations(view: EditorView): DecorationSet {
             (range) => range.from <= titleLine.to && range.to >= titleLine.from
         );
 
-        if (!isLineSelected) {
+        if (renderAlertTitles && !isLineSelected) {
             if ('title' in title) {
                 // Custom title: replace marker + title with icon + custom title widget
                 ranges.push(
@@ -170,7 +172,9 @@ const alertsPlugin = ViewPlugin.fromClass(
         }
 
         update(update: ViewUpdate) {
-            if (update.docChanged || update.viewportChanged || update.selectionSet) {
+            const settingsChanged =
+                getMarkdownAlertEditorSettings(update.startState) !== getMarkdownAlertEditorSettings(update.state);
+            if (update.docChanged || update.viewportChanged || update.selectionSet || settingsChanged) {
                 this.decorations = computeDecorations(update.view);
             }
         }

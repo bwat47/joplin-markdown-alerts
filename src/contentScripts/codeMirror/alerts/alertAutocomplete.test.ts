@@ -22,6 +22,7 @@ function createAutocompleteEnabledHarness(input: string) {
         extensions: [
             createMarkdownAlertEditorSettingsExtension({
                 enableAlertAutocomplete: true,
+                renderAlertTitles: true,
             }),
         ],
     });
@@ -91,6 +92,7 @@ describe('createAlertCompletionSource — trigger conditions', () => {
             extensions: [
                 createMarkdownAlertEditorSettingsExtension({
                     enableAlertAutocomplete: false,
+                    renderAlertTitles: true,
                 }),
             ],
         });

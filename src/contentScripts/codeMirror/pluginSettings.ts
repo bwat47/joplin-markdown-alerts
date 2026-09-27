@@ -7,10 +7,15 @@ export type MarkdownAlertEditorSettings = {
     showAlertBackground: boolean;
 };
 
+/**
+ * Settings used until the plugin's real settings arrive over async content-script messaging.
+ * Title rendering and background color default to false, because briefly showing plain text
+ * before the settings are applied makes more sense than the other way around.
+ */
 const DEFAULT_MARKDOWN_ALERT_EDITOR_SETTINGS: MarkdownAlertEditorSettings = {
     enableAlertAutocomplete: false,
-    renderAlertTitles: true,
-    showAlertBackground: true,
+    renderAlertTitles: false,
+    showAlertBackground: false,
 };
 
 const markdownAlertEditorSettingsFacet = Facet.define<MarkdownAlertEditorSettings, MarkdownAlertEditorSettings>({

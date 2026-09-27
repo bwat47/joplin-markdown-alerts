@@ -204,13 +204,13 @@ Separate syntax settings for the superscript and subscript commands. Both defaul
 
 ### Alert Styling
 
-Enable/Disable alert title rendering and alert background color.
+Enable/Disable alert title rendering and alert background color. Example with both settings disabled:
+
+![inline formatting commands example](./images/alerts_nobg_notitle.png)
 
 ### Toolbar buttons
 
-The plugin includes settings to enable or disable each editor toolbar button independently.
-
-Available toolbar visibility settings:
+The plugin includes settings to enable or disable each editor toolbar button independently. Available toolbar visibility settings:
 
 - Alert
 - Blockquote

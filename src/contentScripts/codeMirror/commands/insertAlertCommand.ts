@@ -48,6 +48,11 @@ type CursorAlertChange = {
     explicitSelection?: ExplicitCursorSelection;
 };
 
+/**
+ * Records a cursor's alert change and explicit selection.
+ * Changes are deduplicated by key (first wins), but the explicit selection is always
+ * recorded for the cursor's index, so cursors sharing one change each keep their selection.
+ */
 function addCursorAlertChange(
     cursorChange: CursorAlertChange,
     selectionIndex: number,

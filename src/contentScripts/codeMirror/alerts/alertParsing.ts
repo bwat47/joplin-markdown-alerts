@@ -54,6 +54,30 @@ const ALERT_TITLE_LINE_PATTERN = new RegExp(
     'i'
 );
 
+/**
+ * Matches the leading blockquote prefix of a line, including nested markers.
+ *
+ * Examples: `> text` -> `> `, `  > > text` -> `  > > `, `>>text` -> `>>`
+ */
+const BLOCKQUOTE_PREFIX_PATTERN = /^\s*(?:>\s*)+/;
+
+const BLOCKQUOTE_MARKER = '>';
+
+/**
+ * Returns the 0-based offsets of every `>` marker in the line's leading blockquote prefix.
+ * Characters after the prefix (e.g. a `>` inside the line's content) are ignored.
+ */
+export function findBlockquoteMarkerOffsets(lineText: string): number[] {
+    const prefix = BLOCKQUOTE_PREFIX_PATTERN.exec(lineText)?.[0] ?? '';
+    const offsets: number[] = [];
+
+    for (let i = 0; i < prefix.length; i++) {
+        if (prefix[i] === BLOCKQUOTE_MARKER) offsets.push(i);
+    }
+
+    return offsets;
+}
+
 export function parseGitHubAlertTitleLine(lineText: string): ParsedGitHubAlertTitleLine | null {
     const match = ALERT_TITLE_LINE_PATTERN.exec(lineText);
 

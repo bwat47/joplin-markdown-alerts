@@ -1,4 +1,4 @@
-import { parseGitHubAlertTitleLine } from './alertParsing';
+import { findBlockquoteMarkerOffsets, parseGitHubAlertTitleLine } from './alertParsing';
 
 describe('parseGitHubAlertTitleLine', () => {
     test('returns null for non-alert lines', () => {
@@ -78,5 +78,22 @@ describe('parseGitHubAlertTitleLine', () => {
         expect(parsed.type).toBe('note');
         expect(parsed.title).toBe('Title');
         expect(line.slice(parsed.markerRange.from, parsed.markerRange.to)).toBe('[!NOTE]');
+    });
+});
+
+describe('findBlockquoteMarkerOffsets', () => {
+    test('returns offsets of each marker in the leading blockquote prefix', () => {
+        expect(findBlockquoteMarkerOffsets('> text')).toEqual([0]);
+        expect(findBlockquoteMarkerOffsets('  > > text')).toEqual([2, 4]);
+        expect(findBlockquoteMarkerOffsets('>>text')).toEqual([0, 1]);
+    });
+
+    test('ignores markers inside the line content', () => {
+        expect(findBlockquoteMarkerOffsets('> a > b')).toEqual([0]);
+    });
+
+    test('returns an empty array for non-blockquote lines', () => {
+        expect(findBlockquoteMarkerOffsets('text > more')).toEqual([]);
+        expect(findBlockquoteMarkerOffsets('')).toEqual([]);
     });
 });

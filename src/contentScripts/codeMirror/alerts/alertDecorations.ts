@@ -3,12 +3,19 @@ import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate
 
 import { ALERT_COLORS } from './alertColors';
 import { ALERT_ICONS } from './alertIcons';
-import { GITHUB_ALERT_TYPES, type GitHubAlertType, parseGitHubAlertTitleLine } from './alertParsing';
+import {
+    GITHUB_ALERT_TYPES,
+    type GitHubAlertType,
+    findBlockquoteMarkerOffsets,
+    parseGitHubAlertTitleLine,
+} from './alertParsing';
 import { getSyntaxTree } from '../shared/syntaxTreeUtils';
 
 const BLOCKQUOTE_LINE_PATTERN = /^\s*>/;
 
 const ALERT_LINE_PADDING_LEFT = '8px';
+
+const quoteMarkDecoration = Decoration.mark({ class: 'cm-gh-alert-quote-mark' });
 
 /** Base structural styles (no colors) */
 const alertsBaseTheme = EditorView.baseTheme({
@@ -21,6 +28,14 @@ const alertsBaseTheme = EditorView.baseTheme({
     },
     '.cm-line.cm-gh-alert-title': {
         fontWeight: '600',
+        color: 'var(--cm-gh-alert-color)',
+    },
+    // Syntax highlighting (e.g. link styling on `[!NOTE]`) would otherwise override the title color
+    // while the raw title syntax is visible.
+    '.cm-line.cm-gh-alert-title *': {
+        color: 'var(--cm-gh-alert-color)',
+    },
+    '.cm-gh-alert-quote-mark, .cm-gh-alert-quote-mark *': {
         color: 'var(--cm-gh-alert-color)',
     },
     '.cm-gh-alert-icon': {
@@ -121,6 +136,11 @@ function computeDecorations(view: EditorView): DecorationSet {
             const classes = ['cm-gh-alert', `cm-gh-alert-${title.type}`];
             if (n === startLineNo) classes.push('cm-gh-alert-title');
             ranges.push(Decoration.line({ class: classes.join(' ') }).range(currentLine.from));
+
+            for (const offset of findBlockquoteMarkerOffsets(currentLine.text)) {
+                const markerFrom = currentLine.from + offset;
+                ranges.push(quoteMarkDecoration.range(markerFrom, markerFrom + 1));
+            }
         }
     };
 

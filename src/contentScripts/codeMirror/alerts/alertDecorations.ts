@@ -8,11 +8,13 @@ import { getSyntaxTree } from '../shared/syntaxTreeUtils';
 
 const BLOCKQUOTE_LINE_PATTERN = /^\s*>/;
 
+const ALERT_LINE_PADDING_LEFT = '8px';
+
 /** Base structural styles (no colors) */
 const alertsBaseTheme = EditorView.baseTheme({
     '.cm-line.cm-gh-alert': {
         borderLeft: '4px solid var(--cm-gh-alert-color)',
-        paddingLeft: '8px',
+        paddingLeft: ALERT_LINE_PADDING_LEFT,
         marginLeft: '0',
         backgroundColor: 'var(--cm-gh-alert-bg)',
         opacity: 1,
@@ -20,8 +22,6 @@ const alertsBaseTheme = EditorView.baseTheme({
     '.cm-line.cm-gh-alert-title': {
         fontWeight: '600',
         color: 'var(--cm-gh-alert-color)',
-        textIndent: '0 !important',
-        paddingLeft: '1px !important',
     },
     '.cm-gh-alert-icon': {
         display: 'inline-flex',
@@ -32,9 +32,16 @@ const alertsBaseTheme = EditorView.baseTheme({
     '.cm-gh-alert-icon svg': {
         fill: 'currentColor',
     },
+    // Inline (not flex) so the title text shares the line's baseline with any visible `>` markers.
     '.cm-gh-alert-title-widget': {
-        display: 'inline-flex',
-        alignItems: 'center',
+        display: 'inline',
+    },
+    // Hanging-indent extensions (e.g. Rich Markdown, Wrapped Line Indent) put a negative inline
+    // text-indent on quote lines. text-indent is inherited, so reset it inside the widget to keep
+    // its contents from shifting. The line's own padding/indent is left alone so the title stays
+    // aligned with the body lines, which receive the same treatment.
+    '.cm-gh-alert-title-widget, .cm-gh-alert-title-widget *': {
+        textIndent: '0',
     },
 });
 

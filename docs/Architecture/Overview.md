@@ -29,7 +29,7 @@ GitHub alert syntax:
 
 - Joplin `CodeMirrorPlugin` content script using line decorations (keeps source visible/editable)
 - Detects alert blocks via CM6 syntax tree: finds blockquotes, validates first line matches `> [!TYPE]`
-- Implements "clean titles": Replaces `[!TYPE]` marker with an inline widget containing the alert icon and either the alert type name (e.g., "Note", "Tip", "Important", "Warning", "Caution") or a custom title if provided.
+- Implements "clean titles": Replaces `[!TYPE]` marker with an inline widget containing the alert icon and either the alert type name (e.g., "Note", "Tip", "Important", "Warning", "Caution") or a custom title if provided. The widget resets the inherited `text-indent`; the title line's own padding/indent is not overridden, so it stays aligned with body lines under hanging-indent extensions.
 - Theme detection via `EditorView.darkTheme` facet at content script initialization
 - Applies appropriate color theme based on detected theme (passed into editor-local decoration and autocomplete theme extensions)
 - Provides alert autocomplete triggers: typing `>!` or `> [!` at the start of a line shows a dropdown of all alert types; selecting one inserts `> [!TYPE] ` with the cursor after the trailing space

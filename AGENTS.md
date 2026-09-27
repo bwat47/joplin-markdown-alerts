@@ -3,16 +3,9 @@
 docs/Architecture/
 
 - Internal documentation about project architecture.
-- Keep up to date with significant architecture changes. Keep documentation concise, avoid repeating information.
+- Keep up to date with significant architecture changes when applicable. Keep documentation focused on high level architecture, not random implementation details.
 
 Architecture overview: docs/Architecture/Overview.md
-
-## Guidelines
-
-- Read AGENTS.md before editing code
-- Stop being agreeable: be direct and honest; no flattery, no validation, no sugar-coating.
-- Challenge weak reasoning; point out missing assumptions and trade-offs.
-- If something is underspecified/contradictory/risky — say so and list what must be clarified.
 
 ## Rules
 

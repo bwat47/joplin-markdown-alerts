@@ -158,15 +158,7 @@ The commands behave similarly to joplin's standard inline formatting commands, a
 - Selection contains one or more inner spans already using the target format: remove only that target formatting
 - Selection contains no target formatting: wrap the selection
 
-For full-line selections, the inline formatting commands are line-aware instead of blindly wrapping the whole block:
-
-- blank lines are preserved
-- list markers are preserved
-- blockquote markers are preserved
-- heading markers are preserved
-- task list markers are preserved
-- fenced code blocks, tables, and horizontal rules are left alone
-- leading and trailing spaces stay outside newly inserted delimiters
+For full-line selections, the inline formatting commands are line-aware instead of blindly wrapping the whole block (preserving blank lines, code blocks, block markers, etc...):
 
 Examples:
 
@@ -204,7 +196,13 @@ Separate syntax settings for the superscript and subscript commands. Both defaul
 
 ### Alert Styling
 
-Enable/Disable alert title rendering and alert background color. Example with both settings disabled:
+Enable/Disable alert title rendering and alert background color.
+
+Example with background disabled:
+
+![inline formatting commands example](./images/alerts_nobg.png)
+
+Example with both settings disabled:
 
 ![inline formatting commands example](./images/alerts_nobg_notitle.png)
 

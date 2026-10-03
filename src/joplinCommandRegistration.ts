@@ -40,9 +40,11 @@ const INSERT_NOTE_QUOTE_ICON_NAME = 'fas fa-quote-right';
 const CLEAR_MARKDOWN_FORMATTING_MENU_ITEM_ID = 'markdownAlerts.clearMarkdownFormatting.menuItem';
 const CLEAR_MARKDOWN_FORMATTING_TOOLBAR_BUTTON_ID = 'markdownAlerts.clearMarkdownFormatting.toolbarButton';
 const CLEAR_MARKDOWN_FORMATTING_ICON_NAME = 'fas fa-eraser';
+const MARKDOWN_EDITOR_SETTING = 'editor.codeView';
 
 async function executeMarkdownEditorCommand(commandName: string): Promise<void> {
-    const isMarkdown = !!(await joplin.settings.globalValue('editor.codeView'));
+    const editorSettings: unknown[] = await joplin.settings.globalValues([MARKDOWN_EDITOR_SETTING]);
+    const isMarkdown = Boolean(editorSettings[0]);
     if (!isMarkdown) {
         await joplin.views.dialogs.showToast({
             message: 'Markdown Alerts: This command only works in the Markdown editor',

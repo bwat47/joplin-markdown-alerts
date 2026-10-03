@@ -8,11 +8,7 @@ import { createClearFormattingCommand } from './commands/clearFormattingCommand'
 import { createInsertAlertCommand } from './commands/insertAlertCommand';
 import { createInsertInlineFormatCommand } from './commands/insertInlineFormatCommand';
 import { createInsertQuoteCommand } from './commands/insertQuoteCommand';
-import {
-    type MarkdownAlertEditorSettings,
-    applyMarkdownAlertEditorSettings,
-    createMarkdownAlertEditorSettingsExtension,
-} from './pluginSettings';
+import { applyMarkdownAlertEditorSettings, createMarkdownAlertEditorSettingsExtension } from './pluginSettings';
 import { GET_EDITOR_SETTINGS_MESSAGE } from '../../editorSettingsMessage';
 import { INLINE_FORMAT_DEFINITIONS } from '../../inlineFormatCommands';
 import { logger } from '../../logger';
@@ -53,9 +49,12 @@ export default function (context: ContentScriptContext): MarkdownEditorContentSc
                 );
             }
 
-            let settings: Partial<MarkdownAlertEditorSettings> | null = null;
+            let settings: Record<string, unknown> | null = null;
             try {
-                settings = await context.postMessage({ type: GET_EDITOR_SETTINGS_MESSAGE });
+                const response: unknown = await context.postMessage({ type: GET_EDITOR_SETTINGS_MESSAGE });
+                if (typeof response === 'object' && response !== null) {
+                    settings = response as Record<string, unknown>;
+                }
             } catch (err) {
                 logger.warn('Failed to fetch editor settings; defaulting to enabled.', err);
             }

@@ -453,21 +453,20 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
                 expandedRanges.push(expandedRange);
             }
 
-            const mergedRanges = expandedRanges
-                .sort((a, b) => (a.from === b.from ? a.to - b.to : a.from - b.from))
-                .reduce<ParagraphRange[]>((merged, range) => {
-                    const last = merged[merged.length - 1];
-                    if (!last) {
-                        merged.push({ ...range });
-                        return merged;
-                    }
-                    if (range.from <= last.to) {
-                        last.to = Math.max(last.to, range.to);
-                        return merged;
-                    }
+            expandedRanges.sort((a, b) => (a.from === b.from ? a.to - b.to : a.from - b.from));
+            const mergedRanges = expandedRanges.reduce<ParagraphRange[]>((merged, range) => {
+                const last = merged[merged.length - 1];
+                if (!last) {
                     merged.push({ ...range });
                     return merged;
-                }, []);
+                }
+                if (range.from <= last.to) {
+                    last.to = Math.max(last.to, range.to);
+                    return merged;
+                }
+                merged.push({ ...range });
+                return merged;
+            }, []);
 
             const targets = mergedRanges.map((range) => {
                 const text = state.doc.sliceString(range.from, range.to);

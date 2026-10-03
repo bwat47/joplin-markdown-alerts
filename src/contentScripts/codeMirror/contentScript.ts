@@ -43,13 +43,13 @@ export default function (context: ContentScriptContext): MarkdownEditorContentSc
             editorControl.addExtension(createAlertAutocompleteThemeExtension(isDarkTheme));
             editorControl.addExtension(editorControl.joplinExtensions.completionSource(createAlertCompletionSource()));
 
-            editorControl.registerCommand(INSERT_ALERT_COMMAND, createInsertAlertCommand(editorControl.cm6));
-            editorControl.registerCommand(CLEAR_FORMATTING_COMMAND, createClearFormattingCommand(editorControl.cm6));
-            editorControl.registerCommand(INSERT_QUOTE_COMMAND, createInsertQuoteCommand(editorControl.cm6));
+            editorControl.registerCommand(INSERT_ALERT_COMMAND, createInsertAlertCommand(editor));
+            editorControl.registerCommand(CLEAR_FORMATTING_COMMAND, createClearFormattingCommand(editor));
+            editorControl.registerCommand(INSERT_QUOTE_COMMAND, createInsertQuoteCommand(editor));
             for (const format of INLINE_FORMAT_DEFINITIONS) {
                 editorControl.registerCommand(
                     format.editorCommandName,
-                    createInsertInlineFormatCommand(editorControl.cm6, format)
+                    createInsertInlineFormatCommand(editor, format)
                 );
             }
 
@@ -60,7 +60,7 @@ export default function (context: ContentScriptContext): MarkdownEditorContentSc
                 logger.warn('Failed to fetch editor settings; defaulting to enabled.', err);
             }
 
-            applyMarkdownAlertEditorSettings(editorControl.cm6, {
+            applyMarkdownAlertEditorSettings(editor, {
                 enableAlertAutocomplete: settings?.enableAlertAutocomplete !== false,
                 renderAlertTitles: settings?.renderAlertTitles !== false,
                 showAlertBackground: settings?.showAlertBackground !== false,

@@ -174,7 +174,7 @@ export async function getMarkdownAlertEditorSettingValues(): Promise<MarkdownAle
 }
 
 async function getInlineFormatSyntaxSettingValue(settingKey: string): Promise<InlineFormatSyntaxMode> {
-    const value = await joplin.settings.value(settingKey);
+    const value: unknown = await joplin.settings.value(settingKey);
     return value === INLINE_FORMAT_MARKDOWN_SYNTAX ? INLINE_FORMAT_MARKDOWN_SYNTAX : INLINE_FORMAT_HTML_SYNTAX;
 }
 

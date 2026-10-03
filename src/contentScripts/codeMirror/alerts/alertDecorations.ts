@@ -75,7 +75,7 @@ function buildColorTheme(isDark: boolean) {
     const rules: Record<string, Record<string, string>> = {};
 
     for (const type of GITHUB_ALERT_TYPES) {
-        const { color, bg } = colors[type as GitHubAlertType];
+        const { color, bg } = colors[type];
         rules[`&.cm-gh-alert-${type}`] = {
             '--cm-gh-alert-color': color,
             '--cm-gh-alert-bg': bg,

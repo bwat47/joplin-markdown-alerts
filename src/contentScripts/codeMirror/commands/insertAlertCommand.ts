@@ -315,11 +315,11 @@ function createBlockquoteAlertChange(state: EditorState, blockquoteStarts: numbe
         }
     }
 
-    const outermostBlockquoteFrom = blockquoteStarts[blockquoteStarts.length - 1];
-    if (outermostBlockquoteFrom === undefined) {
+    if (blockquoteStarts.length === 0) {
         return null;
     }
 
+    const outermostBlockquoteFrom = blockquoteStarts[blockquoteStarts.length - 1];
     const blockquoteStartLine = state.doc.lineAt(outermostBlockquoteFrom);
     const match = BLOCKQUOTE_PREFIX_PATTERN.exec(blockquoteStartLine.text);
     if (!match) {

@@ -6,30 +6,34 @@ import { registerAllCommands } from './joplinCommandRegistration';
 import { GET_EDITOR_SETTINGS_MESSAGE } from './editorSettingsMessage';
 import { getMarkdownAlertEditorSettingValues, registerPluginSettings } from './settings';
 
-joplin.plugins.register({
-    onStart: async function () {
-        logger.info('Markdown Alerts plugin started');
+joplin.plugins
+    .register({
+        onStart: async function () {
+            logger.info('Markdown Alerts plugin started');
 
-        await registerPluginSettings();
-        await registerAllCommands();
+            await registerPluginSettings();
+            await registerAllCommands();
 
-        await joplin.contentScripts.register(
-            ContentScriptType.MarkdownItPlugin,
-            'markdownAlerts.markdownIt',
-            './contentScripts/markdownIt/markdownItPlugin.js'
-        );
+            await joplin.contentScripts.register(
+                ContentScriptType.MarkdownItPlugin,
+                'markdownAlerts.markdownIt',
+                './contentScripts/markdownIt/markdownItPlugin.js'
+            );
 
-        await joplin.contentScripts.register(
-            ContentScriptType.CodeMirrorPlugin,
-            'markdownAlerts.codeMirror',
-            './contentScripts/codeMirror/contentScript.js'
-        );
+            await joplin.contentScripts.register(
+                ContentScriptType.CodeMirrorPlugin,
+                'markdownAlerts.codeMirror',
+                './contentScripts/codeMirror/contentScript.js'
+            );
 
-        await joplin.contentScripts.onMessage('markdownAlerts.codeMirror', async (message: unknown) => {
-            if ((message as { type?: string })?.type === GET_EDITOR_SETTINGS_MESSAGE) {
-                return await getMarkdownAlertEditorSettingValues();
-            }
-            return null;
-        });
-    },
-});
+            await joplin.contentScripts.onMessage('markdownAlerts.codeMirror', async (message: unknown) => {
+                if ((message as { type?: string })?.type === GET_EDITOR_SETTINGS_MESSAGE) {
+                    return await getMarkdownAlertEditorSettingValues();
+                }
+                return null;
+            });
+        },
+    })
+    .catch((error: unknown) => {
+        logger.error('Failed to register Markdown Alerts plugin.', error);
+    });

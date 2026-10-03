@@ -18,14 +18,14 @@ const CLEAR_FORMATTING_COMMAND = 'markdownAlerts.clearFormatting';
 const INSERT_QUOTE_COMMAND = 'markdownAlerts.insertQuoteOrToggle';
 
 async function initializeEditor(editorControl: CodeMirrorControl, context: ContentScriptContext): Promise<void> {
-    if (!editorControl?.cm6) {
+    if (!editorControl.cm6) {
         logger.warn('CodeMirror 6 not available; skipping markdown alert extensions.');
         return;
     }
 
     // Detect dark theme from the editor state
     const editor = editorControl.editor as EditorView;
-    const isDarkTheme = editor?.state?.facet(EditorView.darkTheme) ?? false;
+    const isDarkTheme = editor.state.facet(EditorView.darkTheme);
 
     editorControl.addExtension(createMarkdownAlertEditorSettingsExtension());
     editorControl.addExtension(createAlertDecorationExtensions(isDarkTheme));

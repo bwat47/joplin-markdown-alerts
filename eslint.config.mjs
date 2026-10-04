@@ -5,6 +5,7 @@ import tsParser from '@typescript-eslint/parser';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import importPlugin from 'eslint-plugin-import-x';
 import sonarjs from 'eslint-plugin-sonarjs';
+import vitest from '@vitest/eslint-plugin';
 import prettier from 'eslint-config-prettier';
 import globals from 'globals';
 
@@ -55,13 +56,19 @@ export default [
             '**/__tests__/**/*.{ts,tsx,js}',
             'src/testHelpers.ts',
         ],
+        plugins: {
+            vitest,
+        },
         languageOptions: {
             globals: {
                 ...globals.node,
                 ...globals.vitest,
             },
         },
-        rules: {},
+        rules: {
+            ...vitest.configs.recommended.rules,
+            'vitest/prefer-to-have-length': 'error',
+        },
     },
 
     // Prettier compatibility

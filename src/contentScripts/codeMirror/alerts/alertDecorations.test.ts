@@ -98,8 +98,8 @@ describe('alert decorations', () => {
         try {
             const alertLines = harness.view.contentDOM.querySelectorAll('.cm-line.cm-gh-alert');
             const noBackgroundLines = harness.view.contentDOM.querySelectorAll('.cm-line.cm-gh-alert-no-bg');
-            expect(alertLines.length).toBe(3);
-            expect(noBackgroundLines.length).toBe(alertLines.length);
+            expect(alertLines).toHaveLength(3);
+            expect(noBackgroundLines).toHaveLength(alertLines.length);
         } finally {
             harness.destroy();
         }

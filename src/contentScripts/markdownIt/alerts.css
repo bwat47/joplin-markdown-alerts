@@ -163,7 +163,6 @@
     color: var(--color-quote);
 }
 
-
 /* Added by the viewer plugin when the "Show alert background color" setting is disabled. */
 .markdown-alert.markdown-alert-no-bg {
     background-color: transparent;

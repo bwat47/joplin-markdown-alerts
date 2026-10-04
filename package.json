@@ -6,9 +6,9 @@
         "prepare": "npm run dist",
         "updateVersion": "webpack --env joplin-plugin-config=updateVersion",
         "update": "npm install -g generator-joplin && yo joplin --node-package-manager npm --update --force",
-        "lint": "eslint --ext .ts src/",
-        "lint:fix": "eslint --ext .ts src/ --fix",
-        "format": "prettier --write \"src/**/*.ts\"",
+        "lint": "eslint src/",
+        "lint:fix": "eslint src/ --fix",
+        "format": "prettier --write \"src/**/*.{ts,js,css}\"",
         "test": "vitest run --passWithNoTests",
         "test:watch": "vitest --passWithNoTests",
         "knip": "knip"

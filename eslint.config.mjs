@@ -68,6 +68,9 @@ export default [
         rules: {
             ...vitest.configs.recommended.rules,
             'vitest/prefer-to-have-length': 'error',
+            // Vitest variant allows passing unbound methods to expect(); base rule must be off for it to apply
+            '@typescript-eslint/unbound-method': 'off',
+            'vitest/unbound-method': 'error',
         },
     },
 

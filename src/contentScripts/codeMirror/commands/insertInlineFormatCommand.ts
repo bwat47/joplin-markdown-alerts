@@ -2,7 +2,7 @@ import type { SelectionRange } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { SyntaxNode } from '@lezer/common';
 
-import { type InlineFormatDefinition } from '../../../inlineFormatCommands';
+import type { InlineFormatDefinition } from '../../../inlineFormatCommands';
 import {
     analyzeSingleLineCursorAction,
     analyzeSingleLineSelectionRemoval,

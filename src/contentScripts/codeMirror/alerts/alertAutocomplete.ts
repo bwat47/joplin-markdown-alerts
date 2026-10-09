@@ -1,6 +1,6 @@
-import { type CompletionContext, type CompletionResult, type CompletionSource } from '@codemirror/autocomplete';
+import type { CompletionContext, CompletionResult, CompletionSource } from '@codemirror/autocomplete';
 import { ChangeSet, EditorSelection, type EditorState, type SelectionRange } from '@codemirror/state';
-import { type EditorView } from '@codemirror/view';
+import type { EditorView } from '@codemirror/view';
 
 import { GITHUB_ALERT_TYPES, type GitHubAlertType } from './alertParsing';
 import { getMarkdownAlertEditorSettings } from '../pluginSettings';

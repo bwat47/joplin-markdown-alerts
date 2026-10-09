@@ -1,4 +1,4 @@
-import { type InlineFormatDefinition } from '../../../inlineFormatCommands';
+import type { InlineFormatDefinition } from '../../../inlineFormatCommands';
 
 type WrappedSegment = {
     from: number;

@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
-import { type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
+import type { CompletionContext, CompletionResult } from '@codemirror/autocomplete';
 import { EditorSelection } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
+import type { EditorView } from '@codemirror/view';
 
 import { createEditorHarness } from '../shared/testUtils';
 import { createAlertCompletionSource } from './alertAutocomplete';

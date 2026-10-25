@@ -201,7 +201,7 @@ class AlertTitleWidget extends WidgetType {
         super();
     }
 
-    eq(other: AlertTitleWidget) {
+    override eq(other: AlertTitleWidget) {
         return other.type === this.type && other.text === this.text;
     }
 
@@ -218,7 +218,7 @@ class AlertTitleWidget extends WidgetType {
         return div.innerHTML;
     }
 
-    ignoreEvent() {
+    override ignoreEvent() {
         return false;
     }
 }

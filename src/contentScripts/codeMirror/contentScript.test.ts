@@ -1,4 +1,4 @@
-/** @vitest-environment jsdom */
+// @vitest-environment jsdom
 import { StateEffect, type Extension } from '@codemirror/state';
 
 import type { CodeMirrorControl, ContentScriptContext } from 'api/types';

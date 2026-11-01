@@ -57,7 +57,7 @@ const ALERT_TITLE_LINE_PATTERN = new RegExp(
 /**
  * Matches the leading blockquote prefix of a line, including nested markers.
  *
- * Examples: `> text` -> `> `, `  > > text` -> `  > > `, `>>text` -> `>>`
+ * Examples: `> text` → `> `, `  > > text` → `  > > `, `>>text` → `>>`
  */
 const BLOCKQUOTE_PREFIX_PATTERN = /^\s*(?:>\s*)+/;
 

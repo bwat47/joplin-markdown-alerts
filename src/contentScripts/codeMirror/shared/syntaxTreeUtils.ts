@@ -23,7 +23,7 @@ export function getSyntaxTree(state: EditorState, position: number, timeoutMs = 
 }
 
 /**
- * Returns nearby offsets to probe syntax nodes, including just after a detected line prefix (e.g. "> ") so lookups work when the cursor is on a marker boundary.
+ * Returns nearby offsets to probe syntax nodes, including just after a detected line prefix (e.g. `> `) so lookups work when the cursor is on a marker boundary.
  */
 export function getProbePositions(state: EditorState, position: number, linePrefixPattern?: RegExp): number[] {
     const line = state.doc.lineAt(position);

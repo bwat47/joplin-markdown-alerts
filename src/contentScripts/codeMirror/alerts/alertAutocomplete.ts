@@ -5,7 +5,7 @@ import type { EditorView } from '@codemirror/view';
 import { getMarkdownAlertEditorSettings } from '../pluginSettings';
 import { GITHUB_ALERT_TYPES, type GitHubAlertType } from './alertParsing';
 
-/** Matches alert autocomplete triggers, e.g. ">!no" or "> [!no". */
+/** Matches alert autocomplete triggers, e.g. `>!no` or `> [!no`. */
 const AUTOCOMPLETE_TRIGGER_PATTERN = /^(\s*)(>!|> \[!)([a-zA-Z]*)$/;
 const ALERT_TYPE_SORT_TEXT_WIDTH = String(GITHUB_ALERT_TYPES.length).length;
 

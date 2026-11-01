@@ -139,10 +139,8 @@ function getTextPosition(text: string, offset: number): TextPosition {
         remainingOffset -= lineLength + 1;
     }
 
-    return {
-        lineIndex: lines.length - 1,
-        lineOffset: text.length - text.lastIndexOf('\n') - 1,
-    };
+    // Splitting always yields a line, and the loop returns on the last one.
+    throw new Error('Expected text position mapping to return within the line loop');
 }
 
 function getQuotedContentOffset(lines: string[], position: TextPosition): number {

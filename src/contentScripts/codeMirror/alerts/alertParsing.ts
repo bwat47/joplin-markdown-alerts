@@ -62,6 +62,8 @@ const ALERT_TITLE_LINE_PATTERN = new RegExp(
 export const BLOCKQUOTE_PREFIX_PATTERN = /^\s*(?:>\s*)+/;
 
 const BLOCKQUOTE_MARKER = '>';
+const ALERT_MARKER_OPEN = '[!';
+const ALERT_MARKER_CLOSE = ']';
 
 /**
  * Returns the 0-based offsets of every `>` marker in the line's leading blockquote prefix.
@@ -76,6 +78,16 @@ export function findBlockquoteMarkerOffsets(lineText: string): number[] {
     }
 
     return offsets;
+}
+
+/**
+ * Returns the range of the alert type inside a `[!TYPE]` marker range, e.g. `NOTE` in `[!NOTE]`.
+ */
+export function getAlertTypeRange(markerRange: TextRange): TextRange {
+    return {
+        from: markerRange.from + ALERT_MARKER_OPEN.length,
+        to: markerRange.to - ALERT_MARKER_CLOSE.length,
+    };
 }
 
 export function parseGitHubAlertTitleLine(lineText: string): ParsedGitHubAlertTitleLine | null {

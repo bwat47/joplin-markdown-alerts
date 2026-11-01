@@ -7,6 +7,7 @@ import { logger } from '../../logger';
 import { createAlertCompletionSource } from './alerts/alertAutocomplete';
 import { createAlertAutocompleteThemeExtension } from './alerts/alertAutocompleteTheme';
 import { createAlertDecorationExtensions } from './alerts/alertDecorations';
+import { createAlertTypeTabOutExtension } from './alerts/alertTypeTabOut';
 import { createClearFormattingCommand } from './commands/clearFormattingCommand';
 import { createInsertAlertCommand } from './commands/insertAlertCommand';
 import { createInsertInlineFormatCommand } from './commands/insertInlineFormatCommand';
@@ -31,6 +32,7 @@ async function initializeEditor(editorControl: CodeMirrorControl, context: Conte
     editorControl.addExtension(createAlertDecorationExtensions(isDarkTheme));
     editorControl.addExtension(createAlertAutocompleteThemeExtension(isDarkTheme));
     editorControl.addExtension(editorControl.joplinExtensions.completionSource(createAlertCompletionSource()));
+    editorControl.addExtension(createAlertTypeTabOutExtension());
 
     editorControl.registerCommand(INSERT_ALERT_COMMAND, createInsertAlertCommand(editor));
     editorControl.registerCommand(CLEAR_FORMATTING_COMMAND, createClearFormattingCommand(editor));

@@ -102,6 +102,8 @@ Behavior:
 - With no selection, convert the current paragraph or line into an alert
 - With a selection, convert the selected paragraphs or lines into an alert
 
+When an alert type is selected (e.g. `NOTE` in `> [!NOTE]`), press `Tab` to keep that type and move the cursor to the end of the alert title line.
+
 ### Insert or Toggle blockquote
 
 Default shortcut: `Ctrl + Shift + .`

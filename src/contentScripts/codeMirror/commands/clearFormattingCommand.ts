@@ -128,7 +128,7 @@ function findChildNodes(node: SyntaxNode, name: string): SyntaxNode[] {
 
 function expandRangeRightOverInlineWhitespace(text: string, from: number, to: number): { from: number; to: number } {
     let expandedTo = to;
-    while (expandedTo < text.length && text[expandedTo] !== '\n' && /[ \t]/.test(text[expandedTo])) {
+    while (expandedTo < text.length && text.charAt(expandedTo) !== '\n' && /[ \t]/.test(text.charAt(expandedTo))) {
         expandedTo += 1;
     }
 
@@ -159,9 +159,9 @@ function getFencedCodeContent(text: string, node: SyntaxNode): string {
 
 function getInlineCodeContent(text: string, node: SyntaxNode): string {
     const codeMarks = findChildNodes(node, 'CodeMark');
-    if (codeMarks.length >= 2) {
-        const firstCodeMark = codeMarks[0];
-        const lastCodeMark = codeMarks[codeMarks.length - 1];
+    const firstCodeMark = codeMarks[0];
+    const lastCodeMark = codeMarks[codeMarks.length - 1];
+    if (codeMarks.length >= 2 && firstCodeMark && lastCodeMark) {
         return text.slice(firstCodeMark.to, lastCodeMark.from);
     }
 
@@ -179,11 +179,12 @@ function getDirectUrlDestination(text: string, node: SyntaxNode): string | null 
 
 function getReferenceLabelText(text: string, node: SyntaxNode): string | null {
     const linkMarks = findChildNodes(node, 'LinkMark');
-    if (linkMarks.length < 2) {
+    const [openingMark, closingMark] = linkMarks;
+    if (!openingMark || !closingMark) {
         return null;
     }
 
-    return text.slice(linkMarks[0].to, linkMarks[1].from).trim();
+    return text.slice(openingMark.to, closingMark.from).trim();
 }
 
 function createFootnoteReferenceEdit(text: string, node: SyntaxNode, label: string): FormattingEdit | null {
@@ -191,7 +192,7 @@ function createFootnoteReferenceEdit(text: string, node: SyntaxNode, label: stri
         return null;
     }
 
-    const editFrom = node.from > 0 && /[ \t]/.test(text[node.from - 1]) ? node.from - 1 : node.from;
+    const editFrom = node.from > 0 && /[ \t]/.test(text.charAt(node.from - 1)) ? node.from - 1 : node.from;
     return {
         from: editFrom,
         to: node.to,
@@ -442,7 +443,7 @@ function extractLinkDestination(rawDestination: string): string | null {
 
     let parenthesisDepth = 0;
     for (let index = 0; index < trimmed.length; index += 1) {
-        const char = trimmed[index];
+        const char = trimmed.charAt(index);
 
         if (char === '\\') {
             index += 1;
@@ -509,7 +510,8 @@ function clearStructuralLineFormatting(line: string, store: PlaceholderStore): s
     // alert/reference/footnote lines compatible with the previous command behavior.
     const referenceDefinitionMatch = REFERENCE_LINK_DEFINITION_REGEX.exec(line);
     if (referenceDefinitionMatch) {
-        const destination = extractLinkDestination(referenceDefinitionMatch[1]);
+        // The destination group is required, though its content may be empty.
+        const destination = extractLinkDestination(referenceDefinitionMatch[1]!);
         if (!destination || isResourceLinkTarget(destination)) {
             return line;
         }
@@ -519,8 +521,9 @@ function clearStructuralLineFormatting(line: string, store: PlaceholderStore): s
 
     const footnoteDefinitionMatch = FOOTNOTE_DEFINITION_REGEX.exec(line);
     if (footnoteDefinitionMatch) {
-        const footnoteText = footnoteDefinitionMatch[2].trimStart();
-        return footnoteText.length > 0 ? footnoteText : footnoteDefinitionMatch[1];
+        // Both label and content groups are required by the definition pattern.
+        const footnoteText = footnoteDefinitionMatch[2]!.trimStart();
+        return footnoteText.length > 0 ? footnoteText : footnoteDefinitionMatch[1]!;
     }
 
     const clearedAlertTitleLine = clearAlertTitleLine(line);

@@ -59,7 +59,7 @@ const ALERT_TITLE_LINE_PATTERN = new RegExp(
  *
  * Examples: `> text` → `> `, `  > > text` → `  > > `, `>>text` → `>>`
  */
-const BLOCKQUOTE_PREFIX_PATTERN = /^\s*(?:>\s*)+/;
+export const BLOCKQUOTE_PREFIX_PATTERN = /^\s*(?:>\s*)+/;
 
 const BLOCKQUOTE_MARKER = '>';
 
@@ -83,8 +83,9 @@ export function parseGitHubAlertTitleLine(lineText: string): ParsedGitHubAlertTi
 
     if (!match) return null;
 
-    const prefix = match[1];
-    const typeText = match[2];
+    // A successful match always includes the required prefix and alert-type groups.
+    const prefix = match[1]!;
+    const typeText = match[2]!;
     const type = typeText.toLowerCase() as GitHubAlertType;
 
     const title = match[3]?.trim();

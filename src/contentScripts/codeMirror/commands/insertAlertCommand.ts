@@ -2,7 +2,12 @@ import type { EditorState, SelectionRange } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { SyntaxNode, Tree } from '@lezer/common';
 
-import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine, type TextRange } from '../alerts/alertParsing';
+import {
+    BLOCKQUOTE_PREFIX_PATTERN,
+    GITHUB_ALERT_TYPES,
+    parseGitHubAlertTitleLine,
+    type TextRange,
+} from '../alerts/alertParsing';
 import { changeOverlapsRange } from '../shared/commandRangeUtils';
 import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 import {
@@ -14,7 +19,6 @@ import {
     type ParagraphRange,
 } from '../shared/syntaxTreeUtils';
 
-const BLOCKQUOTE_PREFIX_PATTERN = /^(\s*(?:>\s*)+)/;
 const DEFAULT_ALERT_TYPE = 'NOTE';
 const DEFAULT_ALERT_INSERT_TEXT = `> [!${DEFAULT_ALERT_TYPE}] `;
 const BLOCKQUOTE_LINE_PREFIX = /^>\s?/;
@@ -74,12 +78,17 @@ function getAlertTypeRange(markerRange: TextRange): TextRange {
     };
 }
 
+function getFirstLine(text: string): string {
+    const newlineIndex = text.indexOf('\n');
+    return newlineIndex === -1 ? text : text.slice(0, newlineIndex);
+}
+
 function createAlertLine(prefix: string): string {
     return `${prefix}[!${DEFAULT_ALERT_TYPE}]`;
 }
 
 function createDefaultAlertTypeSelectionAt(basePos: number, text: string): ExplicitCursorSelection | undefined {
-    const firstLine = text.split('\n')[0];
+    const firstLine = getFirstLine(text);
     const alertInfo = parseGitHubAlertTitleLine(firstLine);
     // Only select newly inserted default markers; cycled alerts keep normal cursor mapping.
     if (!alertInfo || alertInfo.type.toUpperCase() !== DEFAULT_ALERT_TYPE) {
@@ -101,7 +110,7 @@ function isBlockquoteLine(line: string): boolean {
 
 function getBlockquotePrefix(line: string): string | null {
     const match = BLOCKQUOTE_PREFIX_PATTERN.exec(line);
-    return match ? match[1] : null;
+    return match ? match[0] : null;
 }
 
 function getToggledAlertLineText(line: string): string | null {
@@ -112,7 +121,8 @@ function getToggledAlertLineText(line: string): string | null {
 
     const currentIndex = GITHUB_ALERT_TYPES.indexOf(alertInfo.type);
     const nextIndex = (currentIndex + 1) % GITHUB_ALERT_TYPES.length;
-    const nextTypeUpper = GITHUB_ALERT_TYPES[nextIndex].toUpperCase();
+    // Modulo the nonempty tuple length guarantees an existing alert type.
+    const nextTypeUpper = GITHUB_ALERT_TYPES[nextIndex]!.toUpperCase();
 
     return line.slice(0, alertInfo.markerRange.from) + `[!${nextTypeUpper}]` + line.slice(alertInfo.markerRange.to);
 }
@@ -121,8 +131,8 @@ function getTextPosition(text: string, offset: number): TextPosition {
     const lines = text.split('\n');
     let remainingOffset = offset;
 
-    for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
-        const lineLength = lines[lineIndex].length;
+    for (const [lineIndex, line] of lines.entries()) {
+        const lineLength = line.length;
         if (remainingOffset <= lineLength || lineIndex === lines.length - 1) {
             return {
                 lineIndex,
@@ -133,17 +143,15 @@ function getTextPosition(text: string, offset: number): TextPosition {
         remainingOffset -= lineLength + 1;
     }
 
-    return {
-        lineIndex: lines.length - 1,
-        lineOffset: lines[lines.length - 1].length,
-    };
+    // Splitting always yields a line, and the loop returns on the last one.
+    throw new Error('Expected text position mapping to return within the line loop');
 }
 
 function getQuotedContentOffset(lines: string[], position: TextPosition): number {
     let offset = createAlertLine('> ').length + 1;
 
-    for (let index = 0; index < position.lineIndex; index += 1) {
-        offset += BLOCKQUOTE_PREFIX_TEXT.length + lines[index].length + 1;
+    for (const line of lines.slice(0, position.lineIndex)) {
+        offset += BLOCKQUOTE_PREFIX_TEXT.length + line.length + 1;
     }
 
     return offset + BLOCKQUOTE_PREFIX_TEXT.length + position.lineOffset;
@@ -165,10 +173,11 @@ function mapPositionThroughAlertTransform(target: AlertTarget, position: number)
         };
     }
 
-    const firstLine = lines[0];
+    // Splitting on '\n' always produces at least one line.
+    const firstLine = lines[0]!;
     const alertInfo = parseGitHubAlertTitleLine(firstLine);
     if (alertInfo) {
-        const updatedFirstLine = target.updatedText.split('\n')[0];
+        const updatedFirstLine = getFirstLine(target.updatedText);
         const updatedAlertInfo = parseGitHubAlertTitleLine(updatedFirstLine);
         if (!updatedAlertInfo) {
             return null;
@@ -210,7 +219,7 @@ function findTargetContainingPosition(targets: AlertTarget[], position: number):
 }
 
 function createAlertTypeSelection(target: AlertTarget, range: SelectionRange): ExplicitCursorSelection | null {
-    const firstLine = target.text.split('\n')[0];
+    const firstLine = getFirstLine(target.text);
     const alertInfo = parseGitHubAlertTitleLine(firstLine);
     if (!alertInfo) {
         return null;
@@ -225,7 +234,7 @@ function createAlertTypeSelection(target: AlertTarget, range: SelectionRange): E
         return null;
     }
 
-    const updatedFirstLine = target.updatedText.split('\n')[0];
+    const updatedFirstLine = getFirstLine(target.updatedText);
     const updatedAlertInfo = parseGitHubAlertTitleLine(updatedFirstLine);
     if (!updatedAlertInfo) {
         return null;
@@ -315,18 +324,17 @@ function createBlockquoteAlertChange(state: EditorState, blockquoteStarts: numbe
         }
     }
 
-    if (blockquoteStarts.length === 0) {
+    const outermostBlockquoteFrom = blockquoteStarts[blockquoteStarts.length - 1];
+    if (outermostBlockquoteFrom === undefined) {
         return null;
     }
-
-    const outermostBlockquoteFrom = blockquoteStarts[blockquoteStarts.length - 1];
     const blockquoteStartLine = state.doc.lineAt(outermostBlockquoteFrom);
     const match = BLOCKQUOTE_PREFIX_PATTERN.exec(blockquoteStartLine.text);
     if (!match) {
         return null;
     }
 
-    const insert = `${createAlertLine(match[1])}\n`;
+    const insert = `${createAlertLine(match[0])}\n`;
     return {
         key: `insert:${blockquoteStartLine.from}`,
         change: {
@@ -402,18 +410,10 @@ export function toggleAlertSelectionText(text: string): string {
         return [createAlertLine('> '), ...quotedLines].join('\n');
     }
 
-    const firstLine = lines[0];
-    const alertInfo = parseGitHubAlertTitleLine(firstLine);
-    if (alertInfo) {
-        const currentIndex = GITHUB_ALERT_TYPES.indexOf(alertInfo.type);
-        const nextIndex = (currentIndex + 1) % GITHUB_ALERT_TYPES.length;
-        const nextTypeUpper = GITHUB_ALERT_TYPES[nextIndex].toUpperCase();
-
-        const updatedFirstLine =
-            firstLine.slice(0, alertInfo.markerRange.from) +
-            `[!${nextTypeUpper}]` +
-            firstLine.slice(alertInfo.markerRange.to);
-
+    // Splitting on '\n' always produces at least one line.
+    const firstLine = lines[0]!;
+    const updatedFirstLine = getToggledAlertLineText(firstLine);
+    if (updatedFirstLine !== null) {
         return [updatedFirstLine, ...lines.slice(1)].join('\n');
     }
 
@@ -443,9 +443,8 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
                 const paragraphRanges = collectParagraphRanges(state, tree, range.from, range.to);
                 const baseFrom = state.doc.lineAt(range.from).from;
                 const baseTo = state.doc.lineAt(range.to).to;
-                const paragraphFrom = paragraphRanges.length > 0 ? paragraphRanges[0].from : baseFrom;
-                const paragraphTo =
-                    paragraphRanges.length > 0 ? paragraphRanges[paragraphRanges.length - 1].to : baseTo;
+                const paragraphFrom = paragraphRanges[0]?.from ?? baseFrom;
+                const paragraphTo = paragraphRanges[paragraphRanges.length - 1]?.to ?? baseTo;
                 const expandedRange = {
                     from: Math.min(baseFrom, paragraphFrom),
                     to: Math.max(baseTo, paragraphTo),

@@ -204,6 +204,7 @@ describe('createAlertCompletionSource — apply', () => {
             const cursorPos = harness.getCursor();
             const result = source(makeContext(harness.view, cursorPos)) as CompletionResult;
             const option = result.options[typeIndex];
+            assert.isDefined(option, 'Expected the requested alert completion to exist');
             const applyFn = option.apply as (
                 view: EditorView,
                 completion: (typeof result.options)[0],
@@ -316,6 +317,7 @@ describe('createAlertCompletionSource — apply', () => {
             const cursorPos = harness.view.state.selection.main.head;
             const result = source(makeContext(harness.view, cursorPos)) as CompletionResult;
             const option = result.options[3]; // warning
+            assert.isDefined(option, 'Expected the requested alert completion to exist');
             const applyFn = option.apply as (
                 view: EditorView,
                 completion: (typeof result.options)[0],
@@ -352,6 +354,7 @@ describe('createAlertCompletionSource — apply', () => {
             const cursorPos = harness.view.state.selection.main.head;
             const result = source(makeContext(harness.view, cursorPos)) as CompletionResult;
             const option = result.options[1]; // tip
+            assert.isDefined(option, 'Expected the requested alert completion to exist');
             const applyFn = option.apply as (
                 view: EditorView,
                 completion: (typeof result.options)[0],

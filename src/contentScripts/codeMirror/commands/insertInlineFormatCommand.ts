@@ -3,6 +3,10 @@ import type { EditorView } from '@codemirror/view';
 import type { SyntaxNode } from '@lezer/common';
 
 import type { InlineFormatDefinition } from '../../../inlineFormatCommands';
+import { parseGitHubAlertTitleLine } from '../alerts/alertParsing';
+import { changeOverlapsRange } from '../shared/commandRangeUtils';
+import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
+import { getProbePositions, getSyntaxTree } from '../shared/syntaxTreeUtils';
 import {
     analyzeSingleLineCursorAction,
     analyzeSingleLineSelectionRemoval,
@@ -12,10 +16,6 @@ import {
     splitStructuralLineParts,
     type SingleLineRelativeAction,
 } from './inlineFormatSingleLineActions';
-import { parseGitHubAlertTitleLine } from '../alerts/alertParsing';
-import { changeOverlapsRange } from '../shared/commandRangeUtils';
-import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
-import { getProbePositions, getSyntaxTree } from '../shared/syntaxTreeUtils';
 
 type TextChange = {
     from: number;

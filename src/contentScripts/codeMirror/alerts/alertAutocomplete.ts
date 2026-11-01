@@ -2,8 +2,8 @@ import type { CompletionContext, CompletionResult, CompletionSource } from '@cod
 import { ChangeSet, EditorSelection, type EditorState, type SelectionRange } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 
-import { GITHUB_ALERT_TYPES, type GitHubAlertType } from './alertParsing';
 import { getMarkdownAlertEditorSettings } from '../pluginSettings';
+import { GITHUB_ALERT_TYPES, type GitHubAlertType } from './alertParsing';
 
 /** Matches alert autocomplete triggers, e.g. ">!no" or "> [!no". */
 const AUTOCOMPLETE_TRIGGER_PATTERN = /^(\s*)(>!|> \[!)([a-zA-Z]*)$/;

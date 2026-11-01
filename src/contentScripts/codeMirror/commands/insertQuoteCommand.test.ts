@@ -1,7 +1,8 @@
 /** @vitest-environment jsdom */
 import { EditorSelection } from '@codemirror/state';
-import { createInsertQuoteCommand, toggleBlockquoteText } from './insertQuoteCommand';
+
 import { createEditorHarness } from '../shared/testUtils';
+import { createInsertQuoteCommand, toggleBlockquoteText } from './insertQuoteCommand';
 
 describe('toggleBlockquoteText', () => {
     test.each([

@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
 import { EditorSelection } from '@codemirror/state';
 
-import { clearMarkdownFormattingSelectionText, createClearFormattingCommand } from './clearFormattingCommand';
 import { createEditorHarness } from '../shared/testUtils';
+import { clearMarkdownFormattingSelectionText, createClearFormattingCommand } from './clearFormattingCommand';
 
 const RESOURCE_ID = ':/5622253ddc404beaa9becd86d48095c5';
 

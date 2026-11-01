@@ -1,6 +1,9 @@
 import { EditorView } from '@codemirror/view';
-import type { CodeMirrorControl, ContentScriptContext, MarkdownEditorContentScriptModule } from 'api/types';
 
+import type { CodeMirrorControl, ContentScriptContext, MarkdownEditorContentScriptModule } from 'api/types';
+import { GET_EDITOR_SETTINGS_MESSAGE } from '../../editorSettingsMessage';
+import { INLINE_FORMAT_DEFINITIONS } from '../../inlineFormatCommands';
+import { logger } from '../../logger';
 import { createAlertCompletionSource } from './alerts/alertAutocomplete';
 import { createAlertAutocompleteThemeExtension } from './alerts/alertAutocompleteTheme';
 import { createAlertDecorationExtensions } from './alerts/alertDecorations';
@@ -9,9 +12,6 @@ import { createInsertAlertCommand } from './commands/insertAlertCommand';
 import { createInsertInlineFormatCommand } from './commands/insertInlineFormatCommand';
 import { createInsertQuoteCommand } from './commands/insertQuoteCommand';
 import { applyMarkdownAlertEditorSettings, createMarkdownAlertEditorSettingsExtension } from './pluginSettings';
-import { GET_EDITOR_SETTINGS_MESSAGE } from '../../editorSettingsMessage';
-import { INLINE_FORMAT_DEFINITIONS } from '../../inlineFormatCommands';
-import { logger } from '../../logger';
 
 const INSERT_ALERT_COMMAND = 'markdownAlerts.insertAlertOrToggle';
 const CLEAR_FORMATTING_COMMAND = 'markdownAlerts.clearFormatting';

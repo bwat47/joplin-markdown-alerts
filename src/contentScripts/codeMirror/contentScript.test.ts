@@ -1,11 +1,11 @@
 /** @vitest-environment jsdom */
 import { StateEffect, type Extension } from '@codemirror/state';
-import type { CodeMirrorControl, ContentScriptContext } from 'api/types';
 
+import type { CodeMirrorControl, ContentScriptContext } from 'api/types';
+import { logger } from '../../logger';
 import createContentScript from './contentScript';
 import { getMarkdownAlertEditorSettings } from './pluginSettings';
 import { createEditorHarness } from './shared/testUtils';
-import { logger } from '../../logger';
 
 function createEditorControl(harness: ReturnType<typeof createEditorHarness>): CodeMirrorControl {
     return {

@@ -3,10 +3,10 @@ import type { CompletionContext, CompletionResult } from '@codemirror/autocomple
 import { EditorSelection } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 
+import { createMarkdownAlertEditorSettingsExtension } from '../pluginSettings';
 import { createEditorHarness } from '../shared/testUtils';
 import { createAlertCompletionSource } from './alertAutocomplete';
 import { GITHUB_ALERT_TYPES } from './alertParsing';
-import { createMarkdownAlertEditorSettingsExtension } from '../pluginSettings';
 
 function makeContext(view: EditorView, pos: number): CompletionContext {
     return {

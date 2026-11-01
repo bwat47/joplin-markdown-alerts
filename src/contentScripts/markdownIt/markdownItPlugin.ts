@@ -1,12 +1,11 @@
 import type MarkdownIt from 'markdown-it';
-import type { MarkdownItContentScriptModule } from 'api/types';
-
 import MarkdownItGitHubAlerts from 'markdown-it-github-alerts';
 
-import { ALERT_NO_BACKGROUND_CLASS, addAlertContainerClass } from './alertContainerClass';
-import { GITHUB_ALERT_TYPES } from '../codeMirror/alerts/alertParsing';
-import { ALERT_ICONS } from '../codeMirror/alerts/alertIcons';
+import type { MarkdownItContentScriptModule } from 'api/types';
 import { SHOW_ALERT_BACKGROUND_SETTING } from '../../settingKeys';
+import { ALERT_ICONS } from '../codeMirror/alerts/alertIcons';
+import { GITHUB_ALERT_TYPES } from '../codeMirror/alerts/alertParsing';
+import { addAlertContainerClass, ALERT_NO_BACKGROUND_CLASS } from './alertContainerClass';
 
 type AssetsItem = { name: string };
 

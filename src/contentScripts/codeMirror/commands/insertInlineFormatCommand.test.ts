@@ -6,8 +6,8 @@ import {
     type InlineFormatId,
     type InlineFormatSyntaxMode,
 } from '../../../inlineFormatCommands';
-import { createInsertInlineFormatCommand } from './insertInlineFormatCommand';
 import { createEditorHarness } from '../shared/testUtils';
+import { createInsertInlineFormatCommand } from './insertInlineFormatCommand';
 
 function getFormat(id: InlineFormatId, syntaxMode?: InlineFormatSyntaxMode) {
     return getInlineFormatDefinition(id, syntaxMode);

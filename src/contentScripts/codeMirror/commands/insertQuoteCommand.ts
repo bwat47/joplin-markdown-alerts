@@ -1,5 +1,6 @@
 import type { EditorState, SelectionRange } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
+
 import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 import {
     collectParagraphRanges,

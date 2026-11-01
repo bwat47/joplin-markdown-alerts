@@ -4,9 +4,9 @@ import { EditorSelection } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 
 import { createAlertCompletionSource } from '../alerts/alertAutocomplete';
-import { createInsertAlertCommand, toggleAlertSelectionText } from './insertAlertCommand';
 import { createMarkdownAlertEditorSettingsExtension } from '../pluginSettings';
 import { createEditorHarness } from '../shared/testUtils';
+import { createInsertAlertCommand, toggleAlertSelectionText } from './insertAlertCommand';
 
 describe('toggleAlertSelectionText', () => {
     test.each([

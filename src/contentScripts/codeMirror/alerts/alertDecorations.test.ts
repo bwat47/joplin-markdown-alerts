@@ -1,13 +1,13 @@
 /** @vitest-environment jsdom */
 import { EditorSelection } from '@codemirror/state';
 
-import { createAlertDecorationExtensions } from './alertDecorations';
 import {
-    type MarkdownAlertEditorSettings,
     applyMarkdownAlertEditorSettings,
     createMarkdownAlertEditorSettingsExtension,
+    type MarkdownAlertEditorSettings,
 } from '../pluginSettings';
 import { createEditorHarness } from '../shared/testUtils';
+import { createAlertDecorationExtensions } from './alertDecorations';
 
 const ALERT_DOC = '> [!NOTE]\n> Body line\n> > Nested line';
 const BODY_LINE_START = ALERT_DOC.indexOf('> Body');

@@ -1,13 +1,12 @@
 import joplin from 'api';
 import { SettingItemType } from 'api/types';
-
+import type { MarkdownAlertEditorSettings } from './contentScripts/codeMirror/pluginSettings';
 import {
     INLINE_FORMAT_COMMANDS,
     INLINE_FORMAT_HTML_SYNTAX,
     INLINE_FORMAT_MARKDOWN_SYNTAX,
     type InlineFormatSyntaxMode,
 } from './inlineFormatCommands';
-import type { MarkdownAlertEditorSettings } from './contentScripts/codeMirror/pluginSettings';
 import { SHOW_ALERT_BACKGROUND_SETTING } from './settingKeys';
 
 const SETTINGS_SECTION = 'markdownAlerts.toolbarButtons';

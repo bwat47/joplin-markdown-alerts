@@ -1,10 +1,9 @@
 import joplin from 'api';
 import { MenuItemLocation, ToastType, ToolbarButtonLocation } from 'api/types';
-
 import {
     getInlineFormatEditorCommandName,
-    isConfigurableInlineFormatId,
     INLINE_FORMAT_COMMANDS,
+    isConfigurableInlineFormatId,
     type InlineFormatCommandDefinition,
 } from './inlineFormatCommands';
 import { logger } from './logger';

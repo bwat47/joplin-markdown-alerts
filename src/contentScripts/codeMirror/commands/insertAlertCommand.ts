@@ -1,5 +1,5 @@
-import type { EditorView } from '@codemirror/view';
 import type { EditorState, SelectionRange } from '@codemirror/state';
+import type { EditorView } from '@codemirror/view';
 import type { SyntaxNode, Tree } from '@lezer/common';
 
 import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine, type TextRange } from '../alerts/alertParsing';

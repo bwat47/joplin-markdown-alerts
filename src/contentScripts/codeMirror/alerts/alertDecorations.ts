@@ -1,16 +1,16 @@
 import type { Extension, Range } from '@codemirror/state';
-import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view';
+import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 
+import { getMarkdownAlertEditorSettings } from '../pluginSettings';
+import { getSyntaxTree } from '../shared/syntaxTreeUtils';
 import { ALERT_COLORS } from './alertColors';
 import { ALERT_ICONS } from './alertIcons';
 import {
-    GITHUB_ALERT_TYPES,
-    type GitHubAlertType,
     findBlockquoteMarkerOffsets,
+    GITHUB_ALERT_TYPES,
     parseGitHubAlertTitleLine,
+    type GitHubAlertType,
 } from './alertParsing';
-import { getMarkdownAlertEditorSettings } from '../pluginSettings';
-import { getSyntaxTree } from '../shared/syntaxTreeUtils';
 
 const BLOCKQUOTE_LINE_PATTERN = /^\s*>/;
 

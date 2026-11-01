@@ -1,9 +1,8 @@
 import joplin from 'api';
 import { ContentScriptType } from 'api/types';
-
-import { logger } from './logger';
-import { registerAllCommands } from './joplinCommandRegistration';
 import { GET_EDITOR_SETTINGS_MESSAGE } from './editorSettingsMessage';
+import { registerAllCommands } from './joplinCommandRegistration';
+import { logger } from './logger';
 import { getMarkdownAlertEditorSettingValues, registerPluginSettings } from './settings';
 
 void joplin.plugins.register({

@@ -1,7 +1,7 @@
 import MarkdownIt from 'markdown-it';
 
-import markdownItPlugin from './markdownItPlugin';
 import { SHOW_ALERT_BACKGROUND_SETTING } from '../../settingKeys';
+import markdownItPlugin from './markdownItPlugin';
 
 const ALERT_MARKDOWN = '> [!NOTE]\n> Body';
 

@@ -169,7 +169,8 @@ function mapPositionThroughAlertTransform(target: AlertTarget, position: number)
         };
     }
 
-    const firstLine = getFirstLine(target.text);
+    // Splitting on '\n' always produces at least one line.
+    const firstLine = lines[0]!;
     const alertInfo = parseGitHubAlertTitleLine(firstLine);
     if (alertInfo) {
         const updatedFirstLine = getFirstLine(target.updatedText);
@@ -405,7 +406,8 @@ export function toggleAlertSelectionText(text: string): string {
         return [createAlertLine('> '), ...quotedLines].join('\n');
     }
 
-    const firstLine = getFirstLine(text);
+    // Splitting on '\n' always produces at least one line.
+    const firstLine = lines[0]!;
     const updatedFirstLine = getToggledAlertLineText(firstLine);
     if (updatedFirstLine !== null) {
         return [updatedFirstLine, ...lines.slice(1)].join('\n');

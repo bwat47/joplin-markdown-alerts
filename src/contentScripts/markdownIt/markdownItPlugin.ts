@@ -35,7 +35,7 @@ export default function (): MarkdownItContentScriptModule {
     return {
         plugin: function (md: MarkdownIt, pluginOptions: unknown) {
             md.use(MarkdownItGitHubAlerts, {
-                ...((pluginOptions as Record<string, unknown>) ?? {}),
+                ...(pluginOptions as Record<string, unknown> | undefined),
                 markers: GITHUB_ALERT_TYPES,
                 icons: ALERT_ICONS,
             });
@@ -46,7 +46,7 @@ export default function (): MarkdownItContentScriptModule {
             let rootElement = document.documentElement;
             try {
                 const topWindow = window.top;
-                if (topWindow?.document?.documentElement) {
+                if (topWindow) {
                     rootElement = topWindow.document.documentElement;
                 }
             } catch {

@@ -25,7 +25,7 @@ void joplin.plugins.register({
         );
 
         await joplin.contentScripts.onMessage('markdownAlerts.codeMirror', async (message: unknown) => {
-            if ((message as { type?: string })?.type === GET_EDITOR_SETTINGS_MESSAGE) {
+            if ((message as { type?: string } | null | undefined)?.type === GET_EDITOR_SETTINGS_MESSAGE) {
                 return await getMarkdownAlertEditorSettingValues();
             }
             return null;

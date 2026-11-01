@@ -76,7 +76,7 @@ function mapPositionThroughQuoteTransform(
     const targetLineIndex = targetLine.number - startLineNo;
 
     const targetLineText = lines[targetLineIndex];
-    if (targetLineText === undefined) {
+    if (targetLineIndex < 0 || targetLineText === undefined) {
         return null;
     }
 

@@ -55,6 +55,7 @@ export default defineConfig([
             '@typescript-eslint/no-import-type-side-effects': 'error',
             '@typescript-eslint/no-inferrable-types': 'error',
             '@typescript-eslint/explicit-module-boundary-types': 'error',
+            eqeqeq: ['error', 'always', { null: 'ignore' }],
         },
     },
 

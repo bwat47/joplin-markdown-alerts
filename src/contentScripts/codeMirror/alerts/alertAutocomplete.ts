@@ -58,8 +58,9 @@ function matchAlertAutocompleteTrigger(state: EditorState, pos: number): AlertAu
 
     if (!match) return null;
 
-    const triggerFrom = line.from + match[1].length;
-    const typeFrom = triggerFrom + match[2].length;
+    // Both prefix and trigger groups participate in every successful match.
+    const triggerFrom = line.from + match[1]!.length;
+    const typeFrom = triggerFrom + match[2]!.length;
     return { triggerFrom, typeFrom };
 }
 

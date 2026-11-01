@@ -83,8 +83,9 @@ export function parseGitHubAlertTitleLine(lineText: string): ParsedGitHubAlertTi
 
     if (!match) return null;
 
-    const prefix = match[1];
-    const typeText = match[2];
+    // A successful match always includes the required prefix and alert-type groups.
+    const prefix = match[1]!;
+    const typeText = match[2]!;
     const type = typeText.toLowerCase() as GitHubAlertType;
 
     const title = match[3]?.trim();

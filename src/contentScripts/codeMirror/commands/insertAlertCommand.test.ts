@@ -116,6 +116,21 @@ describe('createInsertAlertCommand', () => {
             input: '|\n',
             expectedText: '> [!NOTE] \n',
         },
+        {
+            name: 'selects alert type after converting a selected paragraph',
+            input: 'Some [[selected]] text',
+            expectedText: ['> [!NOTE]', '> Some selected text'].join('\n'),
+        },
+        {
+            name: 'selects alert type after converting a selected list',
+            input: ['[[- Item one', '- Item two]]'].join('\n'),
+            expectedText: ['> [!NOTE]', '> - Item one', '> - Item two'].join('\n'),
+        },
+        {
+            name: 'selects alert type after converting a selected blockquote',
+            input: ['> [[Line one', '> Line two]]'].join('\n'),
+            expectedText: ['> [!NOTE]', '> Line one', '> Line two'].join('\n'),
+        },
     ])('$name', ({ input, expectedText }) => {
         const result = runCommandWithSelection(input);
 
@@ -194,7 +209,7 @@ describe('createInsertAlertCommand', () => {
         }
     });
 
-    test('keeps the blank-line cursor when it appears before a text selection', () => {
+    test('selects each alert type when a blank-line cursor appears before a text selection', () => {
         const harness = createEditorHarness(['', '', 'Selected line'].join('\n'));
 
         try {
@@ -212,14 +227,12 @@ describe('createInsertAlertCommand', () => {
             command();
 
             expect(harness.getText()).toBe(['> [!NOTE] ', '', '> [!NOTE]', '> Selected line'].join('\n'));
-            const selections = harness.view.state.selection.ranges;
-            expect(selections.map((range) => ({ anchor: range.anchor, head: range.head }))).toEqual([
+            expect(
+                harness.view.state.selection.ranges.map((range) => ({ anchor: range.anchor, head: range.head }))
+            ).toEqual([
                 { anchor: 4, head: 8 },
-                { anchor: 24, head: 37 },
+                { anchor: 16, head: 20 },
             ]);
-            const selectedRange = selections[1];
-            assert.isDefined(selectedRange, 'Expected the second selection to remain present');
-            expect(harness.view.state.doc.sliceString(selectedRange.anchor, selectedRange.head)).toBe('Selected line');
         } finally {
             harness.destroy();
         }

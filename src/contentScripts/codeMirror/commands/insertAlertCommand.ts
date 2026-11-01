@@ -22,7 +22,6 @@ import {
 const DEFAULT_ALERT_TYPE = 'NOTE';
 const DEFAULT_ALERT_INSERT_TEXT = `> [!${DEFAULT_ALERT_TYPE}] `;
 const BLOCKQUOTE_LINE_PREFIX = /^>\s?/;
-const BLOCKQUOTE_PREFIX_TEXT = '> ';
 
 type TextChange = {
     from: number;
@@ -34,11 +33,6 @@ type AlertTarget = {
     range: ParagraphRange;
     text: string;
     updatedText: string;
-};
-
-type TextPosition = {
-    lineIndex: number;
-    lineOffset: number;
 };
 
 type MappedAlertPosition = {
@@ -127,90 +121,51 @@ function getToggledAlertLineText(line: string): string | null {
     return line.slice(0, alertInfo.markerRange.from) + `[!${nextTypeUpper}]` + line.slice(alertInfo.markerRange.to);
 }
 
-function getTextPosition(text: string, offset: number): TextPosition {
+/**
+ * Whether `toggleAlertSelectionText` cycles an existing alert (fully quoted text whose
+ * first line is an alert title) rather than creating a new one.
+ */
+function isCycledAlertText(text: string): boolean {
     const lines = text.split('\n');
-    let remainingOffset = offset;
-
-    for (const [lineIndex, line] of lines.entries()) {
-        const lineLength = line.length;
-        if (remainingOffset <= lineLength || lineIndex === lines.length - 1) {
-            return {
-                lineIndex,
-                lineOffset: Math.min(remainingOffset, lineLength),
-            };
-        }
-
-        remainingOffset -= lineLength + 1;
-    }
-
-    // Splitting always yields a line, and the loop returns on the last one.
-    throw new Error('Expected text position mapping to return within the line loop');
+    return lines.every((line) => isBlockquoteLine(line)) && parseGitHubAlertTitleLine(getFirstLine(text)) !== null;
 }
 
-function getQuotedContentOffset(lines: string[], position: TextPosition): number {
-    let offset = createAlertLine('> ').length + 1;
-
-    for (const line of lines.slice(0, position.lineIndex)) {
-        offset += BLOCKQUOTE_PREFIX_TEXT.length + line.length + 1;
-    }
-
-    return offset + BLOCKQUOTE_PREFIX_TEXT.length + position.lineOffset;
-}
-
-function mapPositionThroughAlertTransform(target: AlertTarget, position: number): MappedAlertPosition | null {
+/**
+ * Maps a position inside a cycled alert target to its position after the marker is replaced.
+ */
+function mapPositionThroughAlertCycle(target: AlertTarget, position: number): MappedAlertPosition | null {
     if (position < target.range.from || position > target.range.to) {
         return null;
     }
 
     const relativePosition = position - target.range.from;
-    const lines = target.text.split('\n');
-    const allQuoted = lines.every((line) => isBlockquoteLine(line));
-
-    if (!allQuoted) {
-        return {
-            basePos: target.range.from,
-            offset: getQuotedContentOffset(lines, getTextPosition(target.text, relativePosition)),
-        };
+    const alertInfo = parseGitHubAlertTitleLine(getFirstLine(target.text));
+    const updatedAlertInfo = parseGitHubAlertTitleLine(getFirstLine(target.updatedText));
+    if (!alertInfo || !updatedAlertInfo) {
+        return null;
     }
 
-    // Splitting on '\n' always produces at least one line.
-    const firstLine = lines[0]!;
-    const alertInfo = parseGitHubAlertTitleLine(firstLine);
-    if (alertInfo) {
-        const updatedFirstLine = getFirstLine(target.updatedText);
-        const updatedAlertInfo = parseGitHubAlertTitleLine(updatedFirstLine);
-        if (!updatedAlertInfo) {
-            return null;
-        }
+    const markerDelta =
+        updatedAlertInfo.markerRange.to -
+        updatedAlertInfo.markerRange.from -
+        (alertInfo.markerRange.to - alertInfo.markerRange.from);
 
-        const markerDelta =
-            updatedAlertInfo.markerRange.to -
-            updatedAlertInfo.markerRange.from -
-            (alertInfo.markerRange.to - alertInfo.markerRange.from);
-
-        if (relativePosition <= alertInfo.markerRange.from) {
-            return { basePos: target.range.from, offset: relativePosition };
-        }
-
-        if (relativePosition >= alertInfo.markerRange.to) {
-            return { basePos: target.range.from, offset: relativePosition + markerDelta };
-        }
-
-        return {
-            basePos: target.range.from,
-            offset:
-                updatedAlertInfo.markerRange.from +
-                Math.min(
-                    relativePosition - alertInfo.markerRange.from,
-                    updatedAlertInfo.markerRange.to - updatedAlertInfo.markerRange.from
-                ),
-        };
+    if (relativePosition <= alertInfo.markerRange.from) {
+        return { basePos: target.range.from, offset: relativePosition };
     }
 
-    const prefix = getBlockquotePrefix(firstLine) ?? BLOCKQUOTE_PREFIX_TEXT;
+    if (relativePosition >= alertInfo.markerRange.to) {
+        return { basePos: target.range.from, offset: relativePosition + markerDelta };
+    }
+
     return {
         basePos: target.range.from,
-        offset: createAlertLine(prefix).length + 1 + relativePosition,
+        offset:
+            updatedAlertInfo.markerRange.from +
+            Math.min(
+                relativePosition - alertInfo.markerRange.from,
+                updatedAlertInfo.markerRange.to - updatedAlertInfo.markerRange.from
+            ),
     };
 }
 
@@ -258,13 +213,18 @@ function createExplicitAlertSelection(targets: AlertTarget[], range: SelectionRa
         return null;
     }
 
+    // Newly created alerts select the inserted type, matching the cursor path.
+    if (!isCycledAlertText(anchorTarget.text)) {
+        return createDefaultAlertTypeSelectionAt(anchorTarget.range.from, anchorTarget.updatedText) ?? null;
+    }
+
     const alertTypeSelection = createAlertTypeSelection(anchorTarget, range);
     if (alertTypeSelection) {
         return alertTypeSelection;
     }
 
-    const mappedAnchor = mapPositionThroughAlertTransform(anchorTarget, range.anchor);
-    const mappedHead = mapPositionThroughAlertTransform(headTarget, range.head);
+    const mappedAnchor = mapPositionThroughAlertCycle(anchorTarget, range.anchor);
+    const mappedHead = mapPositionThroughAlertCycle(headTarget, range.head);
     if (!mappedAnchor || !mappedHead) {
         return null;
     }
@@ -423,7 +383,7 @@ export function toggleAlertSelectionText(text: string): string {
 
 /**
  * Creates a command that inserts or cycles a GitHub alert.
- * - Selections: expand each selection to paragraph boundaries (and the start of any enclosing blockquote), dedupe ranges, and apply `toggleAlertSelectionText` to each.
+ * - Selections: expand each selection to paragraph boundaries (and the start of any enclosing blockquote), dedupe ranges, and apply `toggleAlertSelectionText` to each. Newly created alerts select `NOTE`; cycled alerts keep the mapped selection.
  * - Cursor on empty line: insert `> [!NOTE] ` and select `NOTE`.
  * - Cursor on an alert title line: cycle the alert marker on that line.
  * - Cursor inside a regular blockquote: insert an alert title line above the blockquote, respecting its nesting prefix.

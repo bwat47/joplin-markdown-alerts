@@ -1,17 +1,31 @@
 import { completionStatus } from '@codemirror/autocomplete';
-import { EditorSelection, Prec, type EditorState, type Extension } from '@codemirror/state';
+import {
+    EditorSelection,
+    Prec,
+    type ChangeSpec,
+    type EditorState,
+    type Extension,
+    type TransactionSpec,
+} from '@codemirror/state';
 import { keymap, type Command } from '@codemirror/view';
 
 import { getAlertTypeRange, parseGitHubAlertTitleLine } from './alertParsing';
 
 const TAB_KEY = 'Tab';
+// Matches the trailing space the alert autocomplete inserts after `[!TYPE]`.
+const MARKER_TRAILING_SPACE = ' ';
 
 /**
- * Returns cursors at the end of each alert title line when every selection range is exactly
- * the alert type of a title line (e.g. `NOTE` in `> [!NOTE] Title`), otherwise `null`.
+ * Builds the Tab-out transaction when every selection range is exactly the alert type of a
+ * title line (e.g. `NOTE` in `> [!NOTE] Title`), otherwise returns `null`.
+ *
+ * Each cursor moves to the end of its title line. A line that ends right at the marker
+ * (`> [!NOTE]`) gets a trailing space first, so the cursor lands one space after the marker,
+ * matching where autocomplete leaves it.
  */
-function getAlertTypeTabOutSelection(state: EditorState): EditorSelection | null {
-    const cursors = [];
+function getAlertTypeTabOutSpec(state: EditorState): TransactionSpec | null {
+    const changes: ChangeSpec[] = [];
+    const cursorPositions: number[] = [];
 
     for (const range of state.selection.ranges) {
         if (range.empty) {
@@ -29,10 +43,22 @@ function getAlertTypeTabOutSelection(state: EditorState): EditorSelection | null
             return null;
         }
 
-        cursors.push(EditorSelection.cursor(line.to));
+        if (alertInfo.markerRange.to === line.length) {
+            changes.push({ from: line.to, insert: MARKER_TRAILING_SPACE });
+        }
+        cursorPositions.push(line.to);
     }
 
-    return EditorSelection.create(cursors, state.selection.mainIndex);
+    const changeSet = state.changes(changes);
+    // Map with assoc 1 so a cursor at an inserted space lands after it.
+    const cursors = cursorPositions.map((pos) => EditorSelection.cursor(changeSet.mapPos(pos, 1)));
+
+    return {
+        changes: changeSet,
+        selection: EditorSelection.create(cursors, state.selection.mainIndex),
+        scrollIntoView: true,
+        userEvent: changes.length > 0 ? 'input' : 'select',
+    };
 }
 
 /**
@@ -44,12 +70,12 @@ export const tabOutOfAlertType: Command = (view) => {
         return false;
     }
 
-    const selection = getAlertTypeTabOutSelection(view.state);
-    if (!selection) {
+    const spec = getAlertTypeTabOutSpec(view.state);
+    if (!spec) {
         return false;
     }
 
-    view.dispatch({ selection, scrollIntoView: true, userEvent: 'select' });
+    view.dispatch(spec);
     return true;
 };
 

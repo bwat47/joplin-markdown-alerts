@@ -13,25 +13,35 @@ function getSelections(harness: ReturnType<typeof createEditorHarness>): Array<{
 describe('tabOutOfAlertType', () => {
     test.each([
         {
-            name: 'moves past the selected type to the end of an empty alert line',
+            name: 'moves past the trailing space of an alert line without a title',
             input: '> [![[NOTE]]] ',
+            expectedText: '> [!NOTE] ',
+            expectedCursor: '> [!NOTE] '.length,
+        },
+        {
+            name: 'adds a trailing space when the line ends at the marker',
+            input: ['> [![[NOTE]]]', '> Body'].join('\n'),
+            expectedText: ['> [!NOTE] ', '> Body'].join('\n'),
             expectedCursor: '> [!NOTE] '.length,
         },
         {
             name: 'moves to the end of the title line when the alert has a title',
             input: ['> [![[warning]]] Custom title', '> Body'].join('\n'),
+            expectedText: ['> [!warning] Custom title', '> Body'].join('\n'),
             expectedCursor: '> [!warning] Custom title'.length,
         },
         {
-            name: 'moves to the end of a nested alert title line',
+            name: 'adds a trailing space to a nested alert title line',
             input: ['> > [![[TIP]]]', '> > Body'].join('\n'),
-            expectedCursor: '> > [!TIP]'.length,
+            expectedText: ['> > [!TIP] ', '> > Body'].join('\n'),
+            expectedCursor: '> > [!TIP] '.length,
         },
-    ])('$name', ({ input, expectedCursor }) => {
+    ])('$name', ({ input, expectedText, expectedCursor }) => {
         const harness = createEditorHarness(input);
 
         try {
             expect(tabOutOfAlertType(harness.view)).toBe(true);
+            expect(harness.getText()).toBe(expectedText);
             expect(getSelections(harness)).toEqual([{ anchor: expectedCursor, head: expectedCursor }]);
         } finally {
             harness.destroy();
@@ -57,14 +67,15 @@ describe('tabOutOfAlertType', () => {
     });
 
     test('moves every cursor when each selection is an alert type', () => {
-        const harness = createEditorHarness(['> [!NOTE] ', '', '> [!TIP] Title'].join('\n'));
+        const harness = createEditorHarness(['> [!NOTE]', '', '> [!TIP] Title'].join('\n'));
 
         try {
             harness.view.dispatch({
-                selection: EditorSelection.create([EditorSelection.range(4, 8), EditorSelection.range(16, 19)]),
+                selection: EditorSelection.create([EditorSelection.range(4, 8), EditorSelection.range(15, 18)]),
             });
 
             expect(tabOutOfAlertType(harness.view)).toBe(true);
+            expect(harness.getText()).toBe(['> [!NOTE] ', '', '> [!TIP] Title'].join('\n'));
             expect(getSelections(harness)).toEqual([
                 { anchor: 10, head: 10 },
                 { anchor: 26, head: 26 },
@@ -88,15 +99,22 @@ describe('tabOutOfAlertType', () => {
         }
     });
 
-    test('moves past the type selected by the insert alert command', () => {
-        const harness = createEditorHarness('Some [[selected]] text');
+    test.each([
+        { name: 'a cursor on a blank line', input: '|\n', expectedText: '> [!NOTE] \n' },
+        {
+            name: 'a text selection',
+            input: 'Some [[selected]] text',
+            expectedText: ['> [!NOTE] ', '> Some selected text'].join('\n'),
+        },
+    ])('lands one space after the marker for an alert created from $name', ({ input, expectedText }) => {
+        const harness = createEditorHarness(input);
 
         try {
             createInsertAlertCommand(harness.view)();
 
             expect(tabOutOfAlertType(harness.view)).toBe(true);
-            expect(harness.getText()).toBe(['> [!NOTE]', '> Some selected text'].join('\n'));
-            expect(harness.getCursor()).toBe('> [!NOTE]'.length);
+            expect(harness.getText()).toBe(expectedText);
+            expect(harness.getCursor()).toBe('> [!NOTE] '.length);
         } finally {
             harness.destroy();
         }

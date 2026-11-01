@@ -217,7 +217,9 @@ describe('createInsertAlertCommand', () => {
                 { anchor: 4, head: 8 },
                 { anchor: 24, head: 37 },
             ]);
-            expect(harness.view.state.doc.sliceString(selections[1].anchor, selections[1].head)).toBe('Selected line');
+            const selectedRange = selections[1];
+            assert.isDefined(selectedRange, 'Expected the second selection to remain present');
+            expect(harness.view.state.doc.sliceString(selectedRange.anchor, selectedRange.head)).toBe('Selected line');
         } finally {
             harness.destroy();
         }

@@ -42,7 +42,7 @@ function matchPrefixLength(text: string, prefixRegex: RegExp): number {
 function leadingHorizontalWhitespaceLength(text: string): number {
     let length = 0;
 
-    while (length < text.length && HORIZONTAL_WHITESPACE_CHARACTERS.has(text[length])) {
+    while (length < text.length && HORIZONTAL_WHITESPACE_CHARACTERS.has(text.charAt(length))) {
         length += 1;
     }
 
@@ -53,7 +53,7 @@ function leadingHorizontalWhitespaceLength(text: string): number {
 function trailingHorizontalWhitespaceLength(text: string): number {
     let length = 0;
 
-    while (length < text.length && HORIZONTAL_WHITESPACE_CHARACTERS.has(text[text.length - 1 - length])) {
+    while (length < text.length && HORIZONTAL_WHITESPACE_CHARACTERS.has(text.charAt(text.length - 1 - length))) {
         length += 1;
     }
 
@@ -325,12 +325,11 @@ export function analyzeSingleLineSelectionRemoval(
         return selectionOverlapsSegment;
     });
 
-    if (overlappingSegments.length === 0) {
-        return null;
-    }
-
     const firstSegment = overlappingSegments[0];
     const lastSegment = overlappingSegments[overlappingSegments.length - 1];
+    if (!firstSegment || !lastSegment) {
+        return null;
+    }
     const replaceFrom = firstSegment.from;
     const replaceTo = lastSegment.to;
 

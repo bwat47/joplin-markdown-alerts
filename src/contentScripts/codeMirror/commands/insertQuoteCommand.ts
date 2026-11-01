@@ -75,19 +75,19 @@ function mapPositionThroughQuoteTransform(
     const startLineNo = state.doc.lineAt(target.range.from).number;
     const targetLineIndex = targetLine.number - startLineNo;
 
-    if (targetLineIndex < 0 || targetLineIndex >= lines.length) {
+    const targetLineText = lines[targetLineIndex];
+    if (targetLineText === undefined) {
         return null;
     }
 
     let transformedOffset = 0;
-    for (let index = 0; index < targetLineIndex; index += 1) {
-        transformedOffset += transformQuoteLine(lines[index], removeQuotePrefix).length + 1;
+    for (const line of lines.slice(0, targetLineIndex)) {
+        transformedOffset += transformQuoteLine(line, removeQuotePrefix).length + 1;
     }
 
     // The transform only edits the start of a line, so the position keeps its
     // offset from the line end; clamp to line start for positions inside a
     // removed prefix.
-    const targetLineText = lines[targetLineIndex];
     const lineDelta = transformQuoteLine(targetLineText, removeQuotePrefix).length - targetLineText.length;
     transformedOffset += Math.max(0, lineOffset + lineDelta);
 

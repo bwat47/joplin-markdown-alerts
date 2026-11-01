@@ -4,6 +4,7 @@ import type { SyntaxNode, Tree } from '@lezer/common';
 
 import {
     BLOCKQUOTE_PREFIX_PATTERN,
+    getAlertTypeRange,
     GITHUB_ALERT_TYPES,
     parseGitHubAlertTitleLine,
     type TextRange,
@@ -63,13 +64,6 @@ function addCursorAlertChange(
     if (cursorChange.explicitSelection) {
         explicitSelectionsByIndex.set(selectionIndex, cursorChange.explicitSelection);
     }
-}
-
-function getAlertTypeRange(markerRange: TextRange): TextRange {
-    return {
-        from: markerRange.from + 2,
-        to: markerRange.to - 1,
-    };
 }
 
 function getFirstLine(text: string): string {

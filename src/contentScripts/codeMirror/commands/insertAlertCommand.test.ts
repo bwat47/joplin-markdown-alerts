@@ -306,6 +306,27 @@ describe('createInsertAlertCommand', () => {
         }
     });
 
+    test('cycles the alert type when running the command again on a selected list', () => {
+        const harness = createEditorHarness(['[[- Item one', '- Item two', '- Item three]]'].join('\n'));
+
+        try {
+            const command = createInsertAlertCommand(harness.view);
+            command();
+            command();
+
+            expect(harness.getText()).toBe(['> [!TIP]', '> - Item one', '> - Item two', '> - Item three'].join('\n'));
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('cycles the alert above a list when only the list items are selected', () => {
+        const input = ['> [!NOTE]', '> [[- Item one', '> - Item two]]'].join('\n');
+        const expected = ['> [!TIP]', '> - Item one', '> - Item two'].join('\n');
+
+        expect(runCommand(input)).toBe(expected);
+    });
+
     test('selects the next alert type when cycling a selected alert type', () => {
         const harness = createEditorHarness('> [![[NOTE]]] ');
 

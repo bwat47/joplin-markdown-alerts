@@ -423,7 +423,7 @@ export function toggleAlertSelectionText(text: string): string {
 
 /**
  * Creates a command that inserts or cycles a GitHub alert.
- * - Selections: expand each selection to paragraph boundaries, dedupe ranges, and apply `toggleAlertSelectionText` to each.
+ * - Selections: expand each selection to paragraph boundaries (and the start of any enclosing blockquote), dedupe ranges, and apply `toggleAlertSelectionText` to each.
  * - Cursor on empty line: insert `> [!NOTE] ` and select `NOTE`.
  * - Cursor on an alert title line: cycle the alert marker on that line.
  * - Cursor inside a regular blockquote: insert an alert title line above the blockquote, respecting its nesting prefix.
@@ -445,8 +445,13 @@ export function createInsertAlertCommand(view: EditorView): () => boolean {
                 const baseTo = state.doc.lineAt(range.to).to;
                 const paragraphFrom = paragraphRanges[0]?.from ?? baseFrom;
                 const paragraphTo = paragraphRanges[paragraphRanges.length - 1]?.to ?? baseTo;
+                // Widen to the enclosing blockquote start so an alert title line that is its own
+                // paragraph (e.g. followed by a list) is included and cycled instead of duplicated.
+                const blockquoteLineStarts = collectEnclosingBlockquoteStarts(state, tree, range.from).map(
+                    (start) => state.doc.lineAt(start).from
+                );
                 const expandedRange = {
-                    from: Math.min(baseFrom, paragraphFrom),
+                    from: Math.min(baseFrom, paragraphFrom, ...blockquoteLineStarts),
                     to: Math.max(baseTo, paragraphTo),
                 };
                 expandedRanges.push(expandedRange);

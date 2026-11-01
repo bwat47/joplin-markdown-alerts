@@ -2,7 +2,12 @@ import type { EditorState, SelectionRange } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { SyntaxNode, Tree } from '@lezer/common';
 
-import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine, type TextRange } from '../alerts/alertParsing';
+import {
+    BLOCKQUOTE_PREFIX_PATTERN,
+    GITHUB_ALERT_TYPES,
+    parseGitHubAlertTitleLine,
+    type TextRange,
+} from '../alerts/alertParsing';
 import { changeOverlapsRange } from '../shared/commandRangeUtils';
 import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 import {
@@ -14,7 +19,6 @@ import {
     type ParagraphRange,
 } from '../shared/syntaxTreeUtils';
 
-const BLOCKQUOTE_PREFIX_PATTERN = /^\s*(?:>\s*)+/;
 const DEFAULT_ALERT_TYPE = 'NOTE';
 const DEFAULT_ALERT_INSERT_TEXT = `> [!${DEFAULT_ALERT_TYPE}] `;
 const BLOCKQUOTE_LINE_PREFIX = /^>\s?/;

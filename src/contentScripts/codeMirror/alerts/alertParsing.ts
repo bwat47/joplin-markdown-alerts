@@ -59,7 +59,7 @@ const ALERT_TITLE_LINE_PATTERN = new RegExp(
  *
  * Examples: `> text` → `> `, `  > > text` → `  > > `, `>>text` → `>>`
  */
-const BLOCKQUOTE_PREFIX_PATTERN = /^\s*(?:>\s*)+/;
+export const BLOCKQUOTE_PREFIX_PATTERN = /^\s*(?:>\s*)+/;
 
 const BLOCKQUOTE_MARKER = '>';
 

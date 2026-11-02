@@ -46,6 +46,12 @@ Architecture overview: docs/Architecture/Overview.md
 - **Constants and configuration**: No magic literals — extract to constants, enums, config objects, or dedicated types.
 - **Structure and Testability**: Keep non-trivial pure logic in small, focused units that can be tested independently. Avoid global state and hidden side effects; prefer explicit dependencies where practical. Helpers that do not depend on an enclosing function's state should generally live at module scope; keep a helper local when it intentionally captures or operates on that function's state.
 
+## Line endings
+
+- All text files use LF. If you must fall back to a Python script for file editing, write LF explicitly
+  (Python: `open(path, 'w', newline='\n')` or `write_text(..., newline='\n')`).
+- Don't manually repair incidental CRLF changes. Git normalizes text to LF when staging; Prettier also normalizes files when formatting.
+
 ## Tests
 
 - Focus on Behavior, not Implementation details.
@@ -58,8 +64,4 @@ Architecture overview: docs/Architecture/Overview.md
 
 - Use conventional commit format for commit messages. Only use "fix" for bugfixes.
 - Never run git commit proactively; always wait for explicit user consent.
-
-## Codex working instructions
-
-- GitHub credentials are stored in the OS keyring.
-- If `gh auth status` fails inside the sandbox, retry it with escalated permissions before asking me to authenticate.
+- GitHub credentials are stored in the OS keyring. If `gh auth status` fails inside the sandbox, retry it with escalated permissions before asking me to authenticate.

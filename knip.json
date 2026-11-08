@@ -1,18 +1,15 @@
 {
     "$schema": "https://unpkg.com/knip@6/schema.json",
     "entry": [
-        "webpack.config.js",
         "src/index.ts",
         "src/contentScripts/codeMirror/contentScript.ts",
         "src/contentScripts/markdownIt/markdownItPlugin.ts",
-        "src/**/*.test.ts"
+        "src/**/*.test.ts",
+        "test/*.test.mjs"
     ],
-    "project": ["src/**/*.ts"],
-    "ignoreBinaries": ["yo"],
-    "ignoreDependencies": ["ts-loader"],
+    "project": ["src/**/*.ts", "test/*.mjs"],
     "ignoreIssues": {
         "api/**": ["unlisted", "unresolved"]
     },
-    "tags": ["-lintignore"],
-    "webpack": false
+    "tags": ["-lintignore"]
 }

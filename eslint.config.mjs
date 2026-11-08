@@ -13,11 +13,17 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig([
     {
-        ignores: ['api/**', 'dist/**', 'webpack.config.js', '.prettierrc.js'],
+        ignores: ['api/**', 'dist/**', '.api-staging-*/**', '.prettierrc.js'],
     },
 
     js.configs.recommended,
     sonarjs.configs.recommended,
+
+    // Bundle tests run under node:test.
+    {
+        files: ['test/*.mjs'],
+        languageOptions: { globals: globals.node },
+    },
 
     // Project TS/JS sources
     {

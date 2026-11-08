@@ -14,3 +14,4 @@ prompts/
 .claude/settings.local.json
 .fallowrc.json
 coverage
+.api-staging-*/

@@ -3,7 +3,6 @@
         "outDir": "./dist/",
         "module": "ESNext",
         "target": "es2020",
-        "jsx": "react",
         "allowJs": true,
         "esModuleInterop": true,
         "forceConsistentCasingInFileNames": true,

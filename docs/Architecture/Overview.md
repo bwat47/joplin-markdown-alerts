@@ -10,11 +10,11 @@ The note's Markdown text is the source of truth. Viewer rendering and editor dec
 
 The plugin integrates with Joplin through a main entry point and two content scripts:
 
-| Component | Responsibility | Location |
-| --- | --- | --- |
-| Main plugin | Registers settings, commands, menus, toolbar buttons, and content scripts. Bridges Joplin's APIs and the editor integration. | `src/index.ts`, `src/settings.ts`, `src/joplinCommandRegistration.ts` |
-| Viewer integration | Extends Joplin's Markdown rendering pipeline with alert HTML and theme-aware CSS, using `markdown-it-github-alerts`. | `src/contentScripts/markdownIt/` |
-| Editor integration | Extends CodeMirror 6 with alert decorations, title widgets, autocomplete, Tab navigation past a selected alert type, and commands that modify Markdown. | `src/contentScripts/codeMirror/` |
+| Component          | Responsibility                                                                                                                                          | Location                                                              |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Main plugin        | Registers settings, commands, menus, toolbar buttons, and content scripts. Bridges Joplin's APIs and the editor integration.                            | `src/index.ts`, `src/settings.ts`, `src/joplinCommandRegistration.ts` |
+| Viewer integration | Extends Joplin's Markdown rendering pipeline with alert HTML and theme-aware CSS, using `markdown-it-github-alerts`.                                    | `src/contentScripts/markdownIt/`                                      |
+| Editor integration | Extends CodeMirror 6 with alert decorations, title widgets, autocomplete, Tab navigation past a selected alert type, and commands that modify Markdown. | `src/contentScripts/codeMirror/`                                      |
 
 The viewer and editor process the same note independently. Neither depends on the other's rendered output. They share alert types and icons to keep their presentation consistent.
 

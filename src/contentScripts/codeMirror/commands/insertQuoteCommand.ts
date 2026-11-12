@@ -303,7 +303,7 @@ function addExplicitQuoteSelections(
     explicitSelectionsByIndex: Map<number, ExplicitCursorSelection>
 ): void {
     ranges.forEach((range, index) => {
-        if (range.empty) {
+        if (explicitSelectionsByIndex.has(index)) {
             return;
         }
 
@@ -323,6 +323,7 @@ function applyCursorQuoteChanges(view: EditorView, ranges: readonly SelectionRan
 
     const cursorTargets = Array.from(targetMap.values());
     const allQuoted = cursorTargets.every((target) => isBlockquoteText(target.text));
+    addExplicitQuoteSelections(state, ranges, cursorTargets, allQuoted, explicitSelectionsByIndex);
     const changes = buildQuoteChanges(cursorTargets, allQuoted);
 
     if (changes.length === 0) {

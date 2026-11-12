@@ -95,6 +95,27 @@ describe('createInsertQuoteCommand', () => {
         expect(result.cursor).toBe(expectedCursor);
     });
 
+    test.each([
+        { input: '|Paragraph', expected: '> |Paragraph' },
+        { input: 'Para|graph', expected: '> Para|graph' },
+        { input: 'Paragraph|', expected: '> Paragraph|' },
+        { input: 'First line\nSec|ond line', expected: '> First line\n> Sec|ond line' },
+        { input: '> First line\n> Sec|ond line', expected: 'First line\nSec|ond line' },
+        { input: '|> Quoted line', expected: '|Quoted line' },
+        { input: '>| Quoted line', expected: '|Quoted line' },
+        { input: '> |Quoted line', expected: '|Quoted line' },
+        { input: '>Quoted| line', expected: 'Quoted| line' },
+        { input: '>> Nes|ted line', expected: '> Nes|ted line' },
+        { input: '> First line\nLazy| continuation', expected: '> First line\n> Lazy| continuation' },
+        { input: '> Fir|st line\nLazy continuation', expected: '> Fir|st line\n> Lazy continuation' },
+        { input: '# Head|ing', expected: '> # Head|ing' },
+    ])('preserves cursor position when toggling $input', ({ input, expected }) => {
+        const result = runCommandWithCursor(input);
+
+        expect(result.text).toBe(expected.replace('|', ''));
+        expect(result.cursor).toBe(expected.indexOf('|'));
+    });
+
     test('handles a mixed selection and additional cursor', () => {
         const harness = createEditorHarness(['Selected line', '', 'Cursor line'].join('\n'));
 
@@ -113,6 +134,7 @@ describe('createInsertQuoteCommand', () => {
             command();
 
             expect(harness.getText()).toBe(['> Selected line', '', '> Cursor line'].join('\n'));
+            expect(harness.view.state.selection.ranges[1]?.head).toBe(harness.view.state.doc.line(3).from + 4);
         } finally {
             harness.destroy();
         }
@@ -160,6 +182,10 @@ describe('createInsertQuoteCommand', () => {
             command();
 
             expect(harness.getText()).toBe(['> First line', '', 'Middle line', '', '> Last line'].join('\n'));
+            expect(harness.view.state.selection.ranges.map((range) => range.head)).toEqual([
+                harness.view.state.doc.line(1).from + 4,
+                harness.view.state.doc.line(5).from + 4,
+            ]);
         } finally {
             harness.destroy();
         }
@@ -183,6 +209,10 @@ describe('createInsertQuoteCommand', () => {
             command();
 
             expect(harness.getText()).toBe(['> Quoted line', '', '> Plain line'].join('\n'));
+            expect(harness.view.state.selection.ranges.map((range) => range.head)).toEqual([
+                harness.view.state.doc.line(1).from + 2,
+                harness.view.state.doc.line(3).from + 4,
+            ]);
         } finally {
             harness.destroy();
         }

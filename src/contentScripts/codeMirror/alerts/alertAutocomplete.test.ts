@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import type { CompletionContext, CompletionResult } from '@codemirror/autocomplete';
-import { EditorSelection } from '@codemirror/state';
-import type { EditorView } from '@codemirror/view';
+import { pickedCompletion, type CompletionContext, type CompletionResult } from '@codemirror/autocomplete';
+import { EditorSelection, type Extension, type Transaction } from '@codemirror/state';
+import { EditorView } from '@codemirror/view';
 
 import { createMarkdownAlertEditorSettingsExtension } from '../pluginSettings';
 import { createEditorHarness } from '../shared/testUtils';
@@ -17,7 +17,7 @@ function makeContext(view: EditorView, pos: number): CompletionContext {
     } as unknown as CompletionContext;
 }
 
-function createAutocompleteEnabledHarness(input: string) {
+function createAutocompleteEnabledHarness(input: string, extraExtensions: Extension[] = []) {
     return createEditorHarness(input, {
         extensions: [
             createMarkdownAlertEditorSettingsExtension({
@@ -25,6 +25,7 @@ function createAutocompleteEnabledHarness(input: string) {
                 renderAlertTitles: true,
                 showAlertBackground: true,
             }),
+            ...extraExtensions,
         ],
     });
 }
@@ -121,10 +122,10 @@ describe('createAlertCompletionSource — result shape', () => {
         expect(labels).toEqual(expected);
     });
 
-    test('each option type matches the alert type for icon lookup', () => {
+    test('each option type carries the shared alert marker and the alert type for icon lookup', () => {
         const result = getCompletions('>!|')!;
         result.options.forEach((o, i) => {
-            expect(o.type).toBe(GITHUB_ALERT_TYPES[i]);
+            expect(o.type).toBe(`markdown-alert ${GITHUB_ALERT_TYPES[i]}`);
         });
     });
 
@@ -366,6 +367,35 @@ describe('createAlertCompletionSource — apply', () => {
 
             expect(harness.getText()).toBe(['> [!TIP] ', 'plain', '> [!TIP] '].join('\n'));
             expect(harness.view.state.selection.ranges.map((range) => range.head)).toEqual([9, 12, 25]);
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('marks the inserted change as a picked completion', () => {
+        const transactions: Transaction[] = [];
+        const harness = createAutocompleteEnabledHarness('>!no|', [
+            EditorView.updateListener.of((update) => transactions.push(...update.transactions)),
+        ]);
+
+        try {
+            const source = createAlertCompletionSource();
+            const cursorPos = harness.getCursor();
+            const result = source(makeContext(harness.view, cursorPos)) as CompletionResult;
+            const option = result.options[0]; // note
+            assert.isDefined(option, 'Expected the requested alert completion to exist');
+            const applyFn = option.apply as (
+                view: EditorView,
+                completion: (typeof result.options)[0],
+                from: number,
+                to: number
+            ) => void;
+
+            applyFn(harness.view, option, result.from, result.to ?? cursorPos);
+
+            expect(transactions).toHaveLength(1);
+            expect(transactions[0]!.annotation(pickedCompletion)).toBe(option);
+            expect(transactions[0]!.isUserEvent('input.complete')).toBe(true);
         } finally {
             harness.destroy();
         }

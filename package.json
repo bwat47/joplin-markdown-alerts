@@ -1,6 +1,6 @@
 {
     "name": "joplin-plugin-markdown-alerts",
-    "version": "1.7.2",
+    "version": "1.7.3",
     "scripts": {
         "dist": "npm run typecheck && joplin-plugin-scripts build",
         "prepare": "npm run dist",

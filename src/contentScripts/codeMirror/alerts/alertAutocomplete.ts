@@ -1,4 +1,10 @@
-import type { CompletionContext, CompletionResult, CompletionSource } from '@codemirror/autocomplete';
+import {
+    pickedCompletion,
+    type Completion,
+    type CompletionContext,
+    type CompletionResult,
+    type CompletionSource,
+} from '@codemirror/autocomplete';
 import { ChangeSet, EditorSelection, type EditorState, type SelectionRange } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 
@@ -8,6 +14,15 @@ import { GITHUB_ALERT_TYPES, type GitHubAlertType } from './alertParsing';
 /** Matches alert autocomplete triggers, e.g. `>!no` or `> [!no`. */
 const AUTOCOMPLETE_TRIGGER_PATTERN = /^(\s*)(>!|> \[!)([a-zA-Z]*)$/;
 const ALERT_TYPE_SORT_TEXT_WIDTH = String(GITHUB_ALERT_TYPES.length).length;
+const COMPLETION_USER_EVENT = 'input.complete';
+
+/**
+ * Shared completion type marker. CodeMirror turns each space-separated part of a
+ * completion's `type` into a `cm-completionIcon-<part>` class, so alert icons get
+ * `cm-completionIcon-markdown-alert` plus `cm-completionIcon-<alertType>`, letting
+ * styles target alert completions without affecting other completion sources.
+ */
+export const ALERT_COMPLETION_TYPE_MARKER = 'markdown-alert';
 
 type AlertAutocompleteTriggerMatch = {
     triggerFrom: number;
@@ -141,7 +156,13 @@ function buildSelectionRanges(
 }
 
 /** Inserts the alert marker at every cursor that is on a trigger. */
-function applyAlertCompletion(view: EditorView, insertText: string, completionPos: number, applyTo: number): void {
+function applyAlertCompletion(
+    view: EditorView,
+    completion: Completion,
+    insertText: string,
+    completionPos: number,
+    applyTo: number
+): void {
     const state = view.state;
     const matchingSelections = collectMatchingSelections(state, insertText, completionPos, applyTo);
     const sortedChanges = sortChanges(matchingSelections.map(({ change }) => change));
@@ -151,6 +172,8 @@ function applyAlertCompletion(view: EditorView, insertText: string, completionPo
     view.dispatch({
         changes: sortedChanges,
         selection: EditorSelection.create(selectionRanges, state.selection.mainIndex),
+        annotations: pickedCompletion.of(completion),
+        userEvent: COMPLETION_USER_EVENT,
     });
 }
 
@@ -171,9 +194,9 @@ export function createAlertCompletionSource(): CompletionSource {
                 return {
                     label,
                     sortText: String(index).padStart(ALERT_TYPE_SORT_TEXT_WIDTH, '0'),
-                    type,
-                    apply: (view, _completion, _applyFrom, applyTo) =>
-                        applyAlertCompletion(view, insertText, context.pos, applyTo),
+                    type: `${ALERT_COMPLETION_TYPE_MARKER} ${type}`,
+                    apply: (view, completion, _applyFrom, applyTo) =>
+                        applyAlertCompletion(view, completion, insertText, context.pos, applyTo),
                 };
             }),
             validFor: /^[a-zA-Z]*$/,

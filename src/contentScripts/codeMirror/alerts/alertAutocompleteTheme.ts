@@ -84,7 +84,6 @@ const LAYOUT_RULES: CssRules = {
         width: ROW_LAYOUT.iconSize,
         height: ROW_LAYOUT.iconSize,
         padding: '0',
-        boxSizing: 'border-box',
         opacity: '1',
         flexShrink: '0',
         maskSize: 'contain',
@@ -93,6 +92,21 @@ const LAYOUT_RULES: CssRules = {
         WebkitMaskRepeat: 'no-repeat',
     },
 };
+
+/** Per-type icon shapes. Masks are scheme-independent; color comes from the background. */
+function buildIconMaskRules(): CssRules {
+    const rules: CssRules = {};
+
+    for (const type of GITHUB_ALERT_TYPES) {
+        const mask = iconMaskDataUri(type);
+        rules[`${ICON_SELECTOR}.cm-completionIcon-${type}`] = {
+            maskImage: mask,
+            WebkitMaskImage: mask,
+        };
+    }
+
+    return rules;
+}
 
 /**
  * Icon and selected-row colors for one color scheme. Selectors are prefixed with
@@ -105,10 +119,7 @@ function buildColorRules(scheme: ColorScheme): CssRules {
     const rules: CssRules = {};
 
     for (const type of GITHUB_ALERT_TYPES) {
-        const mask = iconMaskDataUri(type);
         rules[`&${scheme} ${ICON_SELECTOR}.cm-completionIcon-${type}`] = {
-            maskImage: mask,
-            WebkitMaskImage: mask,
             backgroundColor: colors[type].color,
         };
     }
@@ -124,6 +135,7 @@ function buildColorRules(scheme: ColorScheme): CssRules {
 export function createAlertAutocompleteThemeExtension(): Extension {
     return EditorView.baseTheme({
         ...LAYOUT_RULES,
+        ...buildIconMaskRules(),
         ...buildColorRules('light'),
         ...buildColorRules('dark'),
     });

@@ -30,7 +30,7 @@ async function initializeEditor(editorControl: CodeMirrorControl, context: Conte
 
     editorControl.addExtension(createMarkdownAlertEditorSettingsExtension());
     editorControl.addExtension(createAlertDecorationExtensions(isDarkTheme));
-    editorControl.addExtension(createAlertAutocompleteThemeExtension(isDarkTheme));
+    editorControl.addExtension(createAlertAutocompleteThemeExtension());
     editorControl.addExtension(editorControl.joplinExtensions.completionSource(createAlertCompletionSource()));
     editorControl.addExtension(createAlertTypeTabOutExtension());
 

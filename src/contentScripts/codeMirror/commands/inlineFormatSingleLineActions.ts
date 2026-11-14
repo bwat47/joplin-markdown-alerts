@@ -290,7 +290,7 @@ function mapOffsetAfterUnwrapping(offset: number, segments: WrappedSegment[], fo
 
     for (const segment of segments) {
         const openingEnd = segment.from + format.openingDelimiter.length;
-        const contentEnd = segment.to - format.closingDelimiter.length;
+        const segmentContentEnd = contentEnd(segment, format);
 
         if (offset < segment.from) {
             return offset - removedLength;
@@ -300,12 +300,12 @@ function mapOffsetAfterUnwrapping(offset: number, segments: WrappedSegment[], fo
             return segment.from - removedLength;
         }
 
-        if (offset <= contentEnd) {
+        if (offset <= segmentContentEnd) {
             return offset - removedLength - format.openingDelimiter.length;
         }
 
         if (offset < segment.to) {
-            return contentEnd - removedLength - format.openingDelimiter.length;
+            return segmentContentEnd - removedLength - format.openingDelimiter.length;
         }
 
         removedLength += format.openingDelimiter.length + format.closingDelimiter.length;

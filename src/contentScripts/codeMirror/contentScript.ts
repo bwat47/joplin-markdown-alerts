@@ -43,6 +43,7 @@ async function initializeEditor(editorControl: CodeMirrorControl, context: Conte
 
     let settings: Record<string, unknown> | null = null;
     try {
+        // oxlint-disable-next-line unicorn/require-post-message-target-origin -- Joplin's content script API, not window.postMessage
         const response: unknown = await context.postMessage({ type: GET_EDITOR_SETTINGS_MESSAGE });
         if (typeof response === 'object' && response !== null) {
             settings = response as Record<string, unknown>;

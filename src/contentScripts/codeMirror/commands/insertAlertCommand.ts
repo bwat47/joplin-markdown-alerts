@@ -7,9 +7,8 @@ import {
     getAlertTypeRange,
     GITHUB_ALERT_TYPES,
     parseGitHubAlertTitleLine,
-    type TextRange,
 } from '../alerts/alertParsing';
-import { changeOverlapsRange } from '../shared/commandRangeUtils';
+import { changeOverlapsRange, type TextRange } from '../shared/commandRangeUtils';
 import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 import {
     collectParagraphRanges,

@@ -420,6 +420,7 @@ function applyLezerFormattingEdits(text: string, store: PlaceholderStore): strin
             if (markEdit) {
                 edits.push(markEdit);
             }
+            return true;
         },
     });
 

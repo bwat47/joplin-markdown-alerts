@@ -197,28 +197,28 @@ describe('createAlertCompletionSource — result shape', () => {
     });
 });
 
-describe('createAlertCompletionSource — apply', () => {
-    function applyCompletion(input: string, typeIndex: number): { text: string; cursor: number } {
-        const harness = createAutocompleteEnabledHarness(input);
-        try {
-            const source = createAlertCompletionSource();
-            const cursorPos = harness.getCursor();
-            const result = source(makeContext(harness.view, cursorPos)) as CompletionResult;
-            const option = result.options[typeIndex];
-            assert.isDefined(option, 'Expected the requested alert completion to exist');
-            const applyFn = option.apply as (
-                view: EditorView,
-                completion: (typeof result.options)[0],
-                from: number,
-                to: number
-            ) => void;
-            applyFn(harness.view, option, result.from, result.to ?? cursorPos);
-            return { text: harness.getText(), cursor: harness.getCursor() };
-        } finally {
-            harness.destroy();
-        }
+function applyCompletion(input: string, typeIndex: number): { text: string; cursor: number } {
+    const harness = createAutocompleteEnabledHarness(input);
+    try {
+        const source = createAlertCompletionSource();
+        const cursorPos = harness.getCursor();
+        const result = source(makeContext(harness.view, cursorPos)) as CompletionResult;
+        const option = result.options[typeIndex];
+        assert.isDefined(option, 'Expected the requested alert completion to exist');
+        const applyFn = option.apply as (
+            view: EditorView,
+            completion: (typeof result.options)[0],
+            from: number,
+            to: number
+        ) => void;
+        applyFn(harness.view, option, result.from, result.to ?? cursorPos);
+        return { text: harness.getText(), cursor: harness.getCursor() };
+    } finally {
+        harness.destroy();
     }
+}
 
+describe('createAlertCompletionSource — apply', () => {
     // Option order: 0 = note, 1 = tip, 2 = important, 3 = warning
     test.each([
         {

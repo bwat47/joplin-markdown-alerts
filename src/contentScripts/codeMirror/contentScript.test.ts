@@ -39,7 +39,7 @@ describe('CodeMirror content script initialization', () => {
         const harness = createEditorHarness('> [!NOTE]\n> Body');
         const control = createEditorControl(harness);
         const settings = { enableAlertAutocomplete: true, renderAlertTitles: false, showAlertBackground: true };
-        let resolveSettings: (value: unknown) => void = () => {};
+        let resolveSettings!: (value: unknown) => void;
         const response = new Promise<unknown>((resolve) => {
             resolveSettings = resolve;
         });

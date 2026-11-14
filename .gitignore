@@ -12,8 +12,8 @@ publish/
 gemini/
 prompts/
 .claude/settings.local.json
-.fallowrc.json
 coverage
+.fallow/
 .api-staging-*/
 .claude/
 .codex/

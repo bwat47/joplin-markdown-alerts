@@ -13,51 +13,51 @@ function getFormat(id: InlineFormatId, syntaxMode?: InlineFormatSyntaxMode) {
     return getInlineFormatDefinition(id, syntaxMode);
 }
 
+function runCommand(input: string, formatId: InlineFormatId, syntaxMode?: InlineFormatSyntaxMode): string {
+    const harness = createEditorHarness(input);
+
+    try {
+        const command = createInsertInlineFormatCommand(harness.view, getFormat(formatId, syntaxMode));
+        command();
+        return harness.getText();
+    } finally {
+        harness.destroy();
+    }
+}
+
+function runCommandWithCursor(
+    input: string,
+    formatId: InlineFormatId,
+    syntaxMode?: InlineFormatSyntaxMode
+): { text: string; cursor: number } {
+    const harness = createEditorHarness(input);
+
+    try {
+        const command = createInsertInlineFormatCommand(harness.view, getFormat(formatId, syntaxMode));
+        command();
+        return { text: harness.getText(), cursor: harness.getCursor() };
+    } finally {
+        harness.destroy();
+    }
+}
+
+function runCommandWithSelection(
+    input: string,
+    formatId: InlineFormatId,
+    syntaxMode?: InlineFormatSyntaxMode
+): { text: string; selection: { anchor: number; head: number } } {
+    const harness = createEditorHarness(input);
+
+    try {
+        const command = createInsertInlineFormatCommand(harness.view, getFormat(formatId, syntaxMode));
+        command();
+        return { text: harness.getText(), selection: harness.getSelection() };
+    } finally {
+        harness.destroy();
+    }
+}
+
 describe('createInsertInlineFormatCommand', () => {
-    function runCommand(input: string, formatId: InlineFormatId, syntaxMode?: InlineFormatSyntaxMode): string {
-        const harness = createEditorHarness(input);
-
-        try {
-            const command = createInsertInlineFormatCommand(harness.view, getFormat(formatId, syntaxMode));
-            command();
-            return harness.getText();
-        } finally {
-            harness.destroy();
-        }
-    }
-
-    function runCommandWithCursor(
-        input: string,
-        formatId: InlineFormatId,
-        syntaxMode?: InlineFormatSyntaxMode
-    ): { text: string; cursor: number } {
-        const harness = createEditorHarness(input);
-
-        try {
-            const command = createInsertInlineFormatCommand(harness.view, getFormat(formatId, syntaxMode));
-            command();
-            return { text: harness.getText(), cursor: harness.getCursor() };
-        } finally {
-            harness.destroy();
-        }
-    }
-
-    function runCommandWithSelection(
-        input: string,
-        formatId: InlineFormatId,
-        syntaxMode?: InlineFormatSyntaxMode
-    ): { text: string; selection: { anchor: number; head: number } } {
-        const harness = createEditorHarness(input);
-
-        try {
-            const command = createInsertInlineFormatCommand(harness.view, getFormat(formatId, syntaxMode));
-            command();
-            return { text: harness.getText(), selection: harness.getSelection() };
-        } finally {
-            harness.destroy();
-        }
-    }
-
     test('wraps a selection when the target formatting is absent', () => {
         const input = '[[test ~~abc~~ **def** aaaa]]';
         const expected = '==test ~~abc~~ **def** aaaa==';

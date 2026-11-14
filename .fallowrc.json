@@ -1,0 +1,21 @@
+{
+    "$schema": "./node_modules/fallow/schema.json",
+    "entry": [
+        "src/index.ts",
+        "src/contentScripts/codeMirror/contentScript.ts",
+        "src/contentScripts/markdownIt/markdownItPlugin.ts",
+        "src/contentScripts/markdownIt/alerts.css",
+        "src/contentScripts/markdownIt/alerts-theme-dark.css",
+        "src/contentScripts/markdownIt/alerts-theme-light.css"
+    ],
+    "supportEntry": ["src/**/*.test.ts", "src/contentScripts/codeMirror/shared/testUtils.ts"],
+    "ignorePatterns": ["**/*.d.ts", "api/**"],
+    "rules": {
+        "complexity-crap": "off",
+        "dev-dependencies-in-production": "off"
+    },
+    "health": {
+        "maxCognitive": 15,
+        "maxCyclomatic": 20
+    }
+}

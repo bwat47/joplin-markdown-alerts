@@ -1,3 +1,5 @@
+import type { TextRange } from '../shared/commandRangeUtils';
+
 export const GITHUB_ALERT_TYPES = [
     'note',
     'tip',
@@ -17,8 +19,6 @@ export const GITHUB_ALERT_TYPES = [
 ] as const;
 
 export type GitHubAlertType = (typeof GITHUB_ALERT_TYPES)[number];
-
-export type TextRange = { from: number; to: number };
 
 export type ParsedGitHubAlertTitleLine =
     | {

@@ -8,6 +8,28 @@ import { createMarkdownAlertEditorSettingsExtension } from '../pluginSettings';
 import { createEditorHarness } from '../shared/testUtils';
 import { createInsertAlertCommand, toggleAlertSelectionText } from './insertAlertCommand';
 
+function runCommand(input: string): string {
+    const harness = createEditorHarness(input);
+    try {
+        const command = createInsertAlertCommand(harness.view);
+        command();
+        return harness.getText();
+    } finally {
+        harness.destroy();
+    }
+}
+
+function runCommandWithSelection(input: string): { text: string; selection: { anchor: number; head: number } } {
+    const harness = createEditorHarness(input);
+    try {
+        const command = createInsertAlertCommand(harness.view);
+        command();
+        return { text: harness.getText(), selection: harness.getSelection() };
+    } finally {
+        harness.destroy();
+    }
+}
+
 describe('toggleAlertSelectionText', () => {
     test.each([
         {
@@ -55,28 +77,6 @@ describe('createInsertAlertCommand', () => {
             }
 
             await new Promise((resolve) => setTimeout(resolve, COMPLETION_POLL_INTERVAL_MS));
-        }
-    }
-
-    function runCommand(input: string): string {
-        const harness = createEditorHarness(input);
-        try {
-            const command = createInsertAlertCommand(harness.view);
-            command();
-            return harness.getText();
-        } finally {
-            harness.destroy();
-        }
-    }
-
-    function runCommandWithSelection(input: string): { text: string; selection: { anchor: number; head: number } } {
-        const harness = createEditorHarness(input);
-        try {
-            const command = createInsertAlertCommand(harness.view);
-            command();
-            return { text: harness.getText(), selection: harness.getSelection() };
-        } finally {
-            harness.destroy();
         }
     }
 

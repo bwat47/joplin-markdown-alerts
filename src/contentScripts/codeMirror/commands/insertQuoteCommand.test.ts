@@ -26,29 +26,29 @@ describe('toggleBlockquoteText', () => {
     });
 });
 
+function runCommand(input: string): string {
+    const harness = createEditorHarness(input);
+    try {
+        const command = createInsertQuoteCommand(harness.view);
+        command();
+        return harness.getText();
+    } finally {
+        harness.destroy();
+    }
+}
+
+function runCommandWithCursor(input: string): { text: string; cursor: number } {
+    const harness = createEditorHarness(input);
+    try {
+        const command = createInsertQuoteCommand(harness.view);
+        command();
+        return { text: harness.getText(), cursor: harness.getCursor() };
+    } finally {
+        harness.destroy();
+    }
+}
+
 describe('createInsertQuoteCommand', () => {
-    function runCommand(input: string): string {
-        const harness = createEditorHarness(input);
-        try {
-            const command = createInsertQuoteCommand(harness.view);
-            command();
-            return harness.getText();
-        } finally {
-            harness.destroy();
-        }
-    }
-
-    function runCommandWithCursor(input: string): { text: string; cursor: number } {
-        const harness = createEditorHarness(input);
-        try {
-            const command = createInsertQuoteCommand(harness.view);
-            command();
-            return { text: harness.getText(), cursor: harness.getCursor() };
-        } finally {
-            harness.destroy();
-        }
-    }
-
     test.each([
         {
             name: 'quotes paragraph when cursor is at the start',

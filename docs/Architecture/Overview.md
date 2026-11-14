@@ -32,3 +32,9 @@ Settings are owned by the main plugin. The editor requests its settings through 
 - **Rendering belongs to each host surface.** The viewer uses Markdown-it and CSS; the editor uses CodeMirror decorations and inline widgets while keeping the Markdown editable.
 - **Document changes belong in editor commands.** Commands operate on Markdown and selections without depending on the viewer.
 - **Editor support targets CodeMirror 6.** The editor content script skips installation when CodeMirror 6 is unavailable.
+
+## Build and packaging
+
+`npm run dist` typechecks, then delegates bundling and packaging to the shared `@bwat47/joplin-plugin-scripts` dev dependency, which uses esbuild to produce `dist/` and the `.jpl` in `publish/`. Build behavior lives in that package rather than in local scripts.
+
+`plugin.config.json` registers the Markdown-it and CodeMirror content scripts as `extraScripts`. Content scripts keep Joplin's CodeMirror and Lezer libraries external, and the viewer CSS is copied as-is.

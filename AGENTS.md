@@ -33,8 +33,6 @@ Architecture overview: docs/Architecture/Overview.md
 - `npm run updateVersion` Increment the patch version in package.json, src/manifest.json, and package-lock.json together.
 - `npm run updateApi` Update api/ from generator-joplin without regenerating the project.
 
-See docs/BUILDING.md for build and maintenance details.
-
 ## Design Principles
 
 - **Simple over complex:** Prefer focused, single-responsibility modules.

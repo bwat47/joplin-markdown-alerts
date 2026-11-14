@@ -227,3 +227,14 @@ These settings only affect the editor toolbar buttons. The commands themselves, 
 
 Changing a toolbar visibility setting currently requires restarting the plugin to take effect.
 Changing the superscript or subscript syntax setting applies to commands immediately and does not require a restart.
+
+## Building from source
+
+Requires Node 22 or later.
+
+```sh
+npm ci
+npm run dist
+```
+
+The build creates the installable plugin at `publish/com.bwat47.joplin-markdown-alerts.jpl`.

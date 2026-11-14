@@ -36,8 +36,9 @@ there and update the dependency here, rather than adding local build scripts.
 
 - `npm test`: run the Vitest test suite.
 - `npm run typecheck`: check TypeScript without producing output.
-- `npm run lint`: lint TypeScript sources and tests.
-- `npm run knip`: check for unused dependencies, exports, and files.
+- `npm run lint`: lint TypeScript sources and tests with Oxlint, then check for unused
+  files, exports, and dependencies and for complexity limits with fallow.
+- `npm run format:check`: check formatting with Oxfmt.
 - `npm run dist`: build and package the plugin.
 
 Before releasing, install the `.jpl` in Joplin and check the plugin's features in the

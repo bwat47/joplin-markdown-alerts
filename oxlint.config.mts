@@ -12,7 +12,7 @@ const regexpRecommendedRules = Object.fromEntries(
 );
 
 export default defineConfig({
-    plugins: ['typescript', 'import', 'vitest', 'unicorn'],
+    plugins: ['typescript', 'import', 'vitest', 'unicorn', 'oxc'],
     jsPlugins: ['eslint-plugin-regexp'],
     categories: {
         correctness: 'error',

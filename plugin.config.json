@@ -1,4 +1,5 @@
 {
     "extraScripts": ["contentScripts/markdownIt/markdownItPlugin.ts", "contentScripts/codeMirror/contentScript.ts"],
-    "buildOptions": { "target": "es2020" }
+    "buildOptions": { "target": "es2020" },
+    "mainBuildOptions": { "platform": "browser" }
 }

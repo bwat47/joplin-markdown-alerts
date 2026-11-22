@@ -14,7 +14,7 @@ import {
 
 const BLOCKQUOTE_LINE_PATTERN = /^\s*>/;
 
-const ALERT_LINE_PADDING_LEFT = '8px';
+const ALERT_LINE_PADDING_LEFT = '4px';
 
 /** Line class Joplin's editor adds to fenced/indented code block lines (see Joplin's markdownDecorationExtension). */
 const JOPLIN_CODE_BLOCK_LINE_CLASS = 'cm-codeBlock';

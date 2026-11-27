@@ -5,12 +5,12 @@ type WrappedSegment = {
     to: number;
 };
 
-export type StructuralLineParts = {
+type StructuralLineParts = {
     prefix: string;
     content: string;
 };
 
-export type RelativeSelection = {
+type RelativeSelection = {
     from: number;
     to: number;
     anchor: number;

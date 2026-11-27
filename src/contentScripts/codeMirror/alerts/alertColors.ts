@@ -4,7 +4,7 @@ type AlertColorSet = {
     [K in GitHubAlertType]: { color: string; bg: string };
 };
 
-export type ThemeColors = {
+type ThemeColors = {
     light: AlertColorSet;
     dark: AlertColorSet;
 };

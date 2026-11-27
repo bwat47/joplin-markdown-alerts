@@ -20,7 +20,7 @@ export const GITHUB_ALERT_TYPES = [
 
 export type GitHubAlertType = (typeof GITHUB_ALERT_TYPES)[number];
 
-export type ParsedGitHubAlertTitleLine =
+type ParsedGitHubAlertTitleLine =
     | {
           type: GitHubAlertType;
           /**

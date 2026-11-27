@@ -1,6 +1,6 @@
 export type InlineFormatId = 'highlight' | 'strikethrough' | 'underline' | 'superscript' | 'subscript';
 
-export type ConfigurableInlineFormatId = 'superscript' | 'subscript';
+type ConfigurableInlineFormatId = 'superscript' | 'subscript';
 
 export type InlineFormatSyntaxMode = 'html' | 'markdown';
 

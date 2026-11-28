@@ -49,45 +49,42 @@ type SelectionPlan = {
     segments: TextRange[];
 };
 
-const STRUCTURAL_PREFIX_PROBE_REGEX = /^[ \t]*(?:>\s*)*/;
-const CODE_BLOCK_NODE_NAMES = new Set(['fencedcode', 'codeblock']);
-const TABLE_NODE_NAMES = new Set(['table', 'tableheader', 'tablerow', 'tablecell', 'tabledelimiter']);
-const HORIZONTAL_RULE_NODE_NAMES = new Set(['horizontalrule']);
+/** Block structures whose lines are never wrapped by line-aware formatting. */
+type SkippableBlockKind = 'code' | 'table' | 'horizontalRule';
 
-function isLineInsideSyntaxNodes(view: EditorView, lineFrom: number, nodeNames: ReadonlySet<string>): boolean {
+const STRUCTURAL_PREFIX_PROBE_REGEX = /^[ \t]*(?:>\s*)*/;
+const SKIPPABLE_BLOCK_KIND_BY_NODE_NAME = new Map<string, SkippableBlockKind>([
+    ['FencedCode', 'code'],
+    ['CodeBlock', 'code'],
+    ['Table', 'table'],
+    ['TableHeader', 'table'],
+    ['TableRow', 'table'],
+    ['TableCell', 'table'],
+    ['TableDelimiter', 'table'],
+    ['HorizontalRule', 'horizontalRule'],
+]);
+
+/** Walks up the syntax tree once per probe position, collecting the skippable blocks enclosing the line. */
+function findEnclosingSkippableBlockKinds(view: EditorView, lineFrom: number): Set<SkippableBlockKind> {
     const state = view.state;
     const tree = getSyntaxTree(state, lineFrom);
+    const kinds = new Set<SkippableBlockKind>();
 
     for (const probePosition of getProbePositions(state, lineFrom, STRUCTURAL_PREFIX_PROBE_REGEX)) {
         let node: SyntaxNode | null = tree.resolveInner(probePosition, 1);
         while (node) {
-            if (nodeNames.has(node.name.toLowerCase())) {
-                return true;
+            const kind = SKIPPABLE_BLOCK_KIND_BY_NODE_NAME.get(node.name);
+            if (kind) {
+                kinds.add(kind);
             }
             node = node.parent;
         }
     }
 
-    return false;
+    return kinds;
 }
 
-function isLineInsideCodeBlock(view: EditorView, lineFrom: number): boolean {
-    return isLineInsideSyntaxNodes(view, lineFrom, CODE_BLOCK_NODE_NAMES);
-}
-
-function isLineInsideMarkdownTable(view: EditorView, lineFrom: number): boolean {
-    return isLineInsideSyntaxNodes(view, lineFrom, TABLE_NODE_NAMES);
-}
-
-function isLineHorizontalRule(view: EditorView, lineFrom: number): boolean {
-    return isLineInsideSyntaxNodes(view, lineFrom, HORIZONTAL_RULE_NODE_NAMES);
-}
-
-function shouldSkipMarkdownTableLine(line: string, view: EditorView, lineFrom: number): boolean {
-    if (!isLineInsideMarkdownTable(view, lineFrom)) {
-        return false;
-    }
-
+function tableLineHasCellDelimiters(line: string): boolean {
     const structuralParts = splitStructuralLineParts(line);
     const content = structuralParts ? structuralParts.content : line;
     return content.includes('|');
@@ -98,12 +95,16 @@ function isGitHubAlertTitleLine(line: string): boolean {
 }
 
 function lineCanUseLineAwareFormatting(view: EditorView, line: string, lineFrom: number): boolean {
-    return !(
-        isLineInsideCodeBlock(view, lineFrom) ||
-        shouldSkipMarkdownTableLine(line, view, lineFrom) ||
-        isGitHubAlertTitleLine(line) ||
-        isLineHorizontalRule(view, lineFrom)
-    );
+    const blockKinds = findEnclosingSkippableBlockKinds(view, lineFrom);
+    if (blockKinds.has('code') || blockKinds.has('horizontalRule')) {
+        return false;
+    }
+
+    if (blockKinds.has('table') && tableLineHasCellDelimiters(line)) {
+        return false;
+    }
+
+    return !isGitHubAlertTitleLine(line);
 }
 
 /**

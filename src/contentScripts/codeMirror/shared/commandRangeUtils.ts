@@ -14,5 +14,10 @@ export function changeOverlapsRange(change: TextRange, range: TextRange): boolea
         return change.from >= range.from && change.from <= range.to;
     }
 
-    return change.from < range.to && change.to > range.from;
+    return rangesOverlap(change, range);
+}
+
+/** Determines whether two ranges share at least one character. Touching ranges do not overlap. */
+export function rangesOverlap(first: TextRange, second: TextRange): boolean {
+    return first.from < second.to && first.to > second.from;
 }

@@ -1,21 +1,21 @@
-import type { SelectionRange } from '@codemirror/state';
+import type { EditorState, Line, SelectionRange } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { SyntaxNode } from '@lezer/common';
 
 import type { InlineFormatDefinition } from '../../../inlineFormatCommands';
 import { parseGitHubAlertTitleLine } from '../alerts/alertParsing';
-import { changeOverlapsRange } from '../shared/commandRangeUtils';
+import { changeOverlapsRange, rangesOverlap, type TextRange } from '../shared/commandRangeUtils';
 import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 import { getProbePositions, getSyntaxTree } from '../shared/syntaxTreeUtils';
+import { createInlineFormatSegmentFinder, type InlineFormatSegmentFinder } from './inlineFormatSegmentFinder';
 import {
-    analyzeSingleLineCursorAction,
-    analyzeSingleLineSelectionRemoval,
-    applyInlineFormattingToSelectionText,
-    formatFullLineText,
-    lineHasTargetFormatting,
+    analyzeCursorAction,
+    getDelimiterRanges,
+    getSegmentContentEnd,
     splitStructuralLineParts,
-    type SingleLineRelativeAction,
-} from './inlineFormatSingleLineActions';
+    wrapFullLineText,
+    wrapSelectionText,
+} from './inlineFormatText';
 
 type TextChange = {
     from: number;
@@ -23,52 +23,68 @@ type TextChange = {
     insert: string;
 };
 
-type SelectedLineEntry = {
-    line: string;
-    lineFrom: number;
-    isFullySelected: boolean;
-    isEligibleForLineAwareFormatting: boolean;
+/** Whether a command adds the target format or removes existing target spans. */
+type InlineFormatMode = 'add' | 'remove';
+
+type CursorPlan = {
+    changes: TextChange[];
+    selection: ExplicitCursorSelection;
 };
 
+/**
+ * How one selected line is wrapped in `add` mode:
+ * - `line`: text starts at the line boundary; structural prefixes stay outside the delimiters.
+ * - `inline`: the selected text is wrapped as-is.
+ * - `skip`: the text is left unchanged.
+ */
+type SelectedLineKind = 'line' | 'inline' | 'skip';
+
+type SelectedLineEntry = TextRange & {
+    text: string;
+    kind: SelectedLineKind;
+};
+
+type SelectionPlan = {
+    lineEntries: SelectedLineEntry[];
+    /** Target-format segments the selection overlaps; `remove` mode deletes their delimiters. */
+    segments: TextRange[];
+};
+
+/** Block structures whose lines are never wrapped by line-aware formatting. */
+type SkippableBlockKind = 'code' | 'table' | 'horizontalRule';
+
 const STRUCTURAL_PREFIX_PROBE_REGEX = /^[ \t]*(?:>\s*)*/;
-const CODE_BLOCK_NODE_NAMES = new Set(['fencedcode', 'codeblock']);
-const TABLE_NODE_NAMES = new Set(['table', 'tableheader', 'tablerow', 'tablecell', 'tabledelimiter']);
-const HORIZONTAL_RULE_NODE_NAMES = new Set(['horizontalrule']);
+const SKIPPABLE_BLOCK_KIND_BY_NODE_NAME = new Map<string, SkippableBlockKind>([
+    ['FencedCode', 'code'],
+    ['CodeBlock', 'code'],
+    ['Table', 'table'],
+    ['TableHeader', 'table'],
+    ['TableRow', 'table'],
+    ['TableCell', 'table'],
+    ['TableDelimiter', 'table'],
+    ['HorizontalRule', 'horizontalRule'],
+]);
 
-function isLineInsideSyntaxNodes(view: EditorView, lineFrom: number, nodeNames: ReadonlySet<string>): boolean {
-    const state = view.state;
-    const tree = getSyntaxTree(state, lineFrom);
+/** Walks up the syntax tree once per probe position, collecting the skippable blocks enclosing the line. */
+function findEnclosingSkippableBlockKinds(state: EditorState, docLine: Line): Set<SkippableBlockKind> {
+    const tree = getSyntaxTree(state, docLine.to);
+    const kinds = new Set<SkippableBlockKind>();
 
-    for (const probePosition of getProbePositions(state, lineFrom, STRUCTURAL_PREFIX_PROBE_REGEX)) {
+    for (const probePosition of getProbePositions(state, docLine.from, STRUCTURAL_PREFIX_PROBE_REGEX)) {
         let node: SyntaxNode | null = tree.resolveInner(probePosition, 1);
         while (node) {
-            if (nodeNames.has(node.name.toLowerCase())) {
-                return true;
+            const kind = SKIPPABLE_BLOCK_KIND_BY_NODE_NAME.get(node.name);
+            if (kind) {
+                kinds.add(kind);
             }
             node = node.parent;
         }
     }
 
-    return false;
+    return kinds;
 }
 
-function isLineInsideCodeBlock(view: EditorView, lineFrom: number): boolean {
-    return isLineInsideSyntaxNodes(view, lineFrom, CODE_BLOCK_NODE_NAMES);
-}
-
-function isLineInsideMarkdownTable(view: EditorView, lineFrom: number): boolean {
-    return isLineInsideSyntaxNodes(view, lineFrom, TABLE_NODE_NAMES);
-}
-
-function isLineHorizontalRule(view: EditorView, lineFrom: number): boolean {
-    return isLineInsideSyntaxNodes(view, lineFrom, HORIZONTAL_RULE_NODE_NAMES);
-}
-
-function shouldSkipMarkdownTableLine(line: string, view: EditorView, lineFrom: number): boolean {
-    if (!isLineInsideMarkdownTable(view, lineFrom)) {
-        return false;
-    }
-
+function tableLineHasCellDelimiters(line: string): boolean {
     const structuralParts = splitStructuralLineParts(line);
     const content = structuralParts ? structuralParts.content : line;
     return content.includes('|');
@@ -78,230 +94,195 @@ function isGitHubAlertTitleLine(line: string): boolean {
     return parseGitHubAlertTitleLine(line) !== null;
 }
 
-function lineCanUseLineAwareFormatting(view: EditorView, line: string, lineFrom: number): boolean {
-    return !(
-        isLineInsideCodeBlock(view, lineFrom) ||
-        shouldSkipMarkdownTableLine(line, view, lineFrom) ||
-        isGitHubAlertTitleLine(line) ||
-        isLineHorizontalRule(view, lineFrom)
-    );
-}
-
-function getSelectedLineEntries(view: EditorView, range: SelectionRange): SelectedLineEntry[] {
-    const state = view.state;
-    const startLine = state.doc.lineAt(range.from);
-    const selectedText = state.doc.sliceString(range.from, range.to);
-    const lines = selectedText.split('\n');
-
-    return lines.map((line, index) => {
-        const docLine = state.doc.line(startLine.number + index);
-        const lineFrom = docLine.from;
-        const selectionStart = index === 0 ? range.from - lineFrom : 0;
-        const selectionEnd = index === lines.length - 1 ? range.to - lineFrom : docLine.length;
-        const isFullySelected = selectionStart === 0 && selectionEnd === docLine.length;
-
-        return {
-            line,
-            lineFrom,
-            isFullySelected,
-            isEligibleForLineAwareFormatting: lineCanUseLineAwareFormatting(view, line, lineFrom),
-        };
-    });
-}
-
-function applyInlineFormattingToFullLineSelectionRange(
-    view: EditorView,
-    range: SelectionRange,
-    format: InlineFormatDefinition
-): string {
-    const lineEntries = getSelectedLineEntries(view, range);
-    const removalOnly = lineEntries.some(
-        ({ line, isEligibleForLineAwareFormatting }) =>
-            isEligibleForLineAwareFormatting && lineHasTargetFormatting(line, format)
-    );
-
-    return lineEntries
-        .map(({ line, isEligibleForLineAwareFormatting }) => {
-            if (!isEligibleForLineAwareFormatting) {
-                return line;
-            }
-
-            return formatFullLineText(line, format, removalOnly);
-        })
-        .join('\n');
-}
-
-function isFullLineSelection(view: EditorView, range: SelectionRange): boolean {
-    if (range.empty) {
+function lineCanUseLineAwareFormatting(state: EditorState, docLine: Line): boolean {
+    const blockKinds = findEnclosingSkippableBlockKinds(state, docLine);
+    if (blockKinds.has('code') || blockKinds.has('horizontalRule')) {
         return false;
     }
 
-    const state = view.state;
-    const startLine = state.doc.lineAt(range.from);
-    if (range.from !== startLine.from) {
+    if (blockKinds.has('table') && tableLineHasCellDelimiters(docLine.text)) {
         return false;
     }
 
-    if (range.to === state.doc.length) {
-        return true;
-    }
-
-    const lineAtEnd = state.doc.lineAt(range.to);
-    return range.to === lineAtEnd.from || range.to === lineAtEnd.to;
+    return !isGitHubAlertTitleLine(docLine.text);
 }
 
-function applyInlineFormattingToSelectionRange(
-    view: EditorView,
-    range: SelectionRange,
-    format: InlineFormatDefinition
-): string {
-    const state = view.state;
-    const selectedText = state.doc.sliceString(range.from, range.to);
-
-    if (isFullLineSelection(view, range)) {
-        return applyInlineFormattingToFullLineSelectionRange(view, range, format);
+/**
+ * Classifies a line's selected slice. A single-line partial selection is wrapped exactly as selected.
+ * Full-line and multi-line selections skip structures that inline delimiters would break (code,
+ * tables, alert titles, horizontal rules), and partial edge slices that are whitespace-only are
+ * skipped.
+ */
+function classifySelectedLine(
+    state: EditorState,
+    docLine: Line,
+    selectionStart: number,
+    selectionEnd: number,
+    isMultiLineSelection: boolean
+): SelectedLineKind {
+    const isFullySelected = selectionStart === 0 && selectionEnd === docLine.length;
+    if (!isMultiLineSelection && !isFullySelected) {
+        return 'inline';
     }
 
-    if (!selectedText.includes('\n')) {
-        return applyInlineFormattingToSelectionText(selectedText, format);
+    if (!isFullySelected && docLine.text.slice(selectionStart, selectionEnd).trim() === '') {
+        return 'skip';
     }
 
-    const lineEntries = getSelectedLineEntries(view, range);
-    const removalOnly = lineEntries
-        .filter(({ isFullySelected, isEligibleForLineAwareFormatting }) => {
-            return isFullySelected && isEligibleForLineAwareFormatting;
-        })
-        .some(({ line }) => lineHasTargetFormatting(line, format));
+    if (!lineCanUseLineAwareFormatting(state, docLine)) {
+        return 'skip';
+    }
 
-    return lineEntries
-        .map(({ line, isFullySelected, isEligibleForLineAwareFormatting }) => {
-            if (!isFullySelected) {
-                return applyInlineFormattingToSelectionText(line, format);
-            }
-
-            if (!isEligibleForLineAwareFormatting) {
-                return line;
-            }
-
-            return formatFullLineText(line, format, removalOnly);
-        })
-        .join('\n');
+    return selectionStart === 0 ? 'line' : 'inline';
 }
 
-function createExplicitSelection(anchorPos: number, headPos: number, basePos: number): ExplicitCursorSelection {
-    return {
-        anchorBasePos: basePos,
-        anchorOffset: anchorPos - basePos,
-        headBasePos: basePos,
-        headOffset: headPos - basePos,
-    };
+function getSelectedLineEntries(state: EditorState, range: SelectionRange): SelectedLineEntry[] {
+    const doc = state.doc;
+    const startLine = doc.lineAt(range.from);
+    const endLine = doc.lineAt(range.to);
+    const isMultiLineSelection = startLine.number !== endLine.number;
+    const entries: SelectedLineEntry[] = [];
+
+    for (let lineNumber = startLine.number; lineNumber <= endLine.number; lineNumber += 1) {
+        const docLine = doc.line(lineNumber);
+        const from = Math.max(range.from, docLine.from);
+        const to = Math.min(range.to, docLine.to);
+
+        entries.push({
+            from,
+            to,
+            text: doc.sliceString(from, to),
+            kind: classifySelectedLine(state, docLine, from - docLine.from, to - docLine.from, isMultiLineSelection),
+        });
+    }
+
+    return entries;
 }
 
-function findSelectionFormattingAction(
-    view: EditorView,
-    range: SelectionRange,
-    format: InlineFormatDefinition
-): { key: string; change: TextChange; explicitSelection: ExplicitCursorSelection } | null {
-    if (range.empty) {
-        return null;
-    }
-
-    const state = view.state;
-    const selectedText = state.doc.sliceString(range.from, range.to);
-    if (selectedText.includes('\n')) {
-        return null;
-    }
-
-    const line = state.doc.lineAt(range.from);
-    const action = analyzeSingleLineSelectionRemoval(
-        line.text,
-        {
-            from: range.from - line.from,
-            to: range.to - line.from,
-            anchor: range.anchor - line.from,
-            head: range.head - line.from,
-        },
-        format
-    );
-    if (!action) {
-        return null;
-    }
-
-    const docExpandedFrom = line.from + action.replaceFrom;
-    const docExpandedTo = line.from + action.replaceTo;
-    const mappedAnchor = line.from + action.nextAnchor;
-    const mappedHead = line.from + action.nextHead;
-
-    return {
-        key: `selection-removal:${docExpandedFrom}:${docExpandedTo}`,
-        change: {
-            from: docExpandedFrom,
-            to: docExpandedTo,
-            insert: action.insert,
-        },
-        explicitSelection: createExplicitSelection(mappedAnchor, mappedHead, line.from + action.selectionBase),
-    };
-}
-
-function buildCursorActionKey(
-    kind: SingleLineRelativeAction['kind'],
-    cursorPos: number,
-    docChangeFrom: number,
-    docChangeTo: number
-): string {
+function wrapSelectedLine({ text, kind }: SelectedLineEntry, format: InlineFormatDefinition): string {
     switch (kind) {
-        case 'cursor-jump-in':
-            return `jump-in:${cursorPos}`;
-        case 'cursor-jump-out':
-            return `jump:${cursorPos}`;
+        case 'line':
+            return wrapFullLineText(text, format);
+        case 'inline':
+            return wrapSelectionText(text, format);
         default:
-            return `removal:${docChangeFrom}:${docChangeTo}`;
+            return text;
     }
 }
 
-function findCursorFormattingAction(
-    view: EditorView,
-    cursorPos: number,
-    format: InlineFormatDefinition
-): { key: string; change: TextChange; explicitSelection: ExplicitCursorSelection } | null {
-    const state = view.state;
-    const line = state.doc.lineAt(cursorPos);
-    const action = analyzeSingleLineCursorAction(line.text, cursorPos - line.from, format);
-    if (!action) {
-        return null;
+/**
+ * Collects the target segments a selection overlaps, ignoring lines classified as `skip` (code,
+ * tables, alert titles, horizontal rules, and whitespace-only partial edge slices). Segments may
+ * extend past the selection and across soft line breaks.
+ */
+function findOverlappedSegments(
+    state: EditorState,
+    lineEntries: SelectedLineEntry[],
+    findSegments: InlineFormatSegmentFinder
+): TextRange[] {
+    const targets = lineEntries.filter(({ kind }) => kind !== 'skip');
+    const segmentsByStart = new Map<number, TextRange>();
+
+    for (const target of targets) {
+        for (const segment of findSegments(state.doc.lineAt(target.from))) {
+            if (rangesOverlap(segment, target)) {
+                segmentsByStart.set(segment.from, segment);
+            }
+        }
     }
 
-    const docChangeFrom = line.from + action.replaceFrom;
-    const docChangeTo = line.from + action.replaceTo;
-    const absoluteAnchor = line.from + action.nextAnchor;
-    const absoluteHead = line.from + action.nextHead;
-    const key = buildCursorActionKey(action.kind, cursorPos, docChangeFrom, docChangeTo);
+    return Array.from(segmentsByStart.values());
+}
+
+function planSelection(
+    state: EditorState,
+    range: SelectionRange,
+    findSegments: InlineFormatSegmentFinder
+): SelectionPlan {
+    const lineEntries = getSelectedLineEntries(state, range);
 
     return {
-        key,
-        change: {
-            from: docChangeFrom,
-            to: docChangeTo,
-            insert: action.insert,
-        },
-        explicitSelection: createExplicitSelection(absoluteAnchor, absoluteHead, line.from + action.selectionBase),
+        lineEntries,
+        segments: findOverlappedSegments(state, lineEntries, findSegments),
     };
 }
 
-function createCursorInsertion(
+/**
+ * Chooses one mode for every selection in the command: if any selection overlaps the target format,
+ * all selections only remove it; otherwise all selections add it.
+ */
+function resolveFormattingMode(plans: SelectionPlan[]): InlineFormatMode {
+    return plans.some(({ segments }) => segments.length > 0) ? 'remove' : 'add';
+}
+
+function createDelimiterDeletions(segments: readonly TextRange[], format: InlineFormatDefinition): TextChange[] {
+    return segments.flatMap((segment) =>
+        getDelimiterRanges(segment, format).map(({ from, to }) => ({ from, to, insert: '' }))
+    );
+}
+
+function getSelectionChanges(
+    plan: SelectionPlan,
+    range: SelectionRange,
+    format: InlineFormatDefinition,
+    mode: InlineFormatMode
+): TextChange[] {
+    if (mode === 'remove') {
+        return createDelimiterDeletions(plan.segments, format);
+    }
+
+    const selectedText = plan.lineEntries.map(({ text }) => text).join('\n');
+    const updatedText = plan.lineEntries.map((entry) => wrapSelectedLine(entry, format)).join('\n');
+    return updatedText === selectedText ? [] : [{ from: range.from, to: range.to, insert: updatedText }];
+}
+
+/** Selection positions are mapped through the command's changes with `assoc = -1`. */
+function createExplicitSelection(anchor: number, head: number): ExplicitCursorSelection {
+    return {
+        anchorBasePos: anchor,
+        anchorOffset: 0,
+        headBasePos: head,
+        headOffset: 0,
+    };
+}
+
+function planCursor(
+    state: EditorState,
     cursorPos: number,
-    format: InlineFormatDefinition
-): { key: string; change: TextChange; explicitSelection: ExplicitCursorSelection } {
-    const insertedText = `${format.openingDelimiter}${format.closingDelimiter}`;
+    format: InlineFormatDefinition,
+    findSegments: InlineFormatSegmentFinder,
+    nonEmptyRanges: readonly SelectionRange[]
+): CursorPlan | null {
+    const action = analyzeCursorAction(findSegments(state.doc.lineAt(cursorPos)), cursorPos, format);
+
+    if (action?.kind === 'move') {
+        // An empty change keeps the command dispatching even though only the cursor moves.
+        return {
+            changes: [{ from: cursorPos, to: cursorPos, insert: '' }],
+            selection: createExplicitSelection(action.position, action.position),
+        };
+    }
+
+    if (action?.kind === 'unwrap') {
+        const { segment } = action;
+        return {
+            changes: createDelimiterDeletions([segment], format),
+            selection: createExplicitSelection(segment.from, getSegmentContentEnd(segment, format)),
+        };
+    }
+
+    const insertion = {
+        from: cursorPos,
+        to: cursorPos,
+        insert: `${format.openingDelimiter}${format.closingDelimiter}`,
+    };
+    if (nonEmptyRanges.some((range) => changeOverlapsRange(insertion, range))) {
+        return null;
+    }
 
     return {
-        key: `cursor:${cursorPos}`,
-        change: {
-            from: cursorPos,
-            to: cursorPos,
-            insert: insertedText,
-        },
-        explicitSelection: {
+        changes: [insertion],
+        selection: {
             anchorBasePos: cursorPos,
             anchorOffset: format.openingDelimiter.length,
             headBasePos: cursorPos,
@@ -313,63 +294,43 @@ function createCursorInsertion(
 /**
  * Creates an inline-format command that supports multiple selections, cursor insertion, and
  * list-aware multiline full-line formatting.
+ *
+ * Non-empty selections share one mode (see `resolveFormattingMode`), so the command either adds or
+ * removes the format across all of them. Cursors are handled independently. Removal deletes only the
+ * delimiters of each overlapped segment, so identical deletions from several selections are merged.
  */
 export function createInsertInlineFormatCommand(view: EditorView, format: InlineFormatDefinition): () => boolean {
     return () => {
         const state = view.state;
-        const changeMap = new Map<string, TextChange>();
+        const findSegments = createInlineFormatSegmentFinder(state, format);
+        const changesByKey = new Map<string, TextChange>();
         const explicitSelectionsByIndex = new Map<number, ExplicitCursorSelection>();
-        const nonEmptyRanges = state.selection.ranges.filter((range) => !range.empty);
+        const addChanges = (changes: TextChange[]) => {
+            for (const change of changes) {
+                changesByKey.set(`${change.from}:${change.to}:${change.insert}`, change);
+            }
+        };
 
-        state.selection.ranges.forEach((range, index) => {
-            if (range.empty) {
-                const removal = findCursorFormattingAction(view, range.head, format);
-                if (removal) {
-                    if (!changeMap.has(removal.key)) {
-                        changeMap.set(removal.key, removal.change);
-                    }
-                    explicitSelectionsByIndex.set(index, removal.explicitSelection);
-                    return;
-                }
+        const ranges = state.selection.ranges;
+        const nonEmptyRanges = ranges.filter((range) => !range.empty);
+        const plans = ranges.map((range) => (range.empty ? null : planSelection(state, range, findSegments)));
+        const mode = resolveFormattingMode(plans.filter((plan): plan is SelectionPlan => plan !== null));
 
-                const cursorInsertion = createCursorInsertion(range.head, format);
-                if (
-                    nonEmptyRanges.some((nonEmptyRange) => changeOverlapsRange(cursorInsertion.change, nonEmptyRange))
-                ) {
-                    return;
-                }
-
-                if (!changeMap.has(cursorInsertion.key)) {
-                    changeMap.set(cursorInsertion.key, cursorInsertion.change);
-                }
-                explicitSelectionsByIndex.set(index, cursorInsertion.explicitSelection);
+        ranges.forEach((range, index) => {
+            const plan = plans[index];
+            if (plan) {
+                addChanges(getSelectionChanges(plan, range, format, mode));
                 return;
             }
 
-            const selectionRemoval = findSelectionFormattingAction(view, range, format);
-            if (selectionRemoval) {
-                if (!changeMap.has(selectionRemoval.key)) {
-                    changeMap.set(selectionRemoval.key, selectionRemoval.change);
-                }
-                explicitSelectionsByIndex.set(index, selectionRemoval.explicitSelection);
-                return;
+            const cursorPlan = planCursor(state, range.head, format, findSegments, nonEmptyRanges);
+            if (cursorPlan) {
+                addChanges(cursorPlan.changes);
+                explicitSelectionsByIndex.set(index, cursorPlan.selection);
             }
-
-            const selectedText = state.doc.sliceString(range.from, range.to);
-            const updatedText = applyInlineFormattingToSelectionRange(view, range, format);
-
-            if (updatedText === selectedText) {
-                return;
-            }
-
-            changeMap.set(`selection:${range.from}:${range.to}`, {
-                from: range.from,
-                to: range.to,
-                insert: updatedText,
-            });
         });
 
-        const changes = Array.from(changeMap.values());
+        const changes = Array.from(changesByKey.values());
         if (changes.length === 0) {
             return false;
         }

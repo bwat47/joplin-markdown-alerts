@@ -302,7 +302,7 @@ describe('createInsertInlineFormatCommand', () => {
             const command = createInsertInlineFormatCommand(harness.view, getFormat('strikethrough'));
             command();
 
-            expect(harness.getText()).toBe(['ABC', '', '~~TEST~~'].join('\n'));
+            expect(harness.getText()).toBe(['ABC', '', 'TEST'].join('\n'));
         } finally {
             harness.destroy();
         }
@@ -310,9 +310,87 @@ describe('createInsertInlineFormatCommand', () => {
 
     test('uses removal-only mode for fully selected middle lines inside a mixed multiline selection', () => {
         const input = ['prefix [[start', '~~ABC~~', 'TEST', 'end]] suffix'].join('\n');
-        const expected = ['prefix ~~start~~', 'ABC', 'TEST', '~~end~~ suffix'].join('\n');
+        const expected = ['prefix start', 'ABC', 'TEST', 'end suffix'].join('\n');
 
         expect(runCommand(input, 'strikethrough')).toBe(expected);
+    });
+
+    test('uses removal-only mode for partially selected edge lines when any selected line has formatting', () => {
+        const input = ['ab [[cd', '++x++', 'ef]] gh'].join('\n');
+        const expected = ['ab cd', 'x', 'ef gh'].join('\n');
+
+        expect(runCommand(input, 'underline')).toBe(expected);
+    });
+
+    test('only removes formatting when one of several paragraph selections overlaps formatted text', () => {
+        const paragraphs = ['++Even if you are modifying++ a file.', '', 'If this is a large file.'];
+        const harness = createEditorHarness(paragraphs.join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line3 = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.range(line1.from, line1.to),
+                    EditorSelection.range(line3.from, line3.to),
+                ]),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('underline'));
+            command();
+
+            expect(harness.getText()).toBe(
+                ['Even if you are modifying a file.', '', 'If this is a large file.'].join('\n')
+            );
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('shares removal-only mode between single-line and multiline selections', () => {
+        const harness = createEditorHarness(['plain', 'first', '~~second~~'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line2 = harness.view.state.doc.line(2);
+            const line3 = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.range(line1.from, line1.to),
+                    EditorSelection.range(line2.from, line3.to),
+                ]),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('strikethrough'));
+            command();
+
+            expect(harness.getText()).toBe(['plain', 'first', 'second'].join('\n'));
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('keeps list markers outside delimiters on a partially selected last line', () => {
+        const input = ['ab [[cd', '- item tw]]o'].join('\n');
+        const expected = ['ab ==cd==', '- ==item tw==o'].join('\n');
+
+        expect(runCommand(input, 'highlight')).toBe(expected);
+    });
+
+    test('skips a partially selected code block line in a multiline selection', () => {
+        const input = ['```', 'co[[de', '```', 'te]]xt'].join('\n');
+        const expected = ['```', 'code', '```', '==te==xt'].join('\n');
+
+        expect(runCommand(input, 'highlight')).toBe(expected);
+    });
+
+    test('skips a whitespace-only partial edge line in a multiline selection', () => {
+        const input = ['first[[', 'second]]'].join('\n');
+        const expected = ['first', '==second=='].join('\n');
+
+        expect(runCommand(input, 'highlight')).toBe(expected);
     });
 
     test('applies line-aware formatting to fully selected leading lines in a mixed multiline selection', () => {
@@ -598,6 +676,95 @@ describe('createInsertInlineFormatCommand', () => {
         }
     });
 
+    describe('delimiters inside inline code', () => {
+        test.each([
+            ['strikethrough', undefined, '`~~` before ~~word~~', '`~~` before word'],
+            ['underline', undefined, '`++` before ++word++', '`++` before word'],
+            ['highlight', undefined, '`==` before ==word==', '`==` before word'],
+            ['superscript', 'html', '`<sup></sup>` before <sup>word</sup>', '`<sup></sup>` before word'],
+            ['superscript', 'markdown', '`^^` before ^word^', '`^^` before word'],
+        ] as const)('%s (%s) removes only the real span from a multiline selection', (id, syntax, line, expected) => {
+            expect(runCommand(`[[${line}\nplain]]`, id, syntax)).toBe(`${expected}\nplain`);
+        });
+
+        test('removes only the real span from a single-line selection', () => {
+            expect(runCommand('[[`~~` before ~~word~~]]', 'strikethrough')).toBe('`~~` before word');
+        });
+
+        test('wraps a selection whose only delimiters are inside inline code', () => {
+            expect(runCommand('[[use `~~x~~` here]]', 'strikethrough')).toBe('~~use `~~x~~` here~~');
+        });
+
+        test('skips a single full-line selection inside a fenced code block even when it contains delimiters', () => {
+            const input = ['```', '[[~~code~~]]', '```'].join('\n');
+            const expected = ['```', '~~code~~', '```'].join('\n');
+
+            expect(runCommand(input, 'strikethrough')).toBe(expected);
+        });
+
+        test('skips a single full-line alert title selection even when it contains delimiters', () => {
+            const input = '[[> [!NOTE] ~~Title~~]]';
+            const expected = '> [!NOTE] ~~Title~~';
+
+            expect(runCommand(input, 'strikethrough')).toBe(expected);
+        });
+
+        test('does not let a skipped single full-line selection force removal mode on another selection', () => {
+            const harness = createEditorHarness(['> [!NOTE] ~~Title~~', '', 'plain'].join('\n'));
+
+            try {
+                const line1 = harness.view.state.doc.line(1);
+                const line3 = harness.view.state.doc.line(3);
+
+                harness.view.dispatch({
+                    selection: EditorSelection.create([
+                        EditorSelection.range(line1.from, line1.to),
+                        EditorSelection.range(line3.from, line3.to),
+                    ]),
+                });
+
+                const command = createInsertInlineFormatCommand(harness.view, getFormat('strikethrough'));
+                command();
+
+                expect(harness.getText()).toBe(['> [!NOTE] ~~Title~~', '', '~~plain~~'].join('\n'));
+            } finally {
+                harness.destroy();
+            }
+        });
+    });
+
+    describe('spans across soft line breaks', () => {
+        test('preserves a link destination when removing subscript from the next line', () => {
+            const input = '[Alice](https://example.com/~alice)\nThe formula is H[[~2~]]O.';
+            const expected = '[Alice](https://example.com/~alice)\nThe formula is H2O.';
+
+            expect(runCommand(input, 'subscript', 'markdown')).toBe(expected);
+        });
+
+        test('removes a span whose delimiters are on different lines of a paragraph', () => {
+            expect(runCommand('[[~~one\ntwo~~\n\nplain]]', 'strikethrough')).toBe('one\ntwo\n\nplain');
+        });
+
+        test('removes a cross-line span when only its second line is selected', () => {
+            expect(runCommand('~~one\n[[two]]~~', 'strikethrough')).toBe('one\ntwo');
+        });
+
+        test('removes a cross-line span inside a blockquote', () => {
+            expect(runCommand('[[> ==one\n> two==]]', 'highlight')).toBe('> one\n> two');
+        });
+
+        test('does not pair delimiters from different paragraphs', () => {
+            expect(runCommand('[[==one\n\ntwo==]]', 'highlight')).toBe('====one==\n\n==two====');
+        });
+
+        test('unwraps a cross-line span when the cursor is inside it', () => {
+            const result = runCommandWithSelection('~~one\nt|wo~~', 'strikethrough');
+
+            expect(result.text).toBe('one\ntwo');
+            expect(result.selection).toEqual({ anchor: 0, head: 'one\ntwo'.length });
+        });
+    });
+
     describe('cursor inside existing formatting — removes formatting and selects content', () => {
         test('removes strikethrough when cursor is inside formatted text', () => {
             // cursor after 'strike' in '~~strikethrough~~'
@@ -685,10 +852,10 @@ describe('createInsertInlineFormatCommand', () => {
         });
 
         test('does not remove empty delimiters (no content) when cursor is inside ~~~~', () => {
-            // '~~~~': findWrappedSegments skips the closing delimiter when it equals contentStart (empty content),
-            // so no segment is found and the cursor insertion path runs instead
-            const result = runCommandWithSelection('~~|~~', 'strikethrough');
-            expect(result.text).toBe('~~~~~~~~');
+            // '~~~~' at column 0 is parsed as a tilde fenced code block in CommonMark; place it in a paragraph
+            // so findWrappedSegments runs and skips the empty delimiter pair, falling through to cursor insertion
+            const result = runCommandWithSelection('foo ~~|~~', 'strikethrough');
+            expect(result.text).toBe('foo ~~~~~~~~');
         });
 
         test('removes correct segment when multiple formatted segments exist on a line', () => {

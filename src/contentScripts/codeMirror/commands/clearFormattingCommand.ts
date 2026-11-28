@@ -596,7 +596,7 @@ function createExplicitSelection(range: SelectionRange, updatedTextLength: numbe
           };
 }
 
-export function clearMarkdownFormattingSelectionText(text: string): string {
+function clearMarkdownFormattingSelectionText(text: string): string {
     const store = createPlaceholderStore(text);
     let updatedText = applyLezerFormattingEdits(text, store);
     updatedText = replaceHtmlImages(updatedText, store);

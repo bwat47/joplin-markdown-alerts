@@ -354,7 +354,7 @@ function createAlertCursorChange(state: EditorState, cursorPos: number): CursorA
  * - If already an alert, cycles the marker on the first line while preserving the title and nesting prefix.
  * - If quoted but not an alert, injects an alert marker respecting existing blockquote depth.
  */
-export function toggleAlertSelectionText(text: string): string {
+function toggleAlertSelectionText(text: string): string {
     const lines = text.split('\n');
     const allQuoted = lines.every((line) => isBlockquoteLine(line));
 

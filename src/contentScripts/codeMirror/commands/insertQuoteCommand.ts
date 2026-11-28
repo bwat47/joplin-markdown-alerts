@@ -29,10 +29,6 @@ type MappedQuotePosition = {
     offset: number;
 };
 
-export function toggleBlockquoteText(text: string): string {
-    return transformQuoteText(text, isBlockquoteText(text));
-}
-
 /**
  * Transforms one line for the quote toggle. Single source of truth for the
  * text changes and the selection mapping. Adding never nests: lines that

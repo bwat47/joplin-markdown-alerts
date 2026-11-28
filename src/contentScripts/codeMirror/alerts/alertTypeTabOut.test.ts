@@ -1,16 +1,29 @@
 // @vitest-environment jsdom
 import { autocompletion, completionStatus, startCompletion } from '@codemirror/autocomplete';
-import { EditorSelection } from '@codemirror/state';
+import { EditorSelection, type Extension } from '@codemirror/state';
+import type { EditorView } from '@codemirror/view';
 
 import { createInsertAlertCommand } from '../commands/insertAlertCommand';
 import { createEditorHarness } from '../shared/testUtils';
-import { tabOutOfAlertType } from './alertTypeTabOut';
+import { createAlertTypeTabOutExtension } from './alertTypeTabOut';
 
 function getSelections(harness: ReturnType<typeof createEditorHarness>): Array<{ anchor: number; head: number }> {
     return harness.view.state.selection.ranges.map((range) => ({ anchor: range.anchor, head: range.head }));
 }
 
-describe('tabOutOfAlertType', () => {
+function createTabOutHarness(input: string, extraExtensions: Extension[] = []): ReturnType<typeof createEditorHarness> {
+    return createEditorHarness(input, {
+        extensions: [createAlertTypeTabOutExtension(), ...extraExtensions],
+    });
+}
+
+function pressTab(view: EditorView): boolean {
+    const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    view.contentDOM.dispatchEvent(event);
+    return event.defaultPrevented;
+}
+
+describe('createAlertTypeTabOutExtension', () => {
     test.each([
         {
             name: 'moves past the trailing space of an alert line without a title',
@@ -37,10 +50,10 @@ describe('tabOutOfAlertType', () => {
             expectedCursor: '> > [!TIP] '.length,
         },
     ])('$name', ({ input, expectedText, expectedCursor }) => {
-        const harness = createEditorHarness(input);
+        const harness = createTabOutHarness(input);
 
         try {
-            expect(tabOutOfAlertType(harness.view)).toBe(true);
+            expect(pressTab(harness.view)).toBe(true);
             expect(harness.getText()).toBe(expectedText);
             expect(getSelections(harness)).toEqual([{ anchor: expectedCursor, head: expectedCursor }]);
         } finally {
@@ -55,11 +68,11 @@ describe('tabOutOfAlertType', () => {
         { name: 'selection is text that is not an alert type', input: '> [[Note]] text' },
         { name: 'type-like text is not on an alert title line', input: '[![[NOTE]]]' },
     ])('does not handle Tab when $name', ({ input }) => {
-        const harness = createEditorHarness(input);
+        const harness = createTabOutHarness(input);
 
         try {
             const selectionBefore = getSelections(harness);
-            expect(tabOutOfAlertType(harness.view)).toBe(false);
+            expect(pressTab(harness.view)).toBe(false);
             expect(getSelections(harness)).toEqual(selectionBefore);
         } finally {
             harness.destroy();
@@ -67,14 +80,14 @@ describe('tabOutOfAlertType', () => {
     });
 
     test('moves every cursor when each selection is an alert type', () => {
-        const harness = createEditorHarness(['> [!NOTE]', '', '> [!TIP] Title'].join('\n'));
+        const harness = createTabOutHarness(['> [!NOTE]', '', '> [!TIP] Title'].join('\n'));
 
         try {
             harness.view.dispatch({
                 selection: EditorSelection.create([EditorSelection.range(4, 8), EditorSelection.range(15, 18)]),
             });
 
-            expect(tabOutOfAlertType(harness.view)).toBe(true);
+            expect(pressTab(harness.view)).toBe(true);
             expect(harness.getText()).toBe(['> [!NOTE] ', '', '> [!TIP] Title'].join('\n'));
             expect(getSelections(harness)).toEqual([
                 { anchor: 10, head: 10 },
@@ -86,14 +99,14 @@ describe('tabOutOfAlertType', () => {
     });
 
     test('does not handle Tab when any selection is not an alert type', () => {
-        const harness = createEditorHarness(['> [!NOTE] ', '', 'Plain text'].join('\n'));
+        const harness = createTabOutHarness(['> [!NOTE] ', '', 'Plain text'].join('\n'));
 
         try {
             harness.view.dispatch({
                 selection: EditorSelection.create([EditorSelection.range(4, 8), EditorSelection.range(12, 17)]),
             });
 
-            expect(tabOutOfAlertType(harness.view)).toBe(false);
+            expect(pressTab(harness.view)).toBe(false);
         } finally {
             harness.destroy();
         }
@@ -107,12 +120,12 @@ describe('tabOutOfAlertType', () => {
             expectedText: ['> [!NOTE] ', '> Some selected text'].join('\n'),
         },
     ])('lands one space after the marker for an alert created from $name', ({ input, expectedText }) => {
-        const harness = createEditorHarness(input);
+        const harness = createTabOutHarness(input);
 
         try {
             createInsertAlertCommand(harness.view)();
 
-            expect(tabOutOfAlertType(harness.view)).toBe(true);
+            expect(pressTab(harness.view)).toBe(true);
             expect(harness.getText()).toBe(expectedText);
             expect(harness.getCursor()).toBe('> [!NOTE] '.length);
         } finally {
@@ -123,15 +136,13 @@ describe('tabOutOfAlertType', () => {
     test('defers to autocomplete while the completion popup is open', async () => {
         const COMPLETION_START_TIMEOUT_MS = 250;
         const COMPLETION_POLL_INTERVAL_MS = 10;
-        const harness = createEditorHarness('> [![[NOTE]]] ', {
-            extensions: [
-                autocompletion({
-                    override: [(context) => ({ from: context.pos, options: [{ label: 'option' }] })],
-                    activateOnTyping: false,
-                    interactionDelay: 0,
-                }),
-            ],
-        });
+        const harness = createTabOutHarness('> [![[NOTE]]] ', [
+            autocompletion({
+                override: [(context) => ({ from: context.pos, options: [{ label: 'option' }] })],
+                activateOnTyping: false,
+                interactionDelay: 0,
+            }),
+        ]);
 
         try {
             startCompletion(harness.view);
@@ -141,7 +152,7 @@ describe('tabOutOfAlertType', () => {
             }
             expect(completionStatus(harness.view.state)).toBe('active');
 
-            expect(tabOutOfAlertType(harness.view)).toBe(false);
+            expect(pressTab(harness.view)).toBe(false);
             expect(getSelections(harness)).toEqual([{ anchor: 4, head: 8 }]);
         } finally {
             harness.destroy();

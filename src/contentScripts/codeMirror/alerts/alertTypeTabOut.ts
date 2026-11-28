@@ -65,7 +65,7 @@ function getAlertTypeTabOutSpec(state: EditorState): TransactionSpec | null {
  * Moves each cursor past a selected alert type to the end of its title line.
  * Defers to autocomplete while its popup is open so Tab keeps its completion behavior.
  */
-export const tabOutOfAlertType: Command = (view) => {
+const tabOutOfAlertType: Command = (view) => {
     if (completionStatus(view.state) === 'active') {
         return false;
     }

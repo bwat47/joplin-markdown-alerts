@@ -2,11 +2,26 @@
 import { EditorSelection } from '@codemirror/state';
 
 import { createEditorHarness } from '../shared/testUtils';
-import { clearMarkdownFormattingSelectionText, createClearFormattingCommand } from './clearFormattingCommand';
+import { createClearFormattingCommand } from './clearFormattingCommand';
 
 const RESOURCE_ID = ':/5622253ddc404beaa9becd86d48095c5';
 
-describe('clearMarkdownFormattingSelectionText', () => {
+function runCommand(input: string): string {
+    const harness = createEditorHarness(input, { rawInput: true });
+
+    try {
+        harness.view.dispatch({
+            selection: EditorSelection.range(0, input.length),
+        });
+        const command = createClearFormattingCommand(harness.view);
+        command();
+        return harness.getText();
+    } finally {
+        harness.destroy();
+    }
+}
+
+describe('createClearFormattingCommand', () => {
     test.each([
         {
             name: 'removes supported inline markdown formatting markers',
@@ -118,11 +133,9 @@ describe('clearMarkdownFormattingSelectionText', () => {
             expected: ['', '', '', '', '', '', '', ''].join('\n'),
         },
     ])('$name', ({ input, expected }) => {
-        expect(clearMarkdownFormattingSelectionText(input)).toBe(expected);
+        expect(runCommand(input)).toBe(expected);
     });
-});
 
-describe('createClearFormattingCommand', () => {
     test('returns false for a cursor-only selection', () => {
         const harness = createEditorHarness('|**Bold**');
 

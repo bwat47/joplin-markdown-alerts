@@ -6,7 +6,7 @@ import type { EditorView } from '@codemirror/view';
 import { createAlertCompletionSource } from '../alerts/alertAutocomplete';
 import { createMarkdownAlertEditorSettingsExtension } from '../pluginSettings';
 import { createEditorHarness } from '../shared/testUtils';
-import { createInsertAlertCommand, toggleAlertSelectionText } from './insertAlertCommand';
+import { createInsertAlertCommand } from './insertAlertCommand';
 
 function runCommand(input: string): string {
     const harness = createEditorHarness(input);
@@ -29,38 +29,6 @@ function runCommandWithSelection(input: string): { text: string; selection: { an
         harness.destroy();
     }
 }
-
-describe('toggleAlertSelectionText', () => {
-    test.each([
-        {
-            name: 'adds an alert line and quotes when selection is not a blockquote',
-            input: ['Line one', 'Line two'].join('\n'),
-            expected: ['> [!NOTE]', '> Line one', '> Line two'].join('\n'),
-        },
-        {
-            name: 'inserts alert line above quoted selection without an alert marker',
-            input: ['> Line one', '> Line two'].join('\n'),
-            expected: ['> [!NOTE]', '> Line one', '> Line two'].join('\n'),
-        },
-        {
-            name: 'preserves nested blockquote prefix when inserting alert line',
-            input: ['>> Nested line', '>> Another line'].join('\n'),
-            expected: ['>> [!NOTE]', '>> Nested line', '>> Another line'].join('\n'),
-        },
-        {
-            name: 'toggles alert type when selection already includes alert marker',
-            input: ['> [!NOTE]', '> Line one'].join('\n'),
-            expected: ['> [!TIP]', '> Line one'].join('\n'),
-        },
-        {
-            name: 'toggles alert type while preserving the title text',
-            input: ['> [!warning] Custom title', '> Line one'].join('\n'),
-            expected: ['> [!CAUTION] Custom title', '> Line one'].join('\n'),
-        },
-    ])('$name', ({ input, expected }) => {
-        expect(toggleAlertSelectionText(input)).toBe(expected);
-    });
-});
 
 describe('createInsertAlertCommand', () => {
     const COMPLETION_START_TIMEOUT_MS = 250;
@@ -90,6 +58,16 @@ describe('createInsertAlertCommand', () => {
             name: 'converts the entire paragraph when cursor is inside it',
             input: 'Parag|raph',
             expected: ['> [!NOTE]', '> Paragraph'].join('\n'),
+        },
+        {
+            name: 'preserves nested blockquote prefix when inserting alert line',
+            input: ['[[>> Nested line', '>> Another line]]'].join('\n'),
+            expected: ['>> [!NOTE]', '>> Nested line', '>> Another line'].join('\n'),
+        },
+        {
+            name: 'toggles alert type while preserving the title text',
+            input: ['[[> [!warning] Custom title', '> Line one]]'].join('\n'),
+            expected: ['> [!CAUTION] Custom title', '> Line one'].join('\n'),
         },
     ])('$name', ({ input, expected }) => {
         expect(runCommand(input)).toBe(expected);

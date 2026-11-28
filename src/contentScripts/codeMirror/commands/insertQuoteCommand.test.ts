@@ -2,29 +2,7 @@
 import { EditorSelection } from '@codemirror/state';
 
 import { createEditorHarness } from '../shared/testUtils';
-import { createInsertQuoteCommand, toggleBlockquoteText } from './insertQuoteCommand';
-
-describe('toggleBlockquoteText', () => {
-    test.each([
-        {
-            name: 'removes blockquote prefix when all lines are quoted',
-            input: ['> First line', '> ', '> Second line'].join('\n'),
-            expected: ['First line', '', 'Second line'].join('\n'),
-        },
-        {
-            name: 'removes a single blockquote level from nested quotes',
-            input: ['>> Nested line', '>> Another line'].join('\n'),
-            expected: ['> Nested line', '> Another line'].join('\n'),
-        },
-        {
-            name: 'adds blockquote prefix only to unquoted lines when any line is not quoted',
-            input: ['> Quoted line', 'Plain line'].join('\n'),
-            expected: ['> Quoted line', '> Plain line'].join('\n'),
-        },
-    ])('$name', ({ input, expected }) => {
-        expect(toggleBlockquoteText(input)).toBe(expected);
-    });
-});
+import { createInsertQuoteCommand } from './insertQuoteCommand';
 
 function runCommand(input: string): string {
     const harness = createEditorHarness(input);
@@ -79,6 +57,11 @@ describe('createInsertQuoteCommand', () => {
             name: 'quotes non-paragraph selection such as a code block',
             input: ['[[```', 'code block', '```]]'].join('\n'),
             expected: ['> ```', '> code block', '> ```'].join('\n'),
+        },
+        {
+            name: 'unquotes multi-line blockquote containing an empty quoted line',
+            input: ['[[> First line', '> ', '> Second line]]'].join('\n'),
+            expected: ['First line', '', 'Second line'].join('\n'),
         },
     ])('$name', ({ input, expected }) => {
         expect(runCommand(input)).toBe(expected);

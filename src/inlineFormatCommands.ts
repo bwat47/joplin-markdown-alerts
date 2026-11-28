@@ -147,6 +147,7 @@ function getDefaultInlineFormatSyntaxMode(id: ConfigurableInlineFormatId): Inlin
     return DEFAULT_CONFIGURABLE_INLINE_FORMAT_SYNTAX[id];
 }
 
+// fallow-ignore-next-line test-only-export -- reused by inline format tests as single source of truth for format lookup
 export function getInlineFormatDefinition(
     id: InlineFormatId,
     syntaxMode?: InlineFormatSyntaxMode

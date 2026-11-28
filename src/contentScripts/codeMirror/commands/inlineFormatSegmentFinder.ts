@@ -12,11 +12,10 @@ export type InlineFormatSegmentFinder = (line: Line) => TextRange[];
 const PARAGRAPH_NODE_NAME = 'Paragraph';
 
 /**
- * Nodes whose characters can never be part of an inline format delimiter: inline code and code blocks
- * are literal text, and quote marks are the `>` prefixes of continuation lines inside a multi-line
- * paragraph.
+ * Inline code, code blocks, and URL destinations contain literal text. Quote marks are the `>` prefixes
+ * of continuation lines inside a multi-line paragraph. These nodes cannot contain inline format delimiters.
  */
-const NON_DELIMITER_NODE_NAMES = new Set(['InlineCode', 'FencedCode', 'CodeBlock', 'QuoteMark']);
+const NON_DELIMITER_NODE_NAMES = new Set(['InlineCode', 'FencedCode', 'CodeBlock', 'QuoteMark', 'URL']);
 
 function findParagraphOnLine(tree: Tree, line: Line): TextRange | null {
     let paragraph: TextRange | null = null;

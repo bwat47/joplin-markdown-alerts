@@ -734,6 +734,13 @@ describe('createInsertInlineFormatCommand', () => {
     });
 
     describe('spans across soft line breaks', () => {
+        test('preserves a link destination when removing subscript from the next line', () => {
+            const input = '[Alice](https://example.com/~alice)\nThe formula is H[[~2~]]O.';
+            const expected = '[Alice](https://example.com/~alice)\nThe formula is H2O.';
+
+            expect(runCommand(input, 'subscript', 'markdown')).toBe(expected);
+        });
+
         test('removes a span whose delimiters are on different lines of a paragraph', () => {
             expect(runCommand('[[~~one\ntwo~~\n\nplain]]', 'strikethrough')).toBe('one\ntwo\n\nplain');
         });

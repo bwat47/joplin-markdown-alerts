@@ -12,10 +12,11 @@ export type InlineFormatSegmentFinder = (line: Line) => TextRange[];
 const PARAGRAPH_NODE_NAME = 'Paragraph';
 
 /**
- * Nodes whose characters can never be part of an inline format delimiter: code spans are literal text,
- * and quote marks are the `>` prefixes of continuation lines inside a multi-line paragraph.
+ * Nodes whose characters can never be part of an inline format delimiter: inline code and code blocks
+ * are literal text, and quote marks are the `>` prefixes of continuation lines inside a multi-line
+ * paragraph.
  */
-const NON_DELIMITER_NODE_NAMES = new Set(['InlineCode', 'QuoteMark']);
+const NON_DELIMITER_NODE_NAMES = new Set(['InlineCode', 'FencedCode', 'CodeBlock', 'QuoteMark']);
 
 function findParagraphOnLine(tree: Tree, line: Line): TextRange | null {
     let paragraph: TextRange | null = null;
@@ -51,10 +52,11 @@ function collectNonDelimiterRanges(tree: Tree, scope: TextRange): TextRange[] {
                 return true;
             }
 
-            ranges.push({
-                from: Math.max(node.from, scope.from) - scope.from,
-                to: Math.min(node.to, scope.to) - scope.from,
-            });
+            const from = Math.max(node.from, scope.from) - scope.from;
+            const to = Math.min(node.to, scope.to) - scope.from;
+            if (from < to) {
+                ranges.push({ from, to });
+            }
             return false;
         },
     });

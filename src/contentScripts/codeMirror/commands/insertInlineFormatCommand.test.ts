@@ -695,8 +695,41 @@ describe('createInsertInlineFormatCommand', () => {
             expect(runCommand('[[use `~~x~~` here]]', 'strikethrough')).toBe('~~use `~~x~~` here~~');
         });
 
-        test('inserts delimiters at a cursor inside inline code instead of unwrapping', () => {
-            expect(runCommandWithCursor('`~~a|b~~`', 'strikethrough').text).toBe('`~~a~~~~b~~`');
+        test('skips a single full-line selection inside a fenced code block even when it contains delimiters', () => {
+            const input = ['```', '[[~~code~~]]', '```'].join('\n');
+            const expected = ['```', '~~code~~', '```'].join('\n');
+
+            expect(runCommand(input, 'strikethrough')).toBe(expected);
+        });
+
+        test('skips a single full-line alert title selection even when it contains delimiters', () => {
+            const input = '[[> [!NOTE] ~~Title~~]]';
+            const expected = '> [!NOTE] ~~Title~~';
+
+            expect(runCommand(input, 'strikethrough')).toBe(expected);
+        });
+
+        test('does not let a skipped single full-line selection force removal mode on another selection', () => {
+            const harness = createEditorHarness(['> [!NOTE] ~~Title~~', '', 'plain'].join('\n'));
+
+            try {
+                const line1 = harness.view.state.doc.line(1);
+                const line3 = harness.view.state.doc.line(3);
+
+                harness.view.dispatch({
+                    selection: EditorSelection.create([
+                        EditorSelection.range(line1.from, line1.to),
+                        EditorSelection.range(line3.from, line3.to),
+                    ]),
+                });
+
+                const command = createInsertInlineFormatCommand(harness.view, getFormat('strikethrough'));
+                command();
+
+                expect(harness.getText()).toBe(['> [!NOTE] ~~Title~~', '', '~~plain~~'].join('\n'));
+            } finally {
+                harness.destroy();
+            }
         });
     });
 
@@ -812,10 +845,10 @@ describe('createInsertInlineFormatCommand', () => {
         });
 
         test('does not remove empty delimiters (no content) when cursor is inside ~~~~', () => {
-            // '~~~~': findWrappedSegments skips the closing delimiter when it equals contentStart (empty content),
-            // so no segment is found and the cursor insertion path runs instead
-            const result = runCommandWithSelection('~~|~~', 'strikethrough');
-            expect(result.text).toBe('~~~~~~~~');
+            // '~~~~' at column 0 is parsed as a tilde fenced code block in CommonMark; place it in a paragraph
+            // so findWrappedSegments runs and skips the empty delimiter pair, falling through to cursor insertion
+            const result = runCommandWithSelection('foo ~~|~~', 'strikethrough');
+            expect(result.text).toBe('foo ~~~~~~~~');
         });
 
         test('removes correct segment when multiple formatted segments exist on a line', () => {

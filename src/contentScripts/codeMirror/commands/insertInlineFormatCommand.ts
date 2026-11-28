@@ -110,8 +110,9 @@ function lineCanUseLineAwareFormatting(view: EditorView, line: string, lineFrom:
 
 /**
  * Classifies a line's selected slice. A single-line partial selection is wrapped exactly as selected.
- * Lines in a multi-line selection skip structures that inline delimiters would break (code, tables,
- * alert titles, horizontal rules), and partial edge slices that are whitespace-only are skipped.
+ * Full-line and multi-line selections skip structures that inline delimiters would break (code,
+ * tables, alert titles, horizontal rules), and partial edge slices that are whitespace-only are
+ * skipped.
  */
 function classifySelectedLine(
     view: EditorView,
@@ -171,17 +172,16 @@ function wrapSelectedLine({ text, kind }: SelectedLineEntry, format: InlineForma
 }
 
 /**
- * Collects the target segments a selection overlaps. A single-line selection uses the whole selection;
- * a multi-line selection only counts the lines it would format, so skipped lines (code, tables, alert
- * titles) are not modified. Segments may extend past the selection and across soft line breaks.
+ * Collects the target segments a selection overlaps, ignoring lines classified as `skip` (code,
+ * tables, alert titles, horizontal rules, and whitespace-only partial edge slices). Segments may
+ * extend past the selection and across soft line breaks.
  */
 function findOverlappedSegments(
     state: EditorState,
-    range: SelectionRange,
     lineEntries: SelectedLineEntry[],
     findSegments: InlineFormatSegmentFinder
 ): TextRange[] {
-    const targets = lineEntries.length > 1 ? lineEntries.filter(({ kind }) => kind !== 'skip') : [range];
+    const targets = lineEntries.filter(({ kind }) => kind !== 'skip');
     const segmentsByStart = new Map<number, TextRange>();
 
     for (const target of targets) {
@@ -204,7 +204,7 @@ function planSelection(
 
     return {
         lineEntries,
-        segments: findOverlappedSegments(view.state, range, lineEntries, findSegments),
+        segments: findOverlappedSegments(view.state, lineEntries, findSegments),
     };
 }
 

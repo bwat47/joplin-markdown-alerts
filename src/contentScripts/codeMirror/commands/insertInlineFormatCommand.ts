@@ -66,12 +66,12 @@ const SKIPPABLE_BLOCK_KIND_BY_NODE_NAME = new Map<string, SkippableBlockKind>([
 ]);
 
 /** Walks up the syntax tree once per probe position, collecting the skippable blocks enclosing the line. */
-function findEnclosingSkippableBlockKinds(view: EditorView, lineFrom: number): Set<SkippableBlockKind> {
+function findEnclosingSkippableBlockKinds(view: EditorView, docLine: Line): Set<SkippableBlockKind> {
     const state = view.state;
-    const tree = getSyntaxTree(state, lineFrom);
+    const tree = getSyntaxTree(state, docLine.to);
     const kinds = new Set<SkippableBlockKind>();
 
-    for (const probePosition of getProbePositions(state, lineFrom, STRUCTURAL_PREFIX_PROBE_REGEX)) {
+    for (const probePosition of getProbePositions(state, docLine.from, STRUCTURAL_PREFIX_PROBE_REGEX)) {
         let node: SyntaxNode | null = tree.resolveInner(probePosition, 1);
         while (node) {
             const kind = SKIPPABLE_BLOCK_KIND_BY_NODE_NAME.get(node.name);
@@ -95,17 +95,17 @@ function isGitHubAlertTitleLine(line: string): boolean {
     return parseGitHubAlertTitleLine(line) !== null;
 }
 
-function lineCanUseLineAwareFormatting(view: EditorView, line: string, lineFrom: number): boolean {
-    const blockKinds = findEnclosingSkippableBlockKinds(view, lineFrom);
+function lineCanUseLineAwareFormatting(view: EditorView, docLine: Line): boolean {
+    const blockKinds = findEnclosingSkippableBlockKinds(view, docLine);
     if (blockKinds.has('code') || blockKinds.has('horizontalRule')) {
         return false;
     }
 
-    if (blockKinds.has('table') && tableLineHasCellDelimiters(line)) {
+    if (blockKinds.has('table') && tableLineHasCellDelimiters(docLine.text)) {
         return false;
     }
 
-    return !isGitHubAlertTitleLine(line);
+    return !isGitHubAlertTitleLine(docLine.text);
 }
 
 /**
@@ -130,7 +130,7 @@ function classifySelectedLine(
         return 'skip';
     }
 
-    if (!lineCanUseLineAwareFormatting(view, docLine.text, docLine.from)) {
+    if (!lineCanUseLineAwareFormatting(view, docLine)) {
         return 'skip';
     }
 

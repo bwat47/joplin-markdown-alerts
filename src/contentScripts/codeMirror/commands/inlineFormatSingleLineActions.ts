@@ -17,6 +17,9 @@ type RelativeSelection = {
     head: number;
 };
 
+/** Whether a formatting command adds the target format or removes existing target spans. */
+export type InlineFormatMode = 'add' | 'remove';
+
 export type SingleLineRelativeAction = {
     kind: 'selection-removal' | 'cursor-jump-in' | 'cursor-jump-out' | 'cursor-removal';
     replaceFrom: number;
@@ -215,36 +218,39 @@ function removeInlineFormattingFromText(text: string, format: InlineFormatDefini
     return stripWrappedSegmentsFromText(text, findWrappedSegments(text, format), format);
 }
 
-export function applyInlineFormattingToSelectionText(text: string, format: InlineFormatDefinition): string {
-    const wrappedSegments = findWrappedSegments(text, format);
-    if (wrappedSegments.length === 0) {
-        return wrapTextPreservingTrailingWhitespace(text, format);
-    }
-
-    return stripWrappedSegmentsFromText(text, wrappedSegments, format);
+/**
+ * Formats selected text as-is, without treating any leading characters as a structural line prefix.
+ * In `add` mode the text is wrapped; in `remove` mode every complete target span inside it is unwrapped.
+ */
+export function formatSelectionText(text: string, format: InlineFormatDefinition, mode: InlineFormatMode): string {
+    return mode === 'remove'
+        ? removeInlineFormattingFromText(text, format)
+        : wrapTextPreservingTrailingWhitespace(text, format);
 }
 
-export function formatFullLineText(line: string, format: InlineFormatDefinition, removalOnly = false): string {
+export function selectionTextHasTargetFormatting(text: string, format: InlineFormatDefinition): boolean {
+    return findWrappedSegments(text, format).length > 0;
+}
+
+/**
+ * Formats text that starts at a line boundary, keeping structural prefixes (blockquote markers, headings,
+ * list markers, indentation) outside the delimiters. Whitespace-only lines are left unchanged.
+ */
+export function formatFullLineText(line: string, format: InlineFormatDefinition, mode: InlineFormatMode): string {
     if (line.trim() === '') {
         return line;
     }
 
     const structuralParts = splitStructuralLineParts(line);
-    if (structuralParts) {
-        if (structuralParts.content.length === 0) {
-            return line;
-        }
-
-        return `${structuralParts.prefix}${
-            removalOnly
-                ? removeInlineFormattingFromText(structuralParts.content, format)
-                : applyInlineFormattingToSelectionText(structuralParts.content, format)
-        }`;
+    if (!structuralParts) {
+        return formatSelectionText(line, format, mode);
     }
 
-    return removalOnly
-        ? removeInlineFormattingFromText(line, format)
-        : applyInlineFormattingToSelectionText(line, format);
+    if (structuralParts.content.length === 0) {
+        return line;
+    }
+
+    return `${structuralParts.prefix}${formatSelectionText(structuralParts.content, format, mode)}`;
 }
 
 export function lineHasTargetFormatting(line: string, format: InlineFormatDefinition): boolean {
@@ -255,7 +261,7 @@ export function lineHasTargetFormatting(line: string, format: InlineFormatDefini
     const structuralParts = splitStructuralLineParts(line);
     const content = structuralParts ? structuralParts.content : line;
 
-    return findWrappedSegments(content, format).length > 0;
+    return selectionTextHasTargetFormatting(content, format);
 }
 
 function unwrapWrappedSegments(

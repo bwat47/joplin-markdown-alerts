@@ -302,7 +302,7 @@ describe('createInsertInlineFormatCommand', () => {
             const command = createInsertInlineFormatCommand(harness.view, getFormat('strikethrough'));
             command();
 
-            expect(harness.getText()).toBe(['ABC', '', '~~TEST~~'].join('\n'));
+            expect(harness.getText()).toBe(['ABC', '', 'TEST'].join('\n'));
         } finally {
             harness.destroy();
         }
@@ -310,9 +310,87 @@ describe('createInsertInlineFormatCommand', () => {
 
     test('uses removal-only mode for fully selected middle lines inside a mixed multiline selection', () => {
         const input = ['prefix [[start', '~~ABC~~', 'TEST', 'end]] suffix'].join('\n');
-        const expected = ['prefix ~~start~~', 'ABC', 'TEST', '~~end~~ suffix'].join('\n');
+        const expected = ['prefix start', 'ABC', 'TEST', 'end suffix'].join('\n');
 
         expect(runCommand(input, 'strikethrough')).toBe(expected);
+    });
+
+    test('uses removal-only mode for partially selected edge lines when any selected line has formatting', () => {
+        const input = ['ab [[cd', '++x++', 'ef]] gh'].join('\n');
+        const expected = ['ab cd', 'x', 'ef gh'].join('\n');
+
+        expect(runCommand(input, 'underline')).toBe(expected);
+    });
+
+    test('only removes formatting when one of several paragraph selections overlaps formatted text', () => {
+        const paragraphs = ['++Even if you are modifying++ a file.', '', 'If this is a large file.'];
+        const harness = createEditorHarness(paragraphs.join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line3 = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.range(line1.from, line1.to),
+                    EditorSelection.range(line3.from, line3.to),
+                ]),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('underline'));
+            command();
+
+            expect(harness.getText()).toBe(
+                ['Even if you are modifying a file.', '', 'If this is a large file.'].join('\n')
+            );
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('shares removal-only mode between single-line and multiline selections', () => {
+        const harness = createEditorHarness(['plain', 'first', '~~second~~'].join('\n'));
+
+        try {
+            const line1 = harness.view.state.doc.line(1);
+            const line2 = harness.view.state.doc.line(2);
+            const line3 = harness.view.state.doc.line(3);
+
+            harness.view.dispatch({
+                selection: EditorSelection.create([
+                    EditorSelection.range(line1.from, line1.to),
+                    EditorSelection.range(line2.from, line3.to),
+                ]),
+            });
+
+            const command = createInsertInlineFormatCommand(harness.view, getFormat('strikethrough'));
+            command();
+
+            expect(harness.getText()).toBe(['plain', 'first', 'second'].join('\n'));
+        } finally {
+            harness.destroy();
+        }
+    });
+
+    test('keeps list markers outside delimiters on a partially selected last line', () => {
+        const input = ['ab [[cd', '- item tw]]o'].join('\n');
+        const expected = ['ab ==cd==', '- ==item tw==o'].join('\n');
+
+        expect(runCommand(input, 'highlight')).toBe(expected);
+    });
+
+    test('skips a partially selected code block line in a multiline selection', () => {
+        const input = ['```', 'co[[de', '```', 'te]]xt'].join('\n');
+        const expected = ['```', 'code', '```', '==te==xt'].join('\n');
+
+        expect(runCommand(input, 'highlight')).toBe(expected);
+    });
+
+    test('skips a whitespace-only partial edge line in a multiline selection', () => {
+        const input = ['first[[', 'second]]'].join('\n');
+        const expected = ['first', '==second=='].join('\n');
+
+        expect(runCommand(input, 'highlight')).toBe(expected);
     });
 
     test('applies line-aware formatting to fully selected leading lines in a mixed multiline selection', () => {

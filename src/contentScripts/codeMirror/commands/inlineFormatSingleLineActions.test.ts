@@ -6,60 +6,69 @@ import {
 import {
     analyzeSingleLineCursorAction,
     analyzeSingleLineSelectionRemoval,
-    applyInlineFormattingToSelectionText,
+    formatSelectionText,
+    selectionTextHasTargetFormatting,
 } from './inlineFormatSingleLineActions';
 
 function getFormat(id: InlineFormatId, syntaxMode?: InlineFormatSyntaxMode) {
     return getInlineFormatDefinition(id, syntaxMode);
 }
 
-describe('applyInlineFormattingToSelectionText', () => {
-    test('wraps the whole selection when the target formatting is not present', () => {
-        expect(applyInlineFormattingToSelectionText('abc', getFormat('highlight'))).toBe('==abc==');
+describe('formatSelectionText', () => {
+    test('wraps the whole selection in add mode', () => {
+        expect(formatSelectionText('abc', getFormat('highlight'), 'add')).toBe('==abc==');
     });
 
-    test('unwraps the whole selection when it is already wrapped', () => {
-        expect(applyInlineFormattingToSelectionText('==abc==', getFormat('highlight'))).toBe('abc');
+    test('unwraps the whole selection in remove mode when it is already wrapped', () => {
+        expect(formatSelectionText('==abc==', getFormat('highlight'), 'remove')).toBe('abc');
     });
 
     test('removes existing inner target spans without touching other formatting', () => {
-        expect(applyInlineFormattingToSelectionText('test ~~abc~~ **def** aaaa', getFormat('strikethrough'))).toBe(
+        expect(formatSelectionText('test ~~abc~~ **def** aaaa', getFormat('strikethrough'), 'remove')).toBe(
             'test abc **def** aaaa'
         );
     });
 
     test('removes repeated target-formatted spans in one selection', () => {
-        expect(applyInlineFormattingToSelectionText('~~one~~ and ~~two~~', getFormat('strikethrough'))).toBe(
-            'one and two'
-        );
+        expect(formatSelectionText('~~one~~ and ~~two~~', getFormat('strikethrough'), 'remove')).toBe('one and two');
     });
 
-    test('does not misread strikethrough as subscript formatting', () => {
-        expect(applyInlineFormattingToSelectionText('~~abc~~', getFormat('subscript', 'markdown'))).toBe('~~~abc~~~');
+    test('leaves unformatted text unchanged in remove mode', () => {
+        expect(formatSelectionText('plain text', getFormat('strikethrough'), 'remove')).toBe('plain text');
     });
 
     test('keeps trailing spaces outside newly added delimiters', () => {
-        expect(applyInlineFormattingToSelectionText('ABC  ', getFormat('highlight'))).toBe('==ABC==  ');
+        expect(formatSelectionText('ABC  ', getFormat('highlight'), 'add')).toBe('==ABC==  ');
     });
 
     test('keeps leading spaces outside newly added delimiters', () => {
-        expect(applyInlineFormattingToSelectionText('  ABC', getFormat('highlight'))).toBe('  ==ABC==');
+        expect(formatSelectionText('  ABC', getFormat('highlight'), 'add')).toBe('  ==ABC==');
     });
 
     test('wraps the whole selection with superscript HTML when configured', () => {
-        expect(applyInlineFormattingToSelectionText('abc', getFormat('superscript', 'html'))).toBe('<sup>abc</sup>');
+        expect(formatSelectionText('abc', getFormat('superscript', 'html'), 'add')).toBe('<sup>abc</sup>');
     });
 
     test('unwraps exact superscript HTML markup when configured', () => {
-        expect(applyInlineFormattingToSelectionText('<sup>abc</sup>', getFormat('superscript', 'html'))).toBe('abc');
+        expect(formatSelectionText('<sup>abc</sup>', getFormat('superscript', 'html'), 'remove')).toBe('abc');
     });
 
     test('wraps the whole selection with subscript HTML when configured', () => {
-        expect(applyInlineFormattingToSelectionText('abc', getFormat('subscript', 'html'))).toBe('<sub>abc</sub>');
+        expect(formatSelectionText('abc', getFormat('subscript', 'html'), 'add')).toBe('<sub>abc</sub>');
     });
 
     test('unwraps exact subscript HTML markup when configured', () => {
-        expect(applyInlineFormattingToSelectionText('<sub>abc</sub>', getFormat('subscript', 'html'))).toBe('abc');
+        expect(formatSelectionText('<sub>abc</sub>', getFormat('subscript', 'html'), 'remove')).toBe('abc');
+    });
+});
+
+describe('selectionTextHasTargetFormatting', () => {
+    test('detects a wrapped target span', () => {
+        expect(selectionTextHasTargetFormatting('a ==b== c', getFormat('highlight'))).toBe(true);
+    });
+
+    test('does not misread strikethrough as subscript formatting', () => {
+        expect(selectionTextHasTargetFormatting('~~abc~~', getFormat('subscript', 'markdown'))).toBe(false);
     });
 });
 

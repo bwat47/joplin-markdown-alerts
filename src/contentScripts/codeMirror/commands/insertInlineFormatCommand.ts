@@ -1,4 +1,4 @@
-import type { SelectionRange } from '@codemirror/state';
+import type { Line, SelectionRange } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { SyntaxNode } from '@lezer/common';
 
@@ -10,10 +10,12 @@ import { getProbePositions, getSyntaxTree } from '../shared/syntaxTreeUtils';
 import {
     analyzeSingleLineCursorAction,
     analyzeSingleLineSelectionRemoval,
-    applyInlineFormattingToSelectionText,
     formatFullLineText,
+    formatSelectionText,
     lineHasTargetFormatting,
+    selectionTextHasTargetFormatting,
     splitStructuralLineParts,
+    type InlineFormatMode,
     type SingleLineRelativeAction,
 } from './inlineFormatSingleLineActions';
 
@@ -23,11 +25,29 @@ type TextChange = {
     insert: string;
 };
 
+type FormattingAction = {
+    key: string;
+    change: TextChange;
+    explicitSelection: ExplicitCursorSelection;
+};
+
+/**
+ * How one selected line takes part in a formatting command:
+ * - `line`: text starts at the line boundary; structural prefixes stay outside the delimiters.
+ * - `inline`: the selected text is formatted as-is.
+ * - `skip`: the text is left unchanged.
+ */
+type SelectedLineKind = 'line' | 'inline' | 'skip';
+
 type SelectedLineEntry = {
-    line: string;
-    lineFrom: number;
-    isFullySelected: boolean;
-    isEligibleForLineAwareFormatting: boolean;
+    text: string;
+    kind: SelectedLineKind;
+};
+
+type SelectionPlan = {
+    /** Single-line removal that expands to cover target spans overlapping the selection, if any. */
+    removal: FormattingAction | null;
+    lineEntries: SelectedLineEntry[];
 };
 
 const STRUCTURAL_PREFIX_PROBE_REGEX = /^[ \t]*(?:>\s*)*/;
@@ -87,105 +107,99 @@ function lineCanUseLineAwareFormatting(view: EditorView, line: string, lineFrom:
     );
 }
 
-function getSelectedLineEntries(view: EditorView, range: SelectionRange): SelectedLineEntry[] {
-    const state = view.state;
-    const startLine = state.doc.lineAt(range.from);
-    const selectedText = state.doc.sliceString(range.from, range.to);
-    const lines = selectedText.split('\n');
+/**
+ * Classifies a line's selected slice. A single-line partial selection is formatted exactly as selected.
+ * Lines in a multi-line selection skip structures that inline delimiters would break (code, tables,
+ * alert titles, horizontal rules), and partial edge slices that are whitespace-only are skipped.
+ */
+function classifySelectedLine(
+    view: EditorView,
+    docLine: Line,
+    selectionStart: number,
+    selectionEnd: number,
+    isMultiLineSelection: boolean
+): SelectedLineKind {
+    const isFullySelected = selectionStart === 0 && selectionEnd === docLine.length;
+    if (!isMultiLineSelection && !isFullySelected) {
+        return 'inline';
+    }
 
-    return lines.map((line, index) => {
-        const docLine = state.doc.line(startLine.number + index);
-        const lineFrom = docLine.from;
-        const selectionStart = index === 0 ? range.from - lineFrom : 0;
-        const selectionEnd = index === lines.length - 1 ? range.to - lineFrom : docLine.length;
-        const isFullySelected = selectionStart === 0 && selectionEnd === docLine.length;
+    if (!isFullySelected && docLine.text.slice(selectionStart, selectionEnd).trim() === '') {
+        return 'skip';
+    }
 
-        return {
-            line,
-            lineFrom,
-            isFullySelected,
-            isEligibleForLineAwareFormatting: lineCanUseLineAwareFormatting(view, line, lineFrom),
-        };
-    });
+    if (!lineCanUseLineAwareFormatting(view, docLine.text, docLine.from)) {
+        return 'skip';
+    }
+
+    return selectionStart === 0 ? 'line' : 'inline';
 }
 
-function applyInlineFormattingToFullLineSelectionRange(
-    view: EditorView,
-    range: SelectionRange,
-    format: InlineFormatDefinition
+function getSelectedLineEntries(view: EditorView, range: SelectionRange): SelectedLineEntry[] {
+    const doc = view.state.doc;
+    const startLine = doc.lineAt(range.from);
+    const endLine = doc.lineAt(range.to);
+    const isMultiLineSelection = startLine.number !== endLine.number;
+    const entries: SelectedLineEntry[] = [];
+
+    for (let lineNumber = startLine.number; lineNumber <= endLine.number; lineNumber += 1) {
+        const docLine = doc.line(lineNumber);
+        const selectionStart = Math.max(range.from, docLine.from) - docLine.from;
+        const selectionEnd = Math.min(range.to, docLine.to) - docLine.from;
+
+        entries.push({
+            text: docLine.text.slice(selectionStart, selectionEnd),
+            kind: classifySelectedLine(view, docLine, selectionStart, selectionEnd, isMultiLineSelection),
+        });
+    }
+
+    return entries;
+}
+
+function selectedLineHasTargetFormatting({ text, kind }: SelectedLineEntry, format: InlineFormatDefinition): boolean {
+    switch (kind) {
+        case 'line':
+            return lineHasTargetFormatting(text, format);
+        case 'inline':
+            return selectionTextHasTargetFormatting(text, format);
+        default:
+            return false;
+    }
+}
+
+function formatSelectedLine(
+    { text, kind }: SelectedLineEntry,
+    format: InlineFormatDefinition,
+    mode: InlineFormatMode
 ): string {
-    const lineEntries = getSelectedLineEntries(view, range);
-    const removalOnly = lineEntries.some(
-        ({ line, isEligibleForLineAwareFormatting }) =>
-            isEligibleForLineAwareFormatting && lineHasTargetFormatting(line, format)
+    switch (kind) {
+        case 'line':
+            return formatFullLineText(text, format, mode);
+        case 'inline':
+            return formatSelectionText(text, format, mode);
+        default:
+            return text;
+    }
+}
+
+function planSelection(view: EditorView, range: SelectionRange, format: InlineFormatDefinition): SelectionPlan {
+    return {
+        removal: findSelectionFormattingAction(view, range, format),
+        lineEntries: getSelectedLineEntries(view, range),
+    };
+}
+
+/**
+ * Chooses one mode for every selection in the command: if any selection contains or overlaps the target
+ * format, all selections only remove it; otherwise all selections add it.
+ */
+function resolveFormattingMode(plans: SelectionPlan[], format: InlineFormatDefinition): InlineFormatMode {
+    const hasTargetFormatting = plans.some(
+        ({ removal, lineEntries }) =>
+            removal !== null || lineEntries.some((entry) => selectedLineHasTargetFormatting(entry, format))
     );
 
-    return lineEntries
-        .map(({ line, isEligibleForLineAwareFormatting }) => {
-            if (!isEligibleForLineAwareFormatting) {
-                return line;
-            }
-
-            return formatFullLineText(line, format, removalOnly);
-        })
-        .join('\n');
-}
-
-function isFullLineSelection(view: EditorView, range: SelectionRange): boolean {
-    if (range.empty) {
-        return false;
-    }
-
-    const state = view.state;
-    const startLine = state.doc.lineAt(range.from);
-    if (range.from !== startLine.from) {
-        return false;
-    }
-
-    if (range.to === state.doc.length) {
-        return true;
-    }
-
-    const lineAtEnd = state.doc.lineAt(range.to);
-    return range.to === lineAtEnd.from || range.to === lineAtEnd.to;
-}
-
-function applyInlineFormattingToSelectionRange(
-    view: EditorView,
-    range: SelectionRange,
-    format: InlineFormatDefinition
-): string {
-    const state = view.state;
-    const selectedText = state.doc.sliceString(range.from, range.to);
-
-    if (isFullLineSelection(view, range)) {
-        return applyInlineFormattingToFullLineSelectionRange(view, range, format);
-    }
-
-    if (!selectedText.includes('\n')) {
-        return applyInlineFormattingToSelectionText(selectedText, format);
-    }
-
-    const lineEntries = getSelectedLineEntries(view, range);
-    const removalOnly = lineEntries
-        .filter(({ isFullySelected, isEligibleForLineAwareFormatting }) => {
-            return isFullySelected && isEligibleForLineAwareFormatting;
-        })
-        .some(({ line }) => lineHasTargetFormatting(line, format));
-
-    return lineEntries
-        .map(({ line, isFullySelected, isEligibleForLineAwareFormatting }) => {
-            if (!isFullySelected) {
-                return applyInlineFormattingToSelectionText(line, format);
-            }
-
-            if (!isEligibleForLineAwareFormatting) {
-                return line;
-            }
-
-            return formatFullLineText(line, format, removalOnly);
-        })
-        .join('\n');
+    return hasTargetFormatting ? 'remove' : 'add';
 }
 
 function createExplicitSelection(anchorPos: number, headPos: number, basePos: number): ExplicitCursorSelection {
@@ -201,7 +215,7 @@ function findSelectionFormattingAction(
     view: EditorView,
     range: SelectionRange,
     format: InlineFormatDefinition
-): { key: string; change: TextChange; explicitSelection: ExplicitCursorSelection } | null {
+): FormattingAction | null {
     if (range.empty) {
         return null;
     }
@@ -263,7 +277,7 @@ function findCursorFormattingAction(
     view: EditorView,
     cursorPos: number,
     format: InlineFormatDefinition
-): { key: string; change: TextChange; explicitSelection: ExplicitCursorSelection } | null {
+): FormattingAction | null {
     const state = view.state;
     const line = state.doc.lineAt(cursorPos);
     const action = analyzeSingleLineCursorAction(line.text, cursorPos - line.from, format);
@@ -288,10 +302,7 @@ function findCursorFormattingAction(
     };
 }
 
-function createCursorInsertion(
-    cursorPos: number,
-    format: InlineFormatDefinition
-): { key: string; change: TextChange; explicitSelection: ExplicitCursorSelection } {
+function createCursorInsertion(cursorPos: number, format: InlineFormatDefinition): FormattingAction {
     const insertedText = `${format.openingDelimiter}${format.closingDelimiter}`;
 
     return {
@@ -313,16 +324,26 @@ function createCursorInsertion(
 /**
  * Creates an inline-format command that supports multiple selections, cursor insertion, and
  * list-aware multiline full-line formatting.
+ *
+ * Non-empty selections share one mode (see `resolveFormattingMode`), so the command either adds or
+ * removes the format across all of them. Cursors are handled independently.
  */
 export function createInsertInlineFormatCommand(view: EditorView, format: InlineFormatDefinition): () => boolean {
     return () => {
         const state = view.state;
         const changeMap = new Map<string, TextChange>();
         const explicitSelectionsByIndex = new Map<number, ExplicitCursorSelection>();
-        const nonEmptyRanges = state.selection.ranges.filter((range) => !range.empty);
+        const ranges = state.selection.ranges;
+        const nonEmptyRanges = ranges.filter((range) => !range.empty);
+        const plans = ranges.map((range) => (range.empty ? null : planSelection(view, range, format)));
+        const mode = resolveFormattingMode(
+            plans.filter((plan): plan is SelectionPlan => plan !== null),
+            format
+        );
 
-        state.selection.ranges.forEach((range, index) => {
-            if (range.empty) {
+        ranges.forEach((range, index) => {
+            const plan = plans[index];
+            if (!plan) {
                 const removal = findCursorFormattingAction(view, range.head, format);
                 if (removal) {
                     if (!changeMap.has(removal.key)) {
@@ -346,17 +367,17 @@ export function createInsertInlineFormatCommand(view: EditorView, format: Inline
                 return;
             }
 
-            const selectionRemoval = findSelectionFormattingAction(view, range, format);
-            if (selectionRemoval) {
-                if (!changeMap.has(selectionRemoval.key)) {
-                    changeMap.set(selectionRemoval.key, selectionRemoval.change);
+            // A removal only exists when the selection overlaps the target format, which implies `remove` mode.
+            if (plan.removal) {
+                if (!changeMap.has(plan.removal.key)) {
+                    changeMap.set(plan.removal.key, plan.removal.change);
                 }
-                explicitSelectionsByIndex.set(index, selectionRemoval.explicitSelection);
+                explicitSelectionsByIndex.set(index, plan.removal.explicitSelection);
                 return;
             }
 
-            const selectedText = state.doc.sliceString(range.from, range.to);
-            const updatedText = applyInlineFormattingToSelectionRange(view, range, format);
+            const selectedText = plan.lineEntries.map(({ text }) => text).join('\n');
+            const updatedText = plan.lineEntries.map((entry) => formatSelectedLine(entry, format, mode)).join('\n');
 
             if (updatedText === selectedText) {
                 return;

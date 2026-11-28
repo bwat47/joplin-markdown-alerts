@@ -676,6 +676,55 @@ describe('createInsertInlineFormatCommand', () => {
         }
     });
 
+    describe('delimiters inside inline code', () => {
+        test.each([
+            ['strikethrough', undefined, '`~~` before ~~word~~', '`~~` before word'],
+            ['underline', undefined, '`++` before ++word++', '`++` before word'],
+            ['highlight', undefined, '`==` before ==word==', '`==` before word'],
+            ['superscript', 'html', '`<sup></sup>` before <sup>word</sup>', '`<sup></sup>` before word'],
+            ['superscript', 'markdown', '`^^` before ^word^', '`^^` before word'],
+        ] as const)('%s (%s) removes only the real span from a multiline selection', (id, syntax, line, expected) => {
+            expect(runCommand(`[[${line}\nplain]]`, id, syntax)).toBe(`${expected}\nplain`);
+        });
+
+        test('removes only the real span from a single-line selection', () => {
+            expect(runCommand('[[`~~` before ~~word~~]]', 'strikethrough')).toBe('`~~` before word');
+        });
+
+        test('wraps a selection whose only delimiters are inside inline code', () => {
+            expect(runCommand('[[use `~~x~~` here]]', 'strikethrough')).toBe('~~use `~~x~~` here~~');
+        });
+
+        test('inserts delimiters at a cursor inside inline code instead of unwrapping', () => {
+            expect(runCommandWithCursor('`~~a|b~~`', 'strikethrough').text).toBe('`~~a~~~~b~~`');
+        });
+    });
+
+    describe('spans across soft line breaks', () => {
+        test('removes a span whose delimiters are on different lines of a paragraph', () => {
+            expect(runCommand('[[~~one\ntwo~~\n\nplain]]', 'strikethrough')).toBe('one\ntwo\n\nplain');
+        });
+
+        test('removes a cross-line span when only its second line is selected', () => {
+            expect(runCommand('~~one\n[[two]]~~', 'strikethrough')).toBe('one\ntwo');
+        });
+
+        test('removes a cross-line span inside a blockquote', () => {
+            expect(runCommand('[[> ==one\n> two==]]', 'highlight')).toBe('> one\n> two');
+        });
+
+        test('does not pair delimiters from different paragraphs', () => {
+            expect(runCommand('[[==one\n\ntwo==]]', 'highlight')).toBe('====one==\n\n==two====');
+        });
+
+        test('unwraps a cross-line span when the cursor is inside it', () => {
+            const result = runCommandWithSelection('~~one\nt|wo~~', 'strikethrough');
+
+            expect(result.text).toBe('one\ntwo');
+            expect(result.selection).toEqual({ anchor: 0, head: 'one\ntwo'.length });
+        });
+    });
+
     describe('cursor inside existing formatting — removes formatting and selects content', () => {
         test('removes strikethrough when cursor is inside formatted text', () => {
             // cursor after 'strike' in '~~strikethrough~~'

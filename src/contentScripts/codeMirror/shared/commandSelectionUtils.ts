@@ -1,11 +1,7 @@
 import { ChangeSet, EditorSelection } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 
-type TextChange = {
-    from: number;
-    to: number;
-    insert: string;
-};
+import type { TextChange } from './commandRangeUtils';
 
 export type ExplicitCursorSelection = {
     anchorBasePos: number;

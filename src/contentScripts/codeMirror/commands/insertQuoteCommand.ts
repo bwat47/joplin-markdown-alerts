@@ -1,6 +1,7 @@
 import type { EditorState, SelectionRange } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 
+import type { TextChange } from '../shared/commandRangeUtils';
 import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 import {
     collectParagraphRanges,
@@ -16,12 +17,6 @@ const BLOCKQUOTE_PREFIX_REGEX = /^>\s?/;
 type LineRange = {
     from: number;
     to: number;
-};
-
-type TextChange = {
-    from: number;
-    to: number;
-    insert: string;
 };
 
 type MappedQuotePosition = {

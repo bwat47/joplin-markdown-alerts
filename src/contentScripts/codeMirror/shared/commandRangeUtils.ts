@@ -3,6 +3,10 @@ export type TextRange = {
     to: number;
 };
 
+export type TextChange = TextRange & {
+    insert: string;
+};
+
 /**
  * Determines whether a document change affects a range.
  *

@@ -9,6 +9,7 @@ import { ChangeSet, EditorSelection, type EditorState, type SelectionRange } fro
 import type { EditorView } from '@codemirror/view';
 
 import { getMarkdownAlertEditorSettings } from '../pluginSettings';
+import type { TextChange } from '../shared/commandRangeUtils';
 import { GITHUB_ALERT_TYPES, type GitHubAlertType } from './alertParsing';
 
 /** Matches alert autocomplete triggers, e.g. `>!no` or `> [!no`. */
@@ -27,12 +28,6 @@ export const ALERT_COMPLETION_TYPE_MARKER = 'markdown-alert';
 type AlertAutocompleteTriggerMatch = {
     triggerFrom: number;
     typeFrom: number;
-};
-
-type TextChange = {
-    from: number;
-    to: number;
-    insert: string;
 };
 
 type MatchingAlertSelection = {

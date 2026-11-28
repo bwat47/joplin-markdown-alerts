@@ -4,7 +4,7 @@ import type { SyntaxNode } from '@lezer/common';
 
 import type { InlineFormatDefinition } from '../../../inlineFormatCommands';
 import { parseGitHubAlertTitleLine } from '../alerts/alertParsing';
-import { changeOverlapsRange, rangesOverlap, type TextRange } from '../shared/commandRangeUtils';
+import { changeOverlapsRange, rangesOverlap, type TextChange, type TextRange } from '../shared/commandRangeUtils';
 import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 import { getProbePositions, getSyntaxTree } from '../shared/syntaxTreeUtils';
 import { createInlineFormatSegmentFinder, type InlineFormatSegmentFinder } from './inlineFormatSegmentFinder';
@@ -16,12 +16,6 @@ import {
     wrapFullLineText,
     wrapSelectionText,
 } from './inlineFormatText';
-
-type TextChange = {
-    from: number;
-    to: number;
-    insert: string;
-};
 
 /** Whether a command adds the target format or removes existing target spans. */
 type InlineFormatMode = 'add' | 'remove';

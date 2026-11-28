@@ -8,7 +8,7 @@ import {
     GITHUB_ALERT_TYPES,
     parseGitHubAlertTitleLine,
 } from '../alerts/alertParsing';
-import { changeOverlapsRange, type TextRange } from '../shared/commandRangeUtils';
+import { changeOverlapsRange, type TextChange, type TextRange } from '../shared/commandRangeUtils';
 import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
 import {
     collectParagraphRanges,
@@ -22,12 +22,6 @@ import {
 const DEFAULT_ALERT_TYPE = 'NOTE';
 const DEFAULT_ALERT_INSERT_TEXT = `> [!${DEFAULT_ALERT_TYPE}] `;
 const BLOCKQUOTE_LINE_PREFIX = /^>\s?/;
-
-type TextChange = {
-    from: number;
-    to: number;
-    insert: string;
-};
 
 type AlertTarget = {
     range: ParagraphRange;

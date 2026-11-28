@@ -4,13 +4,8 @@ import type { SyntaxNode, SyntaxNodeRef } from '@lezer/common';
 import { GFM, parser, Subscript, Superscript } from '@lezer/markdown';
 
 import { GITHUB_ALERT_TYPES, parseGitHubAlertTitleLine } from '../alerts/alertParsing';
+import { rangesOverlap, type TextChange } from '../shared/commandRangeUtils';
 import { dispatchChangesWithSelections, type ExplicitCursorSelection } from '../shared/commandSelectionUtils';
-
-type TextChange = {
-    from: number;
-    to: number;
-    insert: string;
-};
 
 type FormattingEdit = TextChange & {
     priority: number;
@@ -355,10 +350,6 @@ function createMarkNodeEdit(text: string, node: SyntaxNodeRef): FormattingEdit |
         insert: '',
         priority: STRUCTURAL_MARK_EDIT_PRIORITY,
     };
-}
-
-function rangesOverlap(first: TextChange, second: TextChange): boolean {
-    return first.from < second.to && second.from < first.to;
 }
 
 function selectNonOverlappingEdits(edits: FormattingEdit[]): TextChange[] {

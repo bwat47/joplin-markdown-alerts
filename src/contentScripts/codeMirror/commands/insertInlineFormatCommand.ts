@@ -66,8 +66,7 @@ const SKIPPABLE_BLOCK_KIND_BY_NODE_NAME = new Map<string, SkippableBlockKind>([
 ]);
 
 /** Walks up the syntax tree once per probe position, collecting the skippable blocks enclosing the line. */
-function findEnclosingSkippableBlockKinds(view: EditorView, docLine: Line): Set<SkippableBlockKind> {
-    const state = view.state;
+function findEnclosingSkippableBlockKinds(state: EditorState, docLine: Line): Set<SkippableBlockKind> {
     const tree = getSyntaxTree(state, docLine.to);
     const kinds = new Set<SkippableBlockKind>();
 
@@ -95,8 +94,8 @@ function isGitHubAlertTitleLine(line: string): boolean {
     return parseGitHubAlertTitleLine(line) !== null;
 }
 
-function lineCanUseLineAwareFormatting(view: EditorView, docLine: Line): boolean {
-    const blockKinds = findEnclosingSkippableBlockKinds(view, docLine);
+function lineCanUseLineAwareFormatting(state: EditorState, docLine: Line): boolean {
+    const blockKinds = findEnclosingSkippableBlockKinds(state, docLine);
     if (blockKinds.has('code') || blockKinds.has('horizontalRule')) {
         return false;
     }
@@ -115,7 +114,7 @@ function lineCanUseLineAwareFormatting(view: EditorView, docLine: Line): boolean
  * skipped.
  */
 function classifySelectedLine(
-    view: EditorView,
+    state: EditorState,
     docLine: Line,
     selectionStart: number,
     selectionEnd: number,
@@ -130,15 +129,15 @@ function classifySelectedLine(
         return 'skip';
     }
 
-    if (!lineCanUseLineAwareFormatting(view, docLine)) {
+    if (!lineCanUseLineAwareFormatting(state, docLine)) {
         return 'skip';
     }
 
     return selectionStart === 0 ? 'line' : 'inline';
 }
 
-function getSelectedLineEntries(view: EditorView, range: SelectionRange): SelectedLineEntry[] {
-    const doc = view.state.doc;
+function getSelectedLineEntries(state: EditorState, range: SelectionRange): SelectedLineEntry[] {
+    const doc = state.doc;
     const startLine = doc.lineAt(range.from);
     const endLine = doc.lineAt(range.to);
     const isMultiLineSelection = startLine.number !== endLine.number;
@@ -153,7 +152,7 @@ function getSelectedLineEntries(view: EditorView, range: SelectionRange): Select
             from,
             to,
             text: doc.sliceString(from, to),
-            kind: classifySelectedLine(view, docLine, from - docLine.from, to - docLine.from, isMultiLineSelection),
+            kind: classifySelectedLine(state, docLine, from - docLine.from, to - docLine.from, isMultiLineSelection),
         });
     }
 
@@ -196,15 +195,15 @@ function findOverlappedSegments(
 }
 
 function planSelection(
-    view: EditorView,
+    state: EditorState,
     range: SelectionRange,
     findSegments: InlineFormatSegmentFinder
 ): SelectionPlan {
-    const lineEntries = getSelectedLineEntries(view, range);
+    const lineEntries = getSelectedLineEntries(state, range);
 
     return {
         lineEntries,
-        segments: findOverlappedSegments(view.state, lineEntries, findSegments),
+        segments: findOverlappedSegments(state, lineEntries, findSegments),
     };
 }
 
@@ -314,7 +313,7 @@ export function createInsertInlineFormatCommand(view: EditorView, format: Inline
 
         const ranges = state.selection.ranges;
         const nonEmptyRanges = ranges.filter((range) => !range.empty);
-        const plans = ranges.map((range) => (range.empty ? null : planSelection(view, range, findSegments)));
+        const plans = ranges.map((range) => (range.empty ? null : planSelection(state, range, findSegments)));
         const mode = resolveFormattingMode(plans.filter((plan): plan is SelectionPlan => plan !== null));
 
         ranges.forEach((range, index) => {

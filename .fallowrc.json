@@ -10,6 +10,9 @@
     ],
     "supportEntry": ["src/**/*.test.ts", "src/contentScripts/codeMirror/shared/testUtils.ts"],
     "ignorePatterns": ["**/*.d.ts", "api/**"],
+    "typeAware": {
+        "enabled": true
+    },
     "rules": {
         "complexity-crap": "off",
         "dev-dependencies-in-production": "off",

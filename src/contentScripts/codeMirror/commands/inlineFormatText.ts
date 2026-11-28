@@ -211,11 +211,16 @@ export function wrapFullLineText(line: string, format: InlineFormatDefinition): 
     return `${structuralParts.prefix}${wrapSelectionText(structuralParts.content, format)}`;
 }
 
+/** Returns the position where a wrapped segment's content ends, i.e. where its closing delimiter starts. */
+export function getSegmentContentEnd(segment: TextRange, format: InlineFormatDefinition): number {
+    return segment.to - format.closingDelimiter.length;
+}
+
 /** Returns the opening and closing delimiter ranges of a wrapped segment, in document order. */
 export function getDelimiterRanges(segment: TextRange, format: InlineFormatDefinition): TextRange[] {
     return [
         { from: segment.from, to: segment.from + format.openingDelimiter.length },
-        { from: segment.to - format.closingDelimiter.length, to: segment.to },
+        { from: getSegmentContentEnd(segment, format), to: segment.to },
     ];
 }
 
@@ -240,7 +245,7 @@ export function analyzeCursorAction(
         return { kind: 'move', position: segment.from + format.openingDelimiter.length };
     }
 
-    if (cursorOffset === segment.to - format.closingDelimiter.length) {
+    if (cursorOffset === getSegmentContentEnd(segment, format)) {
         return { kind: 'move', position: segment.to };
     }
 

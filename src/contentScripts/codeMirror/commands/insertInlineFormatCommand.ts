@@ -11,6 +11,7 @@ import { createInlineFormatSegmentFinder, type InlineFormatSegmentFinder } from 
 import {
     analyzeCursorAction,
     getDelimiterRanges,
+    getSegmentContentEnd,
     splitStructuralLineParts,
     wrapFullLineText,
     wrapSelectionText,
@@ -267,7 +268,7 @@ function planCursor(
         const { segment } = action;
         return {
             changes: createDelimiterDeletions([segment], format),
-            selection: createExplicitSelection(segment.from, segment.to - format.closingDelimiter.length),
+            selection: createExplicitSelection(segment.from, getSegmentContentEnd(segment, format)),
         };
     }
 
